@@ -1,0 +1,92 @@
+{
+    "AXISYMMETRIC": false,
+    "BODY_FORCE": false,
+    "BODY_FORCE_VECTOR": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL",
+    "FLUID_MODEL": "STANDARD_AIR",
+    "INC_DENSITY_MODEL": "CONSTANT",
+    "INC_ENERGY_EQUATION": "YES",
+    "INC_INLET_TYPE": "VELOCITY_INLET",
+    "INC_OUTLET_TYPE": "PRESSURE_OUTLET",
+    "INC_VELOCITY_INIT": [
+        0.0,
+        0.0,
+        8.0
+    ],
+    "KIND_INVALID": [
+        "string1",
+        0.0
+    ],
+    "KIND_TURB_SOLVER": "SA",
+    "KT_POLYCOEFFS": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "MARKER_INLET": [
+        [
+            "inlet_1",
+            300.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        [
+            "inlet_2",
+            400.0,
+            2.0,
+            0.0,
+            1.0,
+            0.0
+        ]
+    ],
+    "MARKER_INLET_TURBULENT": [
+        [
+            "inlet",
+            0.1,
+            100.0
+        ]
+    ],
+    "MARKER_OUTLET": [
+        [
+            "outlet1",
+            0.0
+        ],
+        [
+            "outlet2",
+            0.0
+        ]
+    ],
+    "MARKER_SYM": [
+        "symmetry_1",
+        "symmetry_bend",
+        "symmetry_2"
+    ],
+    "MU_CONSTANT": 1.716e-05,
+    "MU_POLYCOEFFS": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "MU_REF": 1.716e-05,
+    "MU_T_REF": 273.15,
+    "PRANDTL_LAM": 0.72,
+    "PRANDTL_TURB": 0.9,
+    "RESTART_SOL": true,
+    "SA_OPTIONS": "NONENEGATIVE",
+    "SOLVER": "INC_RANS",
+    "SST_OPTIONS": "V1994m",
+    "SUTHERLAND_CONSTANT": 110.4,
+    "THERMAL_CONDUCTIVITY_CONSTANT": 0.0257,
+    "TURBULENT_CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL_TURB",
+    "VISCOSITY_MODEL": "SUTHERLAND"
+}
