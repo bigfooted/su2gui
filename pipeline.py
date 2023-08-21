@@ -78,7 +78,7 @@ class PipelineManager:
             Note that the left branch is the default, main branch.
           """
 
-        print("item_keys=",item_keys)
+        #print("item_keys=",item_keys)
 
         _id = f"{self._next_id}"
         self._next_id += 1
@@ -112,9 +112,9 @@ class PipelineManager:
             Note that the left branch is the default, main branch.
           """
 
-        print(self._nodes)
-        for k in self._nodes:
-          print(k, ", node =  ", self._nodes[k])
+        #print(self._nodes)
+        #for k in self._nodes:
+        #  print(k, ", node =  ", self._nodes[k])
 
         # get the id of the node with name 'parent_name'
         for k in self._nodes:
@@ -132,29 +132,29 @@ class PipelineManager:
             "headnode": parent_name,
             **item_keys,
         }
-        print("append node: ",node)
+        #print("append node: ",node)
         # at this point we check where we need to insert the node. If a node already exists,
         # and left=True, then simply add the node. If left=False, we need to swap it with the
         # existing node and make it the lowest node of all nodes in the branch
         # first, find all nodes that have the same parent.
         parentlist = self.get_parents(parent_id)
         parentlist.sort(key=int)
-        print("all nodes with the same parent = ",parentlist)
+        #print("all nodes with the same parent = ",parentlist)
 
         # check if we need to place it to the right
 
         # right list exists:we add it and we point to the parent
         if (len(parentlist)==2 and (left==False)):
-           print("adding to existing right-list")
+           #print("adding to existing right-list")
            self._nodes[_id] = node
            # first in the sorted list is the right-list
            descendantsList=[parentlist[0]]
            self.get_descendants(parentlist[0],descendantsList)
-           print("descendants = ",descendantsList)
+           #print("descendants = ",descendantsList)
            self._nodes[_id]['parent'] = descendantsList[-1]
 
         elif (len(parentlist)==1 and (left==False)):
-          print("creating new right-list")
+          #print("creating new right-list")
 
           parentlist.append(_id)
           # all nodes with the same parent
@@ -162,7 +162,7 @@ class PipelineManager:
             parent = parentlist[i]
             name = self._nodes[parent]['name']
             children = self.get_children(name)
-            print("child = ",children)
+            #print("child = ",children)
             for child in children:
               # move the parents
               self._nodes[child]['parent'] = parentlist[i+1]
@@ -190,11 +190,11 @@ class PipelineManager:
         #else:
         #  self._nodes[_id] = node
 
-        print("**********************************")
-        print("finished! add:",self._nodes)
-        for k in self._nodes:
-          print(self._nodes[k])
-        print("**********************************")
+        #print("**********************************")
+        #print("finished! add:",self._nodes)
+        #for k in self._nodes:
+        #  print(self._nodes[k])
+        #print("**********************************")
         self._update_hierarchy()
 
         return _id
@@ -270,13 +270,13 @@ class PipelineManager:
         """ Remove a node and all right children. We keep the left children. """
         # step 1: get the root node
         if (self.get_node(_id) == None):
-            print("root node is none")
+            #print("root node is none")
             return
 
         # get all descendants of _id
         l = []
         self.get_descendants(_id,l)
-        print("list = ",l)
+        #print("list = ",l)
         del self._nodes[_id]
         for k in l:
            del self._nodes[k]
@@ -298,10 +298,10 @@ class PipelineManager:
           #print(self._nodes[k])
           if self._nodes[k]['name']==_name:
               root_id = int(self._nodes[k]['id'])
-              print("root id found:",root_id)
+              #print("root id found:",root_id)
 
-        if (root_id>0):
-          print("root id found, now find the left and right nodes")
+        #if (root_id>0):
+        #  print("root id found, now find the left and right nodes")
 
         child_node_id = []
         for k in self._nodes:
@@ -312,17 +312,17 @@ class PipelineManager:
             child_node_id.append(current_id)
         child_node_id.sort()
 
-        print("child_node_id=",child_node_id)
+        #print("child_node_id=",child_node_id)
 
         if len(child_node_id) == 2:
           right_node = child_node_id[0]
-          print("right node found at:",right_node)
+          #print("right node found at:",right_node)
           self.remove_node_and_children(str(right_node))
           #self.update()
 
-        print(self._nodes)
-        for k in self._nodes:
-          print(self._nodes[k])
+        #print(self._nodes)
+        #for k in self._nodes:
+        #  print(self._nodes[k])
 
         #elif len(child_node_id) > 2:
         #    print("more than 2 child nodes found!")
@@ -333,15 +333,15 @@ class PipelineManager:
     def update_node_value(self, _name,_key,_value):
         """ For a node with 'name'=_name, apply _key = _value """
         for k in self._nodes:
-            print("node=",k)
+            #print("node=",k)
             if self._nodes[k]['name']==_name:
-              print("node ",k," has name ",_name, ", changing value of ",_key ," to ",_value)
+              #print("node ",k," has name ",_name, ", changing value of ",_key ," to ",_value)
               self._nodes[k][_key] = _value
 
     def get_parents(self, _parent):
         """ For _parent, return a list of all nodes with the same parents """
         parent_list=[]
-        print("find nodes with parent ",_parent)
+        #print("find nodes with parent ",_parent)
         for k in self._nodes:
             #print("node=",self._nodes[k])
             if self._nodes[k]['parent']==_parent:
@@ -359,7 +359,7 @@ class PipelineManager:
     def get_children(self, _name):
         """ For _name, return a sorted list of all nodes that are children of name """
         children_list=[]
-        print("find children of ",_name)
+        #print("find children of ",_name)
         index = self.get_id(_name)
         for k in self._nodes:
             #print("node=",self._nodes[k])
@@ -380,5 +380,5 @@ class PipelineManager:
               descendants_list.append(k)
               child = self.get_descendants(k,descendants_list)
 
-        print("descendants=",descendants_list)
+        #print("descendants=",descendants_list)
         #return descendants_list

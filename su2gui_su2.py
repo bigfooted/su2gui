@@ -295,6 +295,9 @@ def actives_change(ids):
     else:
       state.selectedBoundaryName = "None"
 
+    # nijso: hardcode internal as selected mesh
+    #state.selectedBoundaryName = "internal"
+
     # get list of all actors, loop and color the selected actor
     actorlist = vtk.vtkActorCollection()
     actorlist = renderer.GetActors()
@@ -358,15 +361,6 @@ def boundary_card():
                 v_model=("boundaryText", "bound"),
         )
 
-
-#def new_boundary_card():
-#    with ui_card(title="NewBoundary", ui_name="newboundary"):
-#
-#        vuetify.VTextarea(
-#                label="boundary info:",
-#                rows="5",
-#                v_model=("selectedBoundaryName", "bound"),
-#        )
 
 def mesh_card():
     with ui_card(title="Mesh", ui_name="Mesh"):
@@ -513,6 +507,9 @@ def nijso_list_change():
 ###############################################################
 # FILES
 ###############################################################
+
+
+# load SU2 .su2 mesh file
 @state.change("file_upload")
 def load_client_files(file_upload, **kwargs):
     global pipeline
@@ -525,216 +522,202 @@ def load_client_files(file_upload, **kwargs):
 
     del mesh_actor_list[:]
 
-    if file is None or isinstance(file,list):
+    #file = file_upload
+    file = ClientFile(file_upload)
+
+    if file_upload is None:
         return
+
+    print("name = ",file_upload.get("name"))
+    print("last modified = ",file_upload.get("lastModified"))
+    print("size = ",file_upload.get("size"))
+    print("type = ",file_upload.get("type"))
+
 
     # remove all actors
     renderer.RemoveAllViewProps()
 
-    # these are the scalar fields of the paraview file
-    field = "solid"
-    fields = {
-        "solid": {"value": "solid", "text": "Solid color", "range": [0, 1]},
-    }
-    meshes = []
-    filesOutput = []
-
-    # file from the client
-    file = ClientFile(file_upload)
-    filename = file_upload.get("name")
-    file_size = file_upload.get("size")
-
-    file_binary_content = file_upload.get(
-        "content"
-    )  # can be either list(bytes, ...), or bytes
-
-    with open(filename, "wb") as binary_file:
-        # uploads are sent in chunks of 2Mb, so we need to join them
-        file_binary_content = b"".join(file_binary_content)
-        binary_file.write(file_binary_content)
+    grid.Reset()
 
 
+    # ### setup of the internal data structure ###
+    root = vtkMultiBlockDataSet()
+    branch_interior = vtkMultiBlockDataSet()
+    branch_boundary = vtkMultiBlockDataSet()
 
-    if not file.get("content"):
-            return
-    else:
-            bytes = file.get("content")
-            filesOutput.append({"name": filename, "size": file_size})
-
-            # the vtm reader
-            reader = vtk.vtkXMLMultiBlockDataReader()
-
-            print("reading multiblock file")
-
-            # ***** BASE PATH ***** #
-            base_path = "user/nijso/"
-
-            filename = base_path + filename
-
-            print("file name = ",filename)
+    root.SetBlock(0, branch_interior)
+    root.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Interior')
+    root.SetBlock(1, branch_boundary)
+    root.GetMetaData(1).Set(vtk.vtkCompositeDataSet.NAME(), 'Boundary')
+    del root
+    pts = vtk.vtkPoints()
+    # ### ### #
 
 
-            # for the mesh info display
-            state.meshText = "filename: " + filename + "\n"
-            state.meshText += "filesize: " + str(file.get("size")) + "\n"
+    # mesh file format specific
+    filecontent = file.content.decode('utf-8')
+    f = filecontent.splitlines()
 
-            reader.SetFileName(filename)
-            reader.Update()
-            mb = reader.GetOutput()
-            # nr of external blocks, should be 1
-            print("nr of external blocks = ",mb.GetNumberOfBlocks())
-            global mb1
-            mb1 = mb.GetBlock(0)
-            print("type=",type(mb1))
-            print("nr of blocks inside block = ",mb1.GetNumberOfBlocks())
+    index = [idx for idx, s in enumerate(f) if 'NDIME' in s][0]
+    NDIME = int(f[index].split('=')[1])
+    #state.meshDim = NDIME
+    # for the mesh info display
+    #state.meshText += "Mesh Dimensions: " + str(NDIME) + "D \n"
 
-            blockNames=[]
-            for i in range(mb1.GetNumberOfBlocks()):
-                print("number of internal blocks = ", i+1," / ", mb1.GetNumberOfBlocks() )
-                data = mb1.GetBlock(i)
-                name = mb1.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
-                print("metadata block name = ",name)
-                blockNames.append(
-                    {
-                        "text": name,
-                        "value": i,
-                    }
-                )
-            # we now get only the first 2 blocks, if there are more we give a warning
-            if (mb1.GetNumberOfBlocks()>2) :
-                print("warning, more than 2 blocks found, we only read the first 2 blocks, which should be internal and boundary blocks")
+    index = [idx for idx, s in enumerate(f) if 'NPOIN' in s][0]
+    numPoints = int(f[index].split('=')[1])
+    #state.meshText += "Number of points: " + str(numPoints) + "\n"
 
-            internalBlock = mb1.GetBlock(0)
-            print("nr of blocks inside internal block = ",internalBlock.GetNumberOfBlocks())
-            boundaryBlock = mb1.GetBlock(1)
-            print("nr of blocks inside block = ",boundaryBlock.GetNumberOfBlocks())
+    # get all the points
+    for point in range(numPoints):
+           x = float()
+           y = float()
+           z = float()
+           line = f[index+point+1].split(" ")
+           x = float(line[0])
+           y = float(line[1])
 
-            #print(dir(internalBlock))
-            # nr of data in internal block
-            NELEM = internalBlock.GetNumberOfCells()
-            NPOINT = internalBlock.GetNumberOfPoints()
-            BOUND=[0,0,0,0,0,0]
-            internalBlock.GetBounds(BOUND)
-            # for the mesh info display
-            state.meshText += "Number of cells: " + str(NELEM) + "\n"
-            state.meshText += "Number of points: " + str(NPOINT) + "\n"
-            state.meshText += "bounds: " + str(BOUND) + "\n"
+           if (NDIME==2):
+             # 2D is always x-y plane (z=0)
+             z = float(0.0)
+           else:
+             z = float(line[2])
+           pts.InsertNextPoint(x,y,z)
 
+    grid.SetPoints(pts)
 
-            internalNames=[]
-            for i in range(internalBlock.GetNumberOfBlocks()):
-                print("number of internal elements = ", i+1," / ", internalBlock.GetNumberOfBlocks() )
-                data = internalBlock.GetBlock(i)
-                #print(dir(data))
-                #print(data)
-                #for p in range(NPOINT):
-                #  print(p," ",data.GetPoint(p))
+    # get the elements
+    index = [idx for idx, s in enumerate(f) if 'NELEM' in s][0]
+    numCells = int(f[index].split('=')[1])
+    state.mesh= ["Number of cells: " + str(numCells) + "\n"]
 
-                name = internalBlock.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
-                print("metadata block name = ",name)
-                internalNames.append(
-                    {
-                        "text": name,
-                        "value": i,
-                    }
-                )
-
-            boundaryNames=[]
-            for i in range(boundaryBlock.GetNumberOfBlocks()):
-                print("number of boundary blocks = ", i+1," / ", boundaryBlock.GetNumberOfBlocks() )
-                data = boundaryBlock.GetBlock(i)
-                name = boundaryBlock.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
-                print("metadata block name = ",name)
-                boundaryNames.append(
-                    {
-                        "text": name,
-                        "value": i,
-                    }
-                )
-
-            # internal mesh
-            print("getting the single element from the internal block")
-            ds = vtk.vtkUnstructuredGrid.SafeDownCast(internalBlock.GetBlock(0))
-
-            # boundary meshes
-            ds_b = []
-            for i in range(boundaryBlock.GetNumberOfBlocks()):
-              ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(boundaryBlock.GetBlock(i)))
-             # coloring by scalar field
-            datasetArrays = []
-
-            pd = ds.GetPointData()
-            nb_arrays = pd.GetNumberOfArrays()
-            for i in range(nb_arrays):
-                array = pd.GetArray(i)
-                name = array.GetName()
-                min, max = array.GetRange(-1)
+    for cell in range(numCells):
+            data = f[index+cell+1].split(" ")
+            CellType = int(data[0])
+            # quadrilaterals
+            if(CellType==9):
+              quaddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
+              grid.InsertNextCell(VTK_QUAD,4,quaddata)
+            # triangles
+            elif(CellType==5):
+              tridata = [int(data[1]),int(data[2]),int(data[3])]
+              grid.InsertNextCell(VTK_TRIANGLE,3,tridata)
+            # hexahedral
+            elif(CellType==12):
+              hexdata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]),int(data[6]),int(data[7]),int(data[8])]
+              grid.InsertNextCell(VTK_HEXAHEDRON,8,hexdata)
+            # tetrahedral (4 faces)
+            elif(CellType==10):
+              tetdata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
+              grid.InsertNextCell(VTK_TETRA,4,tetdata)
+            # wedge
+            elif(CellType==13):
+              wedgedata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]),int(data[6])]
+              grid.InsertNextCell(VTK_WEDGE,6,wedgedata)
+            # pyramid
+            elif(CellType==14):
+              pyramiddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])]
+              grid.InsertNextCell(VTK_PYRAMID,5,pyramiddata)
+            else:
+              print("ERROR: cell type not suppported")
 
 
-                ds.GetPointData().AddArray(array)
+    branch_interior.SetBlock(0, grid)
+    branch_interior.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Fluid-Zone-1')
+    del branch_interior
 
-                datasetArrays.append(
-                    {
-                    "text": name,
-                    "value": i,
-                    "range": [min, max],
-                    "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
-                    }
-                )
+    # ### read the markers ### #
+    boundaryNames = []
 
-            #cell_arrays = []
-            #cd = ds.GetCellData()
-            #nb_arrays = cd.GetNumberOfArrays()
-            #for i in range(nb_arrays):
-            #    array = cd.GetArray(i)
-            #    name = array.GetName()
-            #    min, max = array.GetRange(-1)
-            #    fields[name] = {
-            #        "name": name,
-            #        "range": [min, max],
-            #        "value": name,
-            #        "text": name,
-            #        "type": vtkDataObject.FIELD_ASSOCIATION_CELLS,
-            #        "scalarMode": 4,
-            #    }
-            #    cell_arrays.append(name)
+    markerNames=[]
+    index = [idx for idx, s in enumerate(f) if 'NMARK' in s][0]
+    numMarkers = int(f[index].split('=')[1])
 
-            #meshes.append(
-            #    vtk_mesh(ds, point_arrays=point_arrays, cell_arrays=cell_arrays)
-            #)
+    # now loop over the markers
+    counter=0
+    for iMarker in range(numMarkers):
+          # grid for the marker
+          markergrid = vtkUnstructuredGrid()
+          # copy all the pints into the markergrid (inefficient)
+          markergrid.SetPoints(pts)
+          # next line: marker tag, marker_elem
+          counter += 1
+          # this is the name (string) of the boundary
+          markertag = f[index+counter].split("=")[1].strip()
 
-    print("meshes = ",meshes)
+          # add name to the boundaryNames list of dicts
+          boundaryNames.append(
+            {
+                "text": markertag,
+                "value": iMarker,
+            }
+          )
+          markerNames.append(markertag)
+          # next line: marker tag, marker_elem
+          counter+=1
+          line = f[index+counter].split("=")
+          numCells = int(line[1])
+          #print("number of cells = ",numCells)
 
-    defaultArray = datasetArrays[0]
-    state.dataset_arrays = datasetArrays
-    print("dataset = ",datasetArrays)
-    print("dataset_0 = ",datasetArrays[0])
-    print("dataset_0 = ",datasetArrays[0].get('text'))
+          # loop over all cells
+          for cell in range(numCells):
+            counter+=1
+            data = f[index+counter].split(" ")
+            #print("data = ",data)
+            CellType = int(data[0])
+            # line
+            if(CellType==3):
+              linedata = [int(data[1]),int(data[2])]
+              markergrid.InsertNextCell(VTK_LINE,2,linedata)
+            # triangles
+            elif(CellType==5):
+              tridata = [int(data[1]),int(data[2]),int(data[3])]
+              markergrid.InsertNextCell(VTK_TRIANGLE,3,tridata)
+            # quadrilaterals
+            elif(CellType==9):
+              quaddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
+              markergrid.InsertNextCell(VTK_QUAD,4,quaddata)
+            else:
+              print("ERROR: marker cell type not suppported")
+          # put boundary in multiblock structure
+          branch_boundary.SetBlock(iMarker, markergrid)
+          branch_boundary.GetMetaData(iMarker).Set(vtk.vtkCompositeDataSet.NAME(), markertag)
 
+
+    # end loop over lines
+
+    del markergrid
+    del pts
+
+    # boundary meshes as unstructured grids
+    ds_b = []
+    #for i in range(boundaryBlock.GetNumberOfBlocks()):
+    for i in range(branch_boundary.GetNumberOfBlocks()):
+        ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(branch_boundary.GetBlock(i)))
+    del branch_boundary
+
+
+
+    # we also clear the arrays, if any
+    for array in state.dataset_arrays:
+        arrayName = array.get("text")
+        print("removing array ",arrayName)
+        grid.GetPointData().RemoveArray(arrayName)
+    # and we only use the default array
+    state.dataset_arrays = []
 
     # Mesh - add mesh to the renderer
-    #mesh_mapper = vtkDataSetMapper()
-    #mesh_mapper.ScalarVisibilityOn()
-    #mesh_actor = vtkActor()
-
-    mesh_mapper.SetInputData(ds)
+    mesh_mapper.SetInputData(grid)
     mesh_actor.SetMapper(mesh_mapper)
     renderer.AddActor(mesh_actor)
-
-    mesh_mapper.SelectColorArray(defaultArray.get('text'))
-    mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
-    mesh_mapper.SetScalarVisibility(True)
-    mesh_mapper.SetUseLookupTableScalarRange(True)
-    # Mesh: Setup default representation to surface
-    mesh_actor.GetProperty().SetRepresentationToSurface()
-    mesh_actor.GetProperty().SetPointSize(1)
-    mesh_actor.GetProperty().EdgeVisibilityOff()
     mesh_actor.SetObjectName("internal")
-    mesh_actor.VisibilityOff()
 
+    # boundary actors
     boundary_id = 101
     i = 0
+    print("length of ds_b=",len(ds_b))
     for bcName in boundaryNames:
+        print("bc name=",bcName)
         mesh_mapper_b1 = vtkDataSetMapper()
         mesh_mapper_b1.ScalarVisibilityOff()
         mesh_actor_b1 = vtkActor()
@@ -748,69 +731,29 @@ def load_client_files(file_upload, **kwargs):
         mesh_actor_list.append({"id":boundary_id,"name":bcName.get("text"), "mesh":mesh_actor_b1})
         boundary_id += 1
 
+    # add internal mesh as well.
     mesh_actor_list.append({"id":boundary_id,"name":"internal", "mesh":mesh_actor})
+    # internal block is also a 'boundary'
     boundaryNames.append(
                             {
                         "text": "internal",
-                        "value": boundaryBlock.GetNumberOfBlocks()+1,
+                        "value": numMarkers,
                     }
     )
 
-    #for l in mesh_actor_list:
-    #    print("the name in the list = ",l["name"])
-    #actorlist = renderer.GetActors()
-    #print("number of actors: ",actorlist)
-    #print("number of actors: ",dir(actorlist))
-    #print("is actor present: ",actorlist.IsItemPresent(mesh_actor))
-    #actorlist = vtk.vtkActorCollection()
-    #actorlist = renderer.GetActors()
-    #print("number of actors: ",actorlist.GetNumberOfItems())
-    #actorlist.InitTraversal()
-    #for a in range(0, actorlist.GetNumberOfItems()):
-    #    actor = actorlist.GetNextActor()
-    #    print("getnextactor: name =",actor.GetObjectName())
 
-    renderer.ResetCamera()
-    ctrl.view_update()
-
-    state.field = field
-    state.fields = fields
-    state.meshes = meshes
-    state.files = filesOutput
-
-
-    # update the names of the boundary conditions (instantaneously in the boundary card)
-    state.bcfields = boundaryNames
-    # 4 is the position of the wall in the bc list array
-    state.boundaryType_array_idx=4
-
-    #add a dictionary to the BC list of dictionaries
-    # bcName is the su2 mesh name
-    # bcType is the VList name
-    # json is the su2 Boundary condition type MARKER_*
-
-    #for bcName in boundaryNames:
-    #    state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
-
-    #i = 101
-    #j = 200
+    # now construct the actual boundary list for the GUI
     for bcName in boundaryNames:
        print("boundary name=",bcName.get("text"))
-       #pipeline1.append({"id": "%d"%(i), "parent": "%d"%(j), "visible": 1, "name": "%s"%(bcName.get("text"))})
        # add the boundaries to the right tree and not the left tree
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
-       #j = i
-       #i = i + 1
-       #break
     print("updated pipeline",pipeline)
-
-    # the sources
-    #state.dirty("pipeline")
 
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
-
+    renderer.ResetCamera()
+    ctrl.view_update()
     pass
 
 # -----------------------------------------------------------------------------
@@ -877,8 +820,7 @@ def standard_buttons():
 
 state.trame__title = "File loading"
 
-state.fields = []
-state.meshes = []
+#state.fields = []
 
 with SinglePageWithDrawerLayout(server) as layout:
 
@@ -918,19 +860,19 @@ with SinglePageWithDrawerLayout(server) as layout:
         vuetify.VFileInput(
             # read more than one file
             multiple=False,
-            #webkitdirectory=True,
             background_color="white",
             # the icon in front of the file input
             prepend_icon="mdi-file",
             show_size=True,
             small_chips=True,
             truncate_length=25,
-            v_model=("file", None),
+            v_model=("file_upload", None),
+
             dense=True,
             hide_details=True,
             style="max-width: 300px;",
             # only accepts paraview .vtm files
-            accept=".vtm",
+            accept=".su2",
             __properties=["accept"],
         )
 
@@ -939,7 +881,6 @@ with SinglePageWithDrawerLayout(server) as layout:
             indeterminate=True, absolute=True, bottom=True, active=("trame__busy",)
         )
 
-        trame.ClientStateChange(name="meshes", change=ctrl.view_reset_camera)
 
     # left side menu
     with layout.drawer as drawer:

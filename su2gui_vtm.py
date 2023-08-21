@@ -517,13 +517,17 @@ def nijso_list_change():
 def load_client_files(file_upload, **kwargs):
     global pipeline
     # remove the added boundary conditions in the pipeline
-
+    print("read file")
     print("***************************************")
     pipeline.remove_right_subnode("Boundaries")
     print("***************************************")
     print("pipeline=",pipeline)
 
     del mesh_actor_list[:]
+
+    ## file from the client
+    #file = ClientFile(file_upload)
+    file = file_upload
 
     if file is None or isinstance(file,list):
         return
@@ -536,28 +540,32 @@ def load_client_files(file_upload, **kwargs):
     fields = {
         "solid": {"value": "solid", "text": "Solid color", "range": [0, 1]},
     }
-    meshes = []
+    #meshes = []
     filesOutput = []
 
-    # file from the client
-    file = ClientFile(file_upload)
+    ## file from the client
+    #file = ClientFile(file_upload)
+    #file = file_upload
+
     filename = file_upload.get("name")
     file_size = file_upload.get("size")
 
-    file_binary_content = file_upload.get(
-        "content"
-    )  # can be either list(bytes, ...), or bytes
-
-    with open(filename, "wb") as binary_file:
-        # uploads are sent in chunks of 2Mb, so we need to join them
-        file_binary_content = b"".join(file_binary_content)
-        binary_file.write(file_binary_content)
-
-
+    #file_binary_content = file_upload.get(
+    #    "content"
+    #)  # can be either list(bytes, ...), or bytes
+    #
+    #with open(filename, "wb") as binary_file:
+    #    # uploads are sent in chunks of 2Mb, so we need to join them
+    #    file_binary_content = b"".join(file_binary_content)
+    #    binary_file.write(file_binary_content)
 
     if not file.get("content"):
             return
     else:
+
+            # necessary to clear the cell data
+            grid.Reset()
+
             bytes = file.get("content")
             filesOutput.append({"name": filename, "size": file_size})
 
@@ -654,24 +662,25 @@ def load_client_files(file_upload, **kwargs):
 
             # internal mesh
             print("getting the single element from the internal block")
-            ds = vtk.vtkUnstructuredGrid.SafeDownCast(internalBlock.GetBlock(0))
+            grid = vtk.vtkUnstructuredGrid.SafeDownCast(internalBlock.GetBlock(0))
 
             # boundary meshes
             ds_b = []
             for i in range(boundaryBlock.GetNumberOfBlocks()):
               ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(boundaryBlock.GetBlock(i)))
+
+
              # coloring by scalar field
             datasetArrays = []
 
-            pd = ds.GetPointData()
+            pd = grid.GetPointData()
             nb_arrays = pd.GetNumberOfArrays()
             for i in range(nb_arrays):
                 array = pd.GetArray(i)
                 name = array.GetName()
                 min, max = array.GetRange(-1)
 
-
-                ds.GetPointData().AddArray(array)
+                grid.GetPointData().AddArray(array)
 
                 datasetArrays.append(
                     {
@@ -682,28 +691,7 @@ def load_client_files(file_upload, **kwargs):
                     }
                 )
 
-            #cell_arrays = []
-            #cd = ds.GetCellData()
-            #nb_arrays = cd.GetNumberOfArrays()
-            #for i in range(nb_arrays):
-            #    array = cd.GetArray(i)
-            #    name = array.GetName()
-            #    min, max = array.GetRange(-1)
-            #    fields[name] = {
-            #        "name": name,
-            #        "range": [min, max],
-            #        "value": name,
-            #        "text": name,
-            #        "type": vtkDataObject.FIELD_ASSOCIATION_CELLS,
-            #        "scalarMode": 4,
-            #    }
-            #    cell_arrays.append(name)
 
-            #meshes.append(
-            #    vtk_mesh(ds, point_arrays=point_arrays, cell_arrays=cell_arrays)
-            #)
-
-    print("meshes = ",meshes)
 
     defaultArray = datasetArrays[0]
     state.dataset_arrays = datasetArrays
@@ -713,11 +701,7 @@ def load_client_files(file_upload, **kwargs):
 
 
     # Mesh - add mesh to the renderer
-    #mesh_mapper = vtkDataSetMapper()
-    #mesh_mapper.ScalarVisibilityOn()
-    #mesh_actor = vtkActor()
-
-    mesh_mapper.SetInputData(ds)
+    mesh_mapper.SetInputData(grid)
     mesh_actor.SetMapper(mesh_mapper)
     renderer.AddActor(mesh_actor)
 
@@ -756,61 +740,23 @@ def load_client_files(file_upload, **kwargs):
                     }
     )
 
-    #for l in mesh_actor_list:
-    #    print("the name in the list = ",l["name"])
-    #actorlist = renderer.GetActors()
-    #print("number of actors: ",actorlist)
-    #print("number of actors: ",dir(actorlist))
-    #print("is actor present: ",actorlist.IsItemPresent(mesh_actor))
-    #actorlist = vtk.vtkActorCollection()
-    #actorlist = renderer.GetActors()
-    #print("number of actors: ",actorlist.GetNumberOfItems())
-    #actorlist.InitTraversal()
-    #for a in range(0, actorlist.GetNumberOfItems()):
-    #    actor = actorlist.GetNextActor()
-    #    print("getnextactor: name =",actor.GetObjectName())
 
-    renderer.ResetCamera()
-    ctrl.view_update()
 
     state.field = field
     state.fields = fields
-    state.meshes = meshes
     state.files = filesOutput
 
-
-    # update the names of the boundary conditions (instantaneously in the boundary card)
-    state.bcfields = boundaryNames
-    # 4 is the position of the wall in the bc list array
-    state.boundaryType_array_idx=4
-
-    #add a dictionary to the BC list of dictionaries
-    # bcName is the su2 mesh name
-    # bcType is the VList name
-    # json is the su2 Boundary condition type MARKER_*
-
-    #for bcName in boundaryNames:
-    #    state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
-
-    #i = 101
-    #j = 200
     for bcName in boundaryNames:
        print("boundary name=",bcName.get("text"))
-       #pipeline1.append({"id": "%d"%(i), "parent": "%d"%(j), "visible": 1, "name": "%s"%(bcName.get("text"))})
        # add the boundaries to the right tree and not the left tree
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
-       #j = i
-       #i = i + 1
-       #break
     print("updated pipeline",pipeline)
-
-    # the sources
-    #state.dirty("pipeline")
 
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
-
+    renderer.ResetCamera()
+    ctrl.view_update()
     pass
 
 # -----------------------------------------------------------------------------
@@ -878,7 +824,7 @@ def standard_buttons():
 state.trame__title = "File loading"
 
 state.fields = []
-state.meshes = []
+#state.meshes = []
 
 with SinglePageWithDrawerLayout(server) as layout:
 
@@ -918,14 +864,13 @@ with SinglePageWithDrawerLayout(server) as layout:
         vuetify.VFileInput(
             # read more than one file
             multiple=False,
-            #webkitdirectory=True,
             background_color="white",
             # the icon in front of the file input
             prepend_icon="mdi-file",
             show_size=True,
             small_chips=True,
             truncate_length=25,
-            v_model=("file", None),
+            v_model=("file_upload", None),
             dense=True,
             hide_details=True,
             style="max-width: 300px;",
@@ -939,7 +884,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             indeterminate=True, absolute=True, bottom=True, active=("trame__busy",)
         )
 
-        trame.ClientStateChange(name="meshes", change=ctrl.view_reset_camera)
+        #trame.ClientStateChange(name="meshes", change=ctrl.view_reset_camera)
 
     # left side menu
     with layout.drawer as drawer:

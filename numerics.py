@@ -1,0 +1,101 @@
+# numerics gittree menu
+
+# note that in the main menu, we need to call add the following:
+# 1) from numerics import *
+# 2) call numerics_card() in SinglePageWithDrawerLayout
+# 3) define a node in the gittree (pipeline)
+# 4) define any global state variables that might be needed
+
+# definition of ui_card
+from uicard import ui_card, ui_subcard, server
+from trame.widgets import vuetify
+from su2_json import *
+
+state, ctrl = server.state, server.controller
+
+############################################################################
+# Numerics models - list options #
+############################################################################
+
+# List: numerics model: spatial gradients NUM_METHOD_GRAD
+LNumericsGrad= [
+  {"text": "Green-Gauss", "value": 0, "json": "GREEN_GAUSS"},
+  {"text": "Weighted Least Squares", "value": 1, "json": "WEIGHTED_LEAST_SQUARES"},
+]
+
+# List: numerics model: gradient reconstruction for MUSCL (NUM_METHOD_GRAD_RECON)
+LNumericsGradRecon= [
+  {"text": "Green-Gauss", "value": 0, "json": "GREEN_GAUSS"},
+  {"text": "Weighted Least Squares", "value": 1, "json": "WEIGHTED_LEAST_SQUARES"},
+]
+
+
+###############################################################
+# PIPELINE CARD : Numerics
+###############################################################
+def numerics_card():
+    with ui_card(title="Numerics", ui_name="Numerics"):
+        print("## Numerics Selection ##")
+
+        # 1 row of option lists
+        with vuetify.VRow(classes="pt-2"):
+          with vuetify.VCol(cols="10"):
+
+            # Then a list selection for turbulence submodels
+            vuetify.VSelect(
+                # What to do when something is selected
+                v_model=("numerics_grad_idx", 0),
+                # The items in the list
+                items=("representations_grad",LNumericsGrad),
+                # the name of the list box
+                label="Spatial Gradients",
+                hide_details=True,
+                dense=True,
+                outlined=True,
+                classes="pt-1 mt-1",
+            )
+            vuetify.VSelect(
+                # What to do when something is selected
+                v_model=("numerics_grad_recon_idx", 0),
+                # The items in the list
+                items=("representations_grad_recon",LNumericsGradRecon),
+                # the name of the list box
+                label="MUSCL Spatial Gradients",
+                hide_details=True,
+                dense=True,
+                outlined=True,
+                classes="pt-1 mt-1",
+            )
+            vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("CFL_idx", 1.0),
+                # the name of the list box
+                label="CFL",
+            )
+
+###############################################################
+# Numerics - state changes
+###############################################################
+@state.change("numerics_grad_idx")
+def update_material(numerics_grad_idx, **kwargs):
+    print("numerics spatial gradient selection: ",numerics_grad_idx)
+    # we want to call a submenu
+    #state.active_sub_ui = "submaterials_fluid"
+    # update config option value
+    jsonData['NUM_METHOD_GRAD']= GetJsonName(numerics_grad_idx,LNumericsGrad)
+
+@state.change("numerics_grad_recon_idx")
+def update_material(numerics_grad_recon_idx, **kwargs):
+    print("numerics MUSCL spatial gradient selection: ",numerics_grad_recon_idx)
+    # we want to call a submenu
+    #state.active_sub_ui = "submaterials_fluid"
+    # update config option value
+    jsonData['NUM_METHOD_GRAD_RECON']= GetJsonName(numerics_grad_recon_idx,LNumericsGradRecon)
+
+@state.change("CFL_idx")
+def update_material(CFL_idx, **kwargs):
+    print("CFL value: ",CFL_idx)
+    # we want to call a submenu
+    #state.active_sub_ui = "submaterials_fluid"
+    # update config option value
+    jsonData['CFL_NUMBER']= float(CFL_idx)

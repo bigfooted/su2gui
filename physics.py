@@ -1,11 +1,10 @@
 # physics gittree menu
 
-
 # definition of ui_card
 from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
-
+from materials import *
 
 state, ctrl = server.state, server.controller
 
@@ -21,9 +20,10 @@ LPhysicsComp= [
 
 # List: physics model: Turbulence: {SA, SST} selection
 LPhysicsTurbModel= [
-  {"text": "Laminar", "value": 0},
-  {"text": "Spalart-Allmaras", "value": 1},
-  {"text": "k-omega SST", "value": 2},
+  {"text": "Inviscid (Euler)", "value": 0},
+  {"text": "Laminar (Navier-Stokes)", "value": 1},
+  {"text": "Spalart-Allmaras (RANS)", "value": 2},
+  {"text": "k-omega SST (RANS)", "value": 3},
 ]
 
 # List: physics model: Spalart-Allmaras options: selection
@@ -83,7 +83,10 @@ def physics_card():
     with ui_card(title="Physics", ui_name="Physics"):
         print("## Physics Selection ##")
 
+        # todo: viscous flow on/off (Euler vs Navier-Stokes)
 
+        # 2 columns, left containing compressible/incompressible
+        # right containing energy on/off (for incompressible only)
         with vuetify.VRow(classes="pt-2"):
             with vuetify.VCol(cols="6"):
                 # first a list selection for compressible/incompressible
@@ -116,10 +119,6 @@ def physics_card():
                     hide_details=True,
                     dense=True,
                 )
-
-
-
-
 
         # Then a list selection for turbulence submodels
         vuetify.VSelect(
@@ -163,7 +162,7 @@ def update_physics_turb_sa(physics_turb_sa_idx, **kwargs):
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if value==True:
-          optionstring += str(key)
+          optionstring += str(key) + " "
     jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_ft2_idx")
@@ -275,12 +274,16 @@ def update_physics_comp(physics_comp_idx, **kwargs):
 
 
 
-    # select compressible or incompressible options for the boundary conditions
+    # select compressible or incompressible options for:
+    # - fluid model (density)
+    # - boundary conditions
     if (state.compressible==True):
+      state.LMaterialsFluid = LMaterialsFluidComp
       print("selecting compressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryInletType
       state.bcoutletsubtype = LBoundaryOutletType
     else:
+      state.LMaterialsFluid = LMaterialsFluidIncomp
       print("selecting incompressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryIncInletType
       state.bcoutletsubtype = LBoundaryIncOutletType
@@ -298,38 +301,46 @@ def update_physics_turb(physics_turb_idx, **kwargs):
     compressible=False
     if "INC" in (jsonData["SOLVER"]): compressible=False
 
-    # physics_turb_idx=0 = laminar
+    # physics_turb_idx=0 = Euler
     if (physics_turb_idx==0):
+        if (compressible==True):
+            jsonData['SOLVER']="EULER"
+            jsonData['KIND_TURB_SOLVER']="NONE"
+        else:
+            jsonData['SOLVER']="INC_EULER"
+            jsonData['KIND_TURB_SOLVER']="NONE"
+    # 1 = laminar
+    elif (physics_turb_idx==1):
         if (compressible==True):
             jsonData['SOLVER']="NAVIER_STOKES"
             jsonData['KIND_TURB_SOLVER']="NONE"
         else:
             jsonData['SOLVER']="INC_NAVIER_STOKES"
             jsonData['KIND_TURB_SOLVER']="NONE"
-
-    elif (physics_turb_idx==1):
-        if (compressible==True):
-            jsonData['SOLVER']="RANS"
-            jsonData['KIND_TURB_SOLVER']="SA"
-        else:
-            jsonData['SOLVER']="INC_RANS"
-            jsonData['KIND_TURB_SOLVER']="SA"
-
+    # 2 = turbulent - SA
     elif (physics_turb_idx==2):
         if (compressible==True):
             jsonData['SOLVER']="RANS"
+            jsonData['KIND_TURB_SOLVER']="SA"
+        else:
+            jsonData['SOLVER']="INC_RANS"
+            jsonData['KIND_TURB_SOLVER']="SA"
+    # 3 = turbulent - SST
+    elif (physics_turb_idx==3):
+        if (compressible==True):
+            jsonData['SOLVER']="RANS"
             jsonData['KIND_TURB_SOLVER']="SST"
         else:
             jsonData['SOLVER']="INC_RANS"
             jsonData['KIND_TURB_SOLVER']="SST"
 
-    if (physics_turb_idx == 1):
+    if (physics_turb_idx == 2):
         print("SA turbulence model activated")
         noSSTSelected=True
         state.noSST=True
         state.active_sub_ui = "subphysics_sa"
         state.submodeltext = "SA text"
-    elif (physics_turb_idx == 2):
+    elif (physics_turb_idx == 3):
         print("SST turbulence model activated")
         noSSTSelected=False
         state.noSST=False
@@ -342,6 +353,10 @@ def update_physics_turb(physics_turb_idx, **kwargs):
         state.active_sub_ui = "subphysics_none"
         state.submodeltext = "no model"
 
+
+###############################################################
+# PIPELINE SUBCARD : PHYSICS
+###############################################################
 # secondary card
 def physics_subcard():
     # also visible when physics is selected
