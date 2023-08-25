@@ -4,7 +4,7 @@ Delta v1..v2          - https://github.com/Kitware/trame/commit/8d7fd7d3f1136063
 This example reads a .vtm file, shows the boundaries in a git-tree, lights up the boundaries when you select the
 boundary in the git-tree, and when you select the internal element, you can still see the scalar fields.
 """
-import os, copy
+import os, copy, io
 import pandas as pd
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
@@ -35,6 +35,8 @@ from materials import *
 from numerics import *
 # gittree menu : import solver tab                                          #
 from solver import *
+# gittree menu : import initialization tab                                  #
+from initialization import *
 #############################################################################
 
 
@@ -128,7 +130,8 @@ state.solver_running = False
 #state.multiblockb1 = vtkMultiBlockDataSet()
 mb1 = vtkMultiBlockDataSet()
 state.su2_meshfile="mesh_out.su2"
-
+# 2D or 3D mesh
+state.mesh_dimension = 0
 colors = vtkNamedColors()
 
 
@@ -293,7 +296,15 @@ def actives_change(ids):
     if not selectedBoundary==None:
       state.selectedBoundaryName = selectedBoundary["name"]
     else:
-      state.selectedBoundaryName = "None"
+      # for 2D, show internal as default when we have not selected anything
+      if state.mesh_dimension == 2:
+        state.selectedBoundaryName = "internal"
+      else:
+        state.selectedBoundaryName = "None"
+
+    print("selected item = ",state.selectedBoundaryName)
+
+
 
     # nijso: hardcode internal as selected mesh
     #state.selectedBoundaryName = "internal"
@@ -304,21 +315,23 @@ def actives_change(ids):
     actorlist.InitTraversal()
 
     internal=False
-    print("selected item = ",state.selectedBoundaryName)
     if state.selectedBoundaryName=="internal":
         print("internal selected")
         internal=True
 
+    # we loop over all actors
     for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
         print("getnextactor: name =",actor.GetObjectName())
         if actor.GetObjectName() == state.selectedBoundaryName:
-            # current actor is selected, we switch it on
+            # current actor is selected, we highlight it
             actor.VisibilityOn()
             print("we have found the actor!")
             if (internal==False):
               # if it is not an internal, we highlight it in yellow
               actor.GetProperty().SetColor(colors.GetColor3d('yellow'))
+            else:
+               print("internal is true and selected")
         elif actor.GetObjectName()=="internal":
                 # current actor is internal but it is not selected, then we switch it off
                 print("actor is internal but not selected, we switch it off")
@@ -326,9 +339,11 @@ def actives_change(ids):
         else:
             # current actor is not selected and also not internal, then we switch it on but do not highlight
             if (internal==True):
+                print("***** actor is internal *****")
                 # then the actor is internal: switch off all other actors, only show this one
                 actor.VisibilityOff()
             else:
+              print("internal is not selected")
               # if we do not have internal selected, then show everything except internal
               actor.VisibilityOn()
               actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
@@ -508,6 +523,86 @@ def nijso_list_change():
 # FILES
 ###############################################################
 
+# ##### ascii restart file #####
+@state.change("restartFile")
+def load_client_files(restartFile, **kwargs):
+
+  print("loading restart file")
+  if restartFile is None:
+    return
+
+  # type(file) will always be bytes
+  file = ClientFile(restartFile)
+
+  filecontent = file.content.decode('utf-8')
+
+  f = filecontent.splitlines()
+
+  # put everything in df
+  df = pd.read_csv(io.StringIO('\n'.join(f)))
+
+  # check if the points and cells match
+
+  # construct the dataset_arrays
+  datasetArrays = []
+  counter=0
+  for key in df.keys():
+    name = key
+    ArrayObject = vtk.vtkFloatArray()
+    ArrayObject.SetName(name)
+    # all components are scalars, no vectors for velocity
+    ArrayObject.SetNumberOfComponents(1)
+    # how many elements do we have?
+    nElems = len(df[name])
+    ArrayObject.SetNumberOfValues(nElems)
+    ArrayObject.SetNumberOfTuples(nElems)
+
+    # Nijso: TODO FIXME very slow!
+    for i in range(nElems):
+      ArrayObject.SetValue(i,df[name][i])
+
+    grid.GetPointData().AddArray(ArrayObject)
+
+    datasetArrays.append(
+            {
+                "text": name,
+                "value": counter,
+                "range": [df.min()[key],df.max()[key]],
+                "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
+            }
+    )
+    counter += 1
+
+
+  # we should now have the scalars available...
+  defaultArray = datasetArrays[0]
+  state.dataset_arrays = datasetArrays
+  print("dataset = ",datasetArrays)
+  print("dataset_0 = ",datasetArrays[0])
+  print("dataset_0 = ",datasetArrays[0].get('text'))
+
+  mesh_mapper.SetInputData(grid)
+  mesh_actor.SetMapper(mesh_mapper)
+  renderer.AddActor(mesh_actor)
+
+  mesh_mapper.SelectColorArray(defaultArray.get('text'))
+  mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
+  mesh_mapper.SetScalarVisibility(True)
+  mesh_mapper.SetUseLookupTableScalarRange(True)
+
+  # Mesh: Setup default representation to surface
+  mesh_actor.GetProperty().SetRepresentationToSurface()
+  mesh_actor.GetProperty().SetPointSize(1)
+  mesh_actor.GetProperty().EdgeVisibilityOff()
+
+  # We have loaded a mesh, so enable the exporting of files
+  state.export_disabled = False
+
+  renderer.ResetCamera()
+  ctrl.view_update()
+  pass
+
+
 
 # load SU2 .su2 mesh file
 @state.change("file_upload")
@@ -578,9 +673,11 @@ def load_client_files(file_upload, **kwargs):
            y = float(line[1])
 
            if (NDIME==2):
+             state.mesh_dimension = 2
              # 2D is always x-y plane (z=0)
              z = float(0.0)
            else:
+             state.mesh_dimension = 3
              z = float(line[2])
            pts.InsertNextPoint(x,y,z)
 
@@ -900,6 +997,8 @@ with SinglePageWithDrawerLayout(server) as layout:
         materials_subcard()
         #
         numerics_card()
+        #
+        initialization_card()
         #
         #new_boundary_card()
         mesh_card()

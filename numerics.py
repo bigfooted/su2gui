@@ -1,6 +1,6 @@
 # numerics gittree menu
 
-# note that in the main menu, we need to call add the following:
+# note that in the main menu, we need to call/add the following:
 # 1) from numerics import *
 # 2) call numerics_card() in SinglePageWithDrawerLayout
 # 3) define a node in the gittree (pipeline)
@@ -41,7 +41,7 @@ def numerics_card():
         with vuetify.VRow(classes="pt-2"):
           with vuetify.VCol(cols="10"):
 
-            # Then a list selection for turbulence submodels
+            # Then a list selection for numerics submodels
             vuetify.VSelect(
                 # What to do when something is selected
                 v_model=("numerics_grad_idx", 0),
