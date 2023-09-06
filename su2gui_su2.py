@@ -27,6 +27,8 @@ from uicard import ui_card, server
 # We have defined each of the tabs in its own module and we import it here. #
 # We then call the card in the SinglePageWithDrawerLayout() function.       #
 #############################################################################
+# gittree menu : import mesh tab                                            #
+from mesh import *
 # gittree menu : import physics tab                                         #
 from physics import *
 # gittree menu : import materials tab                                       #
@@ -104,14 +106,42 @@ renderWindowInteractor.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
 renderer.ResetCamera()
 
 # -----------------------------------------------------------------------------
+# SU2 setup
+# -----------------------------------------------------------------------------
+# names of fields for restart file
+
+# incompressible fields
+Fields_INC_0=["PointID","x","y"]
+Fields_INC_STATE="Pressure"
+Fields_INC_2D=["Velocity_x","Velocity_y"]
+Fields_INC_3D="Velocity_z"
+Fields_INC_TEMP="Temperature"
+
+# compressible fields
+Fields_0=["PointID","x","y"]
+Fields_STATE="Density"
+Fields_2D=["Momentum_x","Momentum_y"]
+Fields_3D="Momentum_z"
+Fields_ENERGY="Energy"
+
+# turbulence fields
+Fields_SA=["Nu_Tilde"]
+Fields_SST=["Turb_Kin_Energy","Omega"]
+
+# -----------------------------------------------------------------------------
 # Trame setup
 # -----------------------------------------------------------------------------
 
 state, ctrl = server.state, server.controller
 
+# initial state for the initialization gittree
+state.field_state_name = Fields_INC_STATE
+state.field_energy_name = Fields_INC_TEMP
+state.field_velocity_name = Fields_INC_2D
+
+# Boundary Condition Dictionary List
 state.BCDictList = []
-# important for the interactive ui
-state.setdefault("active_ui", None)
+
 
 # disable the export file button
 state.export_disabled=True
@@ -227,12 +257,13 @@ pipeline = PipelineManager(state, "git_tree")
 
 # main menu, note that only these are collapsible
 # These are head nodes. boundary for instance are all subnodes sharing one head node
+# note that subui points to a submenu. We can set it to an existing submenu, or point to "none"
 # 1
 id_root       = pipeline.add_node(                      name="Mesh",
                                   subui="none", visible=1, color="#9C27B0", actions=["collapsible"])
 # 2
 id_physics    = pipeline.add_node(parent=id_root,       name="Physics",
-                                  subui="subphysics", visible=1, color="#42A5F5", actions=["collapsible"])
+                                  subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
 # 3
 id_materials  = pipeline.add_node(parent=id_physics,    name="Materials",
                                   subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
@@ -255,9 +286,15 @@ id_fileio     = pipeline.add_node(parent=id_monitor,    name="File I/O",
 id_solver     = pipeline.add_node(parent=id_fileio,    name="Solver",
                                   subui="none", visible=1, color="#00ACC1", actions=["collapsible"])
 
+# first node is active initially
+state.selection=["1"]
+# important for the interactive ui
+state.setdefault("active_ui", "Mesh")
+state.setdefault("active_subui", "submesh_none")
+
 pipeline.update()
 
-state.active_id=0
+state.active_id=1
 state.active_sub_ui = "none"
 
 state.counter = 0
@@ -267,13 +304,13 @@ state.counter = 0
 # -----------------------------------------------------------------------------
 
 def actives_change(ids):
-    print("ids = ",ids)
+    print("actives_change::ids = ",ids)
     _id = ids[0]
 
     state.active_id = _id
 
     state.boundaryText=_id
-    print("active id = ",state.active_id)
+    print("actives_change::active id = ",state.active_id)
     # get boundary name belonging to ID
     _name = pipeline.get_node(_id)
     # get the headnode of this node
@@ -303,8 +340,6 @@ def actives_change(ids):
         state.selectedBoundaryName = "None"
 
     print("selected item = ",state.selectedBoundaryName)
-
-
 
     # nijso: hardcode internal as selected mesh
     #state.selectedBoundaryName = "internal"
@@ -366,6 +401,7 @@ def actives_change(ids):
 ###############################################################
 state.meshText="meshtext"
 state.boundaryText="boundtext"
+state.selectedBoundaryName = "internal"
 
 def boundary_card():
     with ui_card(title="Boundary", ui_name="Boundaries"):
@@ -377,21 +413,11 @@ def boundary_card():
         )
 
 
-def mesh_card():
-    with ui_card(title="Mesh", ui_name="Mesh"):
-        print("## Mesh Selection ##")
-        vuetify.VTextarea(
-                label="mesh info:",
-                rows="5",
-                v_model=("meshText", "blablabla"),
-        )
-
-
 # export su2 file
 def export_files_01(su2_filename):
     print("********** export_files_01 **********\n")
       # add the filename to the json database
-    jsonData['MESH_FILENAME'] = su2_filename
+    state.jsonData['MESH_FILENAME'] = su2_filename
     export_files(mb1,su2_filename)
 
 
@@ -420,19 +446,56 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     color_by_array(mesh_actor, array)
     ctrl.view_update()
 
-@state.change("active_sub_ui")
-def update_active_sub_ui(active_sub_ui, **kwargs):
-    print("change active_sub_ui = ",active_sub_ui)
-    if not(state.active_id ==0):
+# every time we change the main gittree ("ui"), we end up here
+# we need to update the ui because it might have changed due to changes
+# in other git nodes
+#
+@state.change("active_ui")
+def update_active_ui(active_ui, **kwargs):
+    print("update_active_ui:: ",active_ui)
+
+    if not(state.active_id == 0):
       # get boundary name belonging to ID
       _name = pipeline.get_node(state.active_id)['name']
-      print("name=",_name)
-      if (_name=="Physics"):
-        pipeline.update_node_value("Physics","subui",active_sub_ui)
+      print("update_active_ui::name=",_name)
 
-      #array = state.dataset_arrays[mesh_color_array_idx]
-      #print("array = ",array)
-      #color_by_array(mesh_actor, array)
+      if (_name=="Physics"):
+        print("update node physics")
+        #pipeline.update_node_value("Physics","subui",active_ui)
+      elif (_name=="Initialization"):
+        print("update node Initialization")
+        #pipeline.update_node_value("Initialization","subui",active_ui)
+        # update because it might be changed elsewhere
+        initialization_card()
+
+      ctrl.view_update()
+
+#
+# every time we change the main gittree ("ui"), we end up here
+# we have to set the correct "subui" again from the last visit.
+@state.change("active_sub_ui")
+def update_active_sub_ui(active_sub_ui, **kwargs):
+    print("update_active_sub_ui:: ",active_sub_ui)
+
+    if not(state.active_id == 0):
+      _name = pipeline.get_node(state.active_id)['name']
+      print("update_active_sub_ui::parent name=",_name)
+
+    print("choice = ",state.initial_option_idx)
+
+    if not(state.active_id == 0):
+      # get boundary name belonging to ID
+      _name = pipeline.get_node(state.active_id)['name']
+      print("update_active_sub_ui::name=",_name)
+      if (_name=="Physics"):
+        print("update node physics")
+        pipeline.update_node_value("Physics","subui",active_sub_ui)
+      elif (_name=="Initialization"):
+        print("update node Initialization")
+        pipeline.update_node_value("Initialization","subui",active_sub_ui)
+        # necessary?
+        #initialization_subcard()
+
       ctrl.view_update()
 
 
@@ -469,7 +532,7 @@ def nijso_list_change():
     if (state.counter==2):
       print("counter=",state.counter)
     with open('config_new.json','w') as jsonOutputFile:
-        json.dump(jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
+        json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
 
     # now convert the json file to a cfg file
     with open('config_new.cfg','w') as f:
@@ -485,8 +548,8 @@ def nijso_list_change():
       f.write("% SU2 version:                                                                 %\n")
       f.write("%                                                                              %\n")
       f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-      #for k in jsonData:
-      for attribute, value in jsonData.items():
+      #for k in state.jsonData:
+      for attribute, value in state.jsonData.items():
         print(attribute, value)
         # convert boolean
         if isinstance(value, bool):
@@ -610,10 +673,10 @@ def load_client_files(file_upload, **kwargs):
     global pipeline
     # remove the added boundary conditions in the pipeline
 
-    print("***************************************")
+    #print("***************************************")
     pipeline.remove_right_subnode("Boundaries")
-    print("***************************************")
-    print("pipeline=",pipeline)
+    #print("***************************************")
+    #print("pipeline=",pipeline)
 
     del mesh_actor_list[:]
 
@@ -846,6 +909,13 @@ def load_client_files(file_upload, **kwargs):
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
     print("updated pipeline",pipeline)
 
+
+    # fill the boundary conditions with initial boundary condition type
+    for bcName in boundaryNames:
+        state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
+
+
+
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
@@ -868,6 +938,8 @@ def on_action(event):
 def on_event(event):
     print(event)
 
+
+
 # git tree in the left drawer
 def pipeline_widget():
     trame.GitTree(
@@ -878,6 +950,8 @@ def pipeline_widget():
         action_size=25,
         width=350,
         action=(on_action, "[$event]"),
+        # default active is first node
+        actives = ("selection",state.selection),
         actives_change=(actives_change, "[$event]"),
     )
 
@@ -988,22 +1062,38 @@ with SinglePageWithDrawerLayout(server) as layout:
         # simple divider
         vuetify.VDivider(classes="mb-2")
         #
+        print("initialize boundary card")
         boundary_card()
         #
+        print("initialize physics card")
         physics_card()
         physics_subcard()
         #
+        print("initialize materials card")
         materials_card()
-        materials_subcard()
+        #materials_subcard()
         #
+        print("initialize numerics card")
         numerics_card()
         #
+        print("initialize initialization card")
         initialization_card()
+        initialization_subcard()
         #
-        #new_boundary_card()
+        print("initialize mesh card")
         mesh_card()
+        mesh_subcard()
         #
+        print("initialize solver card")
         solver_card()
+        #
+
+        # dialog cards - these are predefined 'popup windows'
+        # material dialogs
+        materials_dialog_card_fluid()
+        materials_dialog_card_viscosity()
+        materials_dialog_card_heatcapacity()
+        materials_dialog_card_conductivity()
         #
         pass
 
@@ -1016,14 +1106,23 @@ with SinglePageWithDrawerLayout(server) as layout:
         ):
 
             #view = vtk_widgets.VtkRemoteView(renderWindow)
+            print("setting up view")
             view = vtk_widgets.VtkRemoteView(renderWindow)
+            print("view update")
             ctrl.view_update = view.update
             ctrl.view_reset_camera = view.reset_camera
             ctrl.on_server_ready.add(view.update)
+            print("end view update")
+
+
+
+    print("finalizing drawer layout")
 
 # -----------------------------------------------------------------------------
 # CLI
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
+
     server.start()
+    print("su2gui server ended...")

@@ -382,7 +382,7 @@ def mesh_card():
 def export_files_01(su2_filename):
     print("********** export_files_01 **********\n")
       # add the filename to the json database
-    jsonData['MESH_FILENAME'] = su2_filename
+    state.jsonData['MESH_FILENAME'] = su2_filename
     export_files(mb1,su2_filename)
 
 
@@ -460,7 +460,7 @@ def nijso_list_change():
     if (state.counter==2):
       print("counter=",state.counter)
     with open('config_new.json','w') as jsonOutputFile:
-        json.dump(jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
+        json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
 
     # now convert the json file to a cfg file
     with open('config_new.cfg','w') as f:
@@ -476,8 +476,8 @@ def nijso_list_change():
       f.write("% SU2 version:                                                                 %\n")
       f.write("%                                                                              %\n")
       f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-      #for k in jsonData:
-      for attribute, value in jsonData.items():
+      #for k in state.jsonData:
+      for attribute, value in state.jsonData.items():
         print(attribute, value)
         # convert boolean
         if isinstance(value, bool):

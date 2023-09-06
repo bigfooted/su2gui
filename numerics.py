@@ -82,7 +82,7 @@ def update_material(numerics_grad_idx, **kwargs):
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
-    jsonData['NUM_METHOD_GRAD']= GetJsonName(numerics_grad_idx,LNumericsGrad)
+    state.jsonData['NUM_METHOD_GRAD']= GetJsonName(numerics_grad_idx,LNumericsGrad)
 
 @state.change("numerics_grad_recon_idx")
 def update_material(numerics_grad_recon_idx, **kwargs):
@@ -90,7 +90,7 @@ def update_material(numerics_grad_recon_idx, **kwargs):
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
-    jsonData['NUM_METHOD_GRAD_RECON']= GetJsonName(numerics_grad_recon_idx,LNumericsGradRecon)
+    state.jsonData['NUM_METHOD_GRAD_RECON']= GetJsonName(numerics_grad_recon_idx,LNumericsGradRecon)
 
 @state.change("CFL_idx")
 def update_material(CFL_idx, **kwargs):
@@ -98,4 +98,4 @@ def update_material(CFL_idx, **kwargs):
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
-    jsonData['CFL_NUMBER']= float(CFL_idx)
+    state.jsonData['CFL_NUMBER']= float(CFL_idx)

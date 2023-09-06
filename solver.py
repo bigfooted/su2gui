@@ -50,7 +50,7 @@ def update_material(Iter_idx, **kwargs):
     #state.active_sub_ui = "submaterials_fluid"
     #
     # update config option value
-    jsonData['ITER']= int(Iter_idx)
+    state.jsonData['ITER']= int(Iter_idx)
 
 def su2_play():
     print("Start SU2 solver!"),

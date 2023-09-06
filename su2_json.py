@@ -1,7 +1,12 @@
 
 # ##################################### JSON ##############################
+from uicard import ui_card, ui_subcard, server
+
 import json,jsonschema
 from jsonschema import validate, ValidationError, SchemaError
+
+state, ctrl = server.state, server.controller
+
 # ##################################### JSON ##############################
 
 #class jsonManager:
@@ -17,12 +22,12 @@ from jsonschema import validate, ValidationError, SchemaError
 # Opening JSON file, which is a python dictionary
 def read_json_data(filenam):
   with open(filenam,"r") as jsonFile:
-    jsonData = json.load(jsonFile)
-  return jsonData
+    state.jsonData = json.load(jsonFile)
+  return state.jsonData
 # ##################################### JSON ##############################
 
 # Read the default values for the SU2 configuration.
-jsonData = read_json_data('config.json')
+state.jsonData = read_json_data('config.json')
 
 
 # get the json name from the dictionary

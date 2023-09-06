@@ -13,7 +13,9 @@ server = get_server()
 
 
 # Main definition of the card for all gittree items.
+# note that "active_ui" points to a state change
 def ui_card(title, ui_name):
+    print("##### def ui_card =",ui_name)
     with vuetify.VCard(v_show=f"active_ui == '{ui_name}'"):
         vuetify.VCardTitle(
             title,
@@ -27,7 +29,9 @@ def ui_card(title, ui_name):
 
 # subcard, appearing below the main card. Visible depending on the
 # selection in the main card
+# note that "active_sub_ui" points to a state change
 def ui_subcard(title, sub_ui_name):
+    print("##### def ui_subcard =",sub_ui_name)
     with vuetify.VCard(v_show=f"active_sub_ui == '{sub_ui_name}'"):
         vuetify.VCardTitle(
             title,
