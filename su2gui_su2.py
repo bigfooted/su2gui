@@ -8,6 +8,7 @@ import os, copy, io
 import pandas as pd
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
+from trame.widgets import markdown
 
 from trame.ui.vuetify import SinglePageWithDrawerLayout
 #from trame.ui.vuetify import SinglePageLayout
@@ -138,6 +139,7 @@ state, ctrl = server.state, server.controller
 state.field_state_name = Fields_INC_STATE
 state.field_energy_name = Fields_INC_TEMP
 state.field_velocity_name = Fields_INC_2D
+
 
 # Boundary Condition Dictionary List
 state.BCDictList = []
@@ -521,6 +523,9 @@ state.SAOptions={"NONE":True,
 
 # initial value for the materials-fluidmodel list
 state.LMaterialsFluid = LMaterialsFluidComp
+state.LMaterialsViscosity = LMaterialsViscosityComp
+state.LMaterialsConductivity = LMaterialsConductivityComp
+state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 
 # save the new json configuration file #
 # TODO: why do all the states get checked at startup?
@@ -998,6 +1003,7 @@ with SinglePageWithDrawerLayout(server) as layout:
     # text inside the toolbar
     layout.title.set_text("SU2 GUI")
 
+
     with layout.toolbar:
 
         # vertical spacer inside the toolbar
@@ -1092,9 +1098,19 @@ with SinglePageWithDrawerLayout(server) as layout:
         # material dialogs
         materials_dialog_card_fluid()
         materials_dialog_card_viscosity()
-        materials_dialog_card_heatcapacity()
+        materials_dialog_card_cp()
         materials_dialog_card_conductivity()
         #
+        # set all physics states from the json file
+        set_json_physics()
+
+        #print("setting physics energy idx using ",state.jsonData['INC_ENERGY_EQUATION'])
+        #state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']=="YES")
+        #print("setting physics energy idx = ",state.physics_energy_idx)
+        #state.physics_comp_idx = 0
+        #state.dirty('physics_comp_idx')
+        state.dirty('jsonData')
+
         pass
 
     print("setting up layout content")

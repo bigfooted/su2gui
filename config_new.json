@@ -14,11 +14,18 @@
     "CONV_FILENAME": "history",
     "CONV_RESIDUAL_MINVAL": -14,
     "CONV_STARTITER": 10,
-    "FLUID_MODEL": "STANDARD_AIR",
+    "CP_POLYCOEFFS": [
+        1.2e-05,
+        0,
+        0,
+        0,
+        0
+    ],
+    "FLUID_MODEL": "CONSTANT_DENSITY",
     "FREESTREAM_DENSITY": 1.2,
     "INC_DENSITY_INIT": 1.2886,
     "INC_DENSITY_MODEL": "CONSTANT",
-    "INC_ENERGY_EQUATION": "YES",
+    "INC_ENERGY_EQUATION": true,
     "INC_INLET_DAMPING": 0.1,
     "INC_INLET_TYPE": "VELOCITY_INLET",
     "INC_NONDIM": "DIMENSIONAL",
@@ -36,7 +43,7 @@
         0.0
     ],
     "KIND_TRANS_MODEL": "NONE",
-    "KIND_TURB_SOLVER": "NONE",
+    "KIND_TURB_SOLVER": "SA",
     "KT_POLYCOEFFS": [
         0.0,
         0.0,
@@ -89,13 +96,13 @@
     "MESH_FORMAT": "SU2",
     "MU_CONSTANT": 1.18e-05,
     "MU_POLYCOEFFS": [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
+        1.2e-05,
+        0,
+        0,
+        0,
+        0
     ],
-    "MU_REF": 1.716e-05,
+    "MU_REF": 1.18e-05,
     "MU_T_REF": 273.15,
     "NUM_METHOD_GRAD": "GREEN_GAUSS",
     "NUM_METHOD_GRAD_RECON": "GREEN_GAUSS",
@@ -108,21 +115,21 @@
     "PRANDTL_TURB": 0.9,
     "RESTART_FILENAME": "restart",
     "RESTART_SOL": true,
-    "SA_OPTIONS": "EXPERIMENTAL ",
+    "SA_OPTIONS": "COMPRESSIBILITY ROTATION NEGATIVE EXPERIMENTAL ",
     "SCREEN_OUTPUT": [
         "INNER_ITER",
         "RMS_DENSITY",
         "RMS_PRESSURE"
     ],
     "SOLUTION_FILENAME": "solution",
-    "SOLVER": "INC_NAVIER_STOKES",
-    "SPECIFIC_HEAT_CP": 1005.0,
+    "SOLVER": "INC_RANS",
+    "SPECIFIC_HEAT_CP": 1.18e-05,
     "SST_OPTIONS": "V1994m",
     "SUTHERLAND_CONSTANT": 110.4,
     "SYSTEM_MEASUREMENTS": "SI",
     "TABULAR_FORMAT": "CSV",
     "THERMAL_CONDUCTIVITY_CONSTANT": 1005.0,
     "TURBULENT_CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL_TURB",
-    "VISCOSITY_MODEL": "POLYNOMIAL_VISCOSITY",
+    "VISCOSITY_MODEL": "CONSTANT_VISCOSITY",
     "VOLUME_FILENAME": "flow"
 }

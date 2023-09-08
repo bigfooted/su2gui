@@ -21,6 +21,7 @@ state, ctrl = server.state, server.controller
 # ##################################### JSON ##############################
 # Opening JSON file, which is a python dictionary
 def read_json_data(filenam):
+  print("jsondata::opening json file and reading data")
   with open(filenam,"r") as jsonFile:
     state.jsonData = json.load(jsonFile)
   return state.jsonData
@@ -30,11 +31,22 @@ def read_json_data(filenam):
 state.jsonData = read_json_data('config.json')
 
 
-# get the json name from the dictionary
+# get the "json" name from the dictionary
 def GetJsonName(value,List):
+  print("value=",value)
+  print("list=",List)
   entry = [item for item in List if item["value"] == value]
   return(entry[0]["json"])
+
+# get the "value" from the dictionary
+def GetJsonIndex(value,List):
+  entry = [item for item in List if item["json"] == value]
+  return(int(entry[0]["value"]))
 
 def GetBCName(value,List):
   entry = [item for item in List if item["bcName"] == value]
   return(entry[0])
+
+
+def SetGUIStateWithJson():
+  print("setting GUI state with Json variable")

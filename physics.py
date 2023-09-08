@@ -8,6 +8,7 @@ from materials import *
 import copy
 state, ctrl = server.state, server.controller
 
+
 ############################################################################
 # Physics models - list options #
 ############################################################################
@@ -32,22 +33,15 @@ LPhysicsTurbSAOptions= [
         {"text": "Negative", "value": 1,"json":"NEGATIVE"},
         {"text": "Edwards", "value": 2,"json":"EDWARDS"},
         ]
-#LPhysicsTurbSAOptions= [
-#        {"text": "Negative", "value": 0},
-#        {"text": "Edwards", "value": 1},
-#        {"text": "FT2", "value": 2},
-#        {"text": "QCR2000", "value": 3},
-#        {"text": "Compressibility", "value": 4},
-#        {"text": "Rotation", "value": 5},
-#        {"text": "BCM", "value": 6},
-#        {"text": "Experimental", "value": 7},
-#        ]
+
 
 # List: physics model: SST options
 LPhysicsTurbSSTOptions= [
         {"text": "V1994m", "value": 0, "json":"V1994m"},
         {"text": "V2003m", "value": 1, "json":"V2003m"},
         ]
+
+
 
 # compressible inlet boundary types
 # json name: INLET_TYPE
@@ -74,6 +68,53 @@ LBoundaryIncOutletType= [
         {"text": "Pressure", "value": 0,"json":"PRESSURE_OUTLET"},
         {"text": "Mass flow", "value": 1,"json":"VELOCITY_OUTLET"},
 ]
+
+
+
+
+# set the state variables using the json data
+def set_json_physics():
+  # energy equation on/off
+  state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']=="YES")
+  state.dirty('physics_energy_idx')
+
+  # compressible or incompressible
+  state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
+  print("       ################# compressible= ",state.physics_comp_idx)
+  state.dirty('physics_comp_idx')
+
+  # turbulence model
+  state.physics_turb_idx = 0
+  state.physics_turb_sst_idx = 0
+  state.physics_turb_sa_idx = 0
+  state.physics_turb_sa_ft2_idx = 0
+  state.physics_turb_sa_qcr2000_idx = 0
+  state.physics_turb_sa_compressibility_idx = 0
+  state.physics_turb_sa_rotation_idx = 0
+  state.physics_turb_sa_bcm_idx = 0
+
+  if "RANS" in state.jsonData['KIND_TURB_SOLVER']:
+    if state.jsonData['KIND_TURB_SOLVER'] == "SST":
+      state.physics_turb_idx = 3
+      state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
+    else:
+      # must be SA
+      state.physics_turb_idx = 2
+      state.physics_turb_sa_idx= GetJsonIndex(state.jsonData['SA_OPTIONS'],LPhysicsTurbSSTOptions)
+      # SA submodels
+      state.physics_turb_sa_ft2_idx= bool("WITHFT2" in state.jsonData['SA_OPTIONS'])
+      state.physics_turb_sa_qcr2000_idx= bool("QCR200" in state.jsonData['SA_OPTIONS'])
+      state.physics_turb_sa_compressibility_idx= bool("COMPRESSIBILITY" in state.jsonData['SA_OPTIONS'])
+      state.physics_turb_sa_rotation_idx= bool("ROTATION" in state.jsonData['SA_OPTIONS'])
+      state.physics_turb_sa_bcm_idx= bool("BCM" in state.jsonData['SA_OPTIONS'])
+
+  state.dirty('physics_turb_idx')
+  state.dirty('physics_turb_sa_ft2_idx')
+  state.dirty('physics_turb_sa_qcr2000_idx')
+  state.dirty('physics_turb_sa_compressibility_idx')
+  state.dirty('physics_turb_sa_rotation_idx')
+  state.dirty('physics_turb_sa_bcm_idx')
+  state.dirty('physics_turb_sst_idx')
 
 
 ###############################################################
@@ -119,6 +160,7 @@ def physics_card():
         # Then a list selection for turbulence submodels
         vuetify.VSelect(
             # What to do when something is selected
+            # the value is the default
             v_model=("physics_turb_idx", 0),
             # The items in the list
             items=("representations_turb",LPhysicsTurbModel),
@@ -233,14 +275,17 @@ def update_physics_turb_sa(physics_turb_sa_bcm_idx, **kwargs):
 ###############################################################
 @state.change("physics_energy_idx")
 def update_physics_energy(physics_energy_idx, **kwargs):
+
     print("     energy selection: ",physics_energy_idx)
     # can only be activated/deactivated for incompressible
-    state.energy = bool(physics_energy_idx)
+    #state.energy = bool(state.physics_energy_idx)
 
-    if (state.energy==True):
-      state.jsonData['INC_ENERGY_EQUATION']= "YES"
-    else:
-      state.jsonData['INC_ENERGY_EQUATION']= "NO"
+
+    state.jsonData['INC_ENERGY_EQUATION']= bool(physics_energy_idx)
+    #if (state.energy==True):
+    #  state.jsonData['INC_ENERGY_EQUATION']= "YES"
+    #else:
+    #  state.jsonData['INC_ENERGY_EQUATION']= "NO"
 
     # update jsonData
     state.dirty("jsonData")
@@ -275,12 +320,15 @@ def update_physics_comp(physics_comp_idx, **kwargs):
 
 
     # select compressible or incompressible options for:
-    # - fluid model (density)
+    # - fluid materials (density)
+    # - fluid materials (viscosity)
     # - boundary conditions
     if (state.compressible==True):
       print("       selecting compressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidComp
       state.field_state_name = "Density"
+      state.LMaterialsViscosity = LMaterialsViscosityComp
+      state.LMaterialsConductivity = LMaterialsConductivityComp
       print("       selecting compressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryInletType
       state.bcoutletsubtype = LBoundaryOutletType
@@ -288,6 +336,8 @@ def update_physics_comp(physics_comp_idx, **kwargs):
       print("       selecting incompressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidIncomp
       state.field_state_name = "Pressure"
+      state.LMaterialsViscosity = LMaterialsViscosityIncomp
+      state.LMaterialsConductivity = LMaterialsConductivityIncomp
       print("       selecting incompressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryIncInletType
       state.bcoutletsubtype = LBoundaryIncOutletType
