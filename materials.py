@@ -185,6 +185,50 @@ def materials_dialog_card_fluid():
                 label=("jsonData['THERMODYNAMIC_PRESSURE']",100000.0),
                 disabled=True,
               )
+
+        # note that for ideal gases, pressure comes from rho_infty*T_infty*R
+        # and density comes from P=rho*R*T
+        # with R = <R>/M the molecular weight M and universal gas constant <R>
+        with vuetify.VContainer(fluid=True, v_if=("jsonData['FLUID_MODEL']=='STANDARD_AIR' ")):
+          # ####################################################### #
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                #v_model=("materials_inc_density_init_idx", 1.2),
+                # the name of the list box
+                label="Gas Constant: 287.058 [J/kg.K]",
+              )
+
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                #v_model=("materials_inc_temperature_init_idx", 293.15),
+                # the name of the list box
+                label="Gamma: 1.4 [-]",
+              )
+
+        with vuetify.VContainer(fluid=True, v_if=("jsonData['FLUID_MODEL']=='IDEAL_GAS' ")):
+          # ####################################################### #
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("materials_gamma_idx", 1.4),
+                # the name of the list box
+                label="Gamma",
+              )
+
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("materials_gas_constant_idx", 287.15),
+                # the name of the list box
+                label="Specific gas constant [J/kg.K]",
+              )
+
         with vuetify.VCardText():
           vuetify.VBtn("close", click=update_materials_dialog_card_fluid)
 
@@ -568,13 +612,18 @@ def update_material(materials_fluid_idx, **kwargs):
 
     # note that fluid model determines Cp
     # Cp is constant, except when fluid model is CIncIdealGasPoly
-
     # update config option value
     state.jsonData['FLUID_MODEL']= GetJsonName(materials_fluid_idx,state.LMaterialsFluid)
     if (state.jsonData['FLUID_MODEL'] == "INC_IDEAL_GAS_POLY"):
        state.LMaterialsHeatCapacity = LMaterialsHeatCapacityPoly
     else:
        state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
+
+    # for incompressible, constant density, we set the inc_density_model
+    if (state.jsonData['FLUID_MODEL'] == "CONSTANT_DENSITY"):
+      state.jsonData['INC_DENSITY_MODEL']= 'CONSTANT'
+    else:
+      state.jsonData['INC_DENSITY_MODEL']= 'VARIABLE'
 
     print("FLUID_MODEL=",state.jsonData['FLUID_MODEL'])
 
@@ -644,9 +693,8 @@ def update_material(materials_inc_density_init_idx, **kwargs):
     #if state.active_ui=="Materials":
     #  state.active_sub_ui = "submaterials_fluid"
 
-
     # update config option value, note that density comes from freestream density
-    state.jsonData['IND_DENSITY_INIT']= materials_inc_density_init_idx
+    state.jsonData['INC_DENSITY_INIT']= materials_inc_density_init_idx
 
     computePressure()
     state.dirty('jsonData')
@@ -836,3 +884,17 @@ def update_material(materials_polynomial_kt_a4_idx, **kwargs):
     print("Polynomial kt a4 value: ",materials_polynomial_kt_a4_idx)
     # update config option value
     state.jsonData['KT_POLYCOEFFS'][4]= materials_polynomial_kt_a4_idx
+
+# compressible gamma
+@state.change("materials_gamma_idx")
+def update_material(materials_gamma_idx, **kwargs):
+    print("gamma value: ",materials_gamma_idx)
+    # update config option value
+    state.jsonData['GAMMA_VALUE']= materials_gamma_idx
+
+# compressible specific gas constant
+@state.change("materials_gas_constant_idx")
+def update_material(materials_gas_constant_idx, **kwargs):
+    print("gamma value: ",materials_gas_constant_idx)
+    # update config option value
+    state.jsonData['GAS_CONSTANT']= materials_gas_constant_idx

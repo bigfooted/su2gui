@@ -5,6 +5,9 @@ from uicard import ui_card, ui_subcard, server
 import json,jsonschema
 from jsonschema import validate, ValidationError, SchemaError
 
+from pathlib import Path
+BASE = Path(__file__).parent
+
 state, ctrl = server.state, server.controller
 
 # ##################################### JSON ##############################
@@ -28,7 +31,7 @@ def read_json_data(filenam):
 # ##################################### JSON ##############################
 
 # Read the default values for the SU2 configuration.
-state.jsonData = read_json_data('config.json')
+state.jsonData = read_json_data(BASE / "config.json")
 
 
 # get the "json" name from the dictionary

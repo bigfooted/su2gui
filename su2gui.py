@@ -4,14 +4,17 @@ Delta v1..v2          - https://github.com/Kitware/trame/commit/8d7fd7d3f1136063
 This example reads a .vtm file, shows the boundaries in a git-tree, lights up the boundaries when you select the
 boundary in the git-tree, and when you select the internal element, you can still see the scalar fields.
 """
-import os, copy
+import os, copy, io
 import pandas as pd
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
+from trame.widgets import markdown
 
 from trame.ui.vuetify import SinglePageWithDrawerLayout
 #from trame.ui.vuetify import SinglePageLayout
-from trame.widgets import vuetify, trame, vtk as vtk_widgets
+from trame.widgets import vuetify, vtk as vtk_widgets
+from trame.widgets import trame
+
 #import itertools
 from datetime import date
 # Import json setup for writing the config file in json and cfg file format.
@@ -27,14 +30,20 @@ from uicard import ui_card, server
 # We have defined each of the tabs in its own module and we import it here. #
 # We then call the card in the SinglePageWithDrawerLayout() function.       #
 #############################################################################
+# gittree menu : import mesh tab                                            #
+from mesh import *
 # gittree menu : import physics tab                                         #
 from physics import *
 # gittree menu : import materials tab                                       #
 from materials import *
 # gittree menu : import numerics tab                                        #
 from numerics import *
+# gittree menu : import boundaries tab                                      #
+from boundaries import *
 # gittree menu : import solver tab                                          #
 from solver import *
+# gittree menu : import initialization tab                                  #
+from initialization import *
 #############################################################################
 
 
@@ -43,6 +52,13 @@ from pathlib import Path
 BASE = Path(__file__).parent
 from trame.assets.local import LocalFileManager
 
+print("****************************************")
+print("* Base path = ", BASE                    )
+print("****************************************")
+
+filename_cfg_export = "config_new.su2"
+filename_json_export = "config_new.json"
+
 local_file_manager = LocalFileManager(__file__)
 local_file_manager.url("collapsed", BASE / "icons/chevron-up.svg")
 local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
@@ -50,13 +66,13 @@ local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
 import vtk
 # vtm reader
 #from paraview.vtk.vtkIOXML import vtkXMLMultiBlockDataReader
-from vtkmodules.web.utils import mesh as vtk_mesh
+#from vtkmodules.web.utils import mesh as vtk_mesh
 from vtkmodules.vtkCommonDataModel import vtkDataObject
-from vtkmodules.vtkFiltersCore import vtkContourFilter
+#from vtkmodules.vtkFiltersCore import vtkContourFilter #noqa
 
 from vtkmodules.vtkCommonColor import vtkNamedColors
 
-from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor
+#from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkDataSetMapper,
@@ -102,14 +118,46 @@ renderWindowInteractor.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
 renderer.ResetCamera()
 
 # -----------------------------------------------------------------------------
+# SU2 setup
+# -----------------------------------------------------------------------------
+# names of fields for restart file
+
+# incompressible fields
+Fields_INC_0=["PointID","x","y"]
+Fields_INC_STATE="Pressure"
+Fields_INC_2D=["Velocity_x","Velocity_y"]
+Fields_INC_3D="Velocity_z"
+Fields_INC_TEMP="Temperature"
+
+# compressible fields
+Fields_0=["PointID","x","y"]
+Fields_STATE="Density"
+Fields_2D=["Momentum_x","Momentum_y"]
+Fields_3D="Momentum_z"
+Fields_ENERGY="Energy"
+
+# turbulence fields
+Fields_SA=["Nu_Tilde"]
+Fields_SST=["Turb_Kin_Energy","Omega"]
+
+# -----------------------------------------------------------------------------
 # Trame setup
 # -----------------------------------------------------------------------------
 
 state, ctrl = server.state, server.controller
 
-state.BCDictList = []
-# important for the interactive ui
-state.setdefault("active_ui", None)
+# initial state for the initialization gittree
+state.field_state_name = Fields_INC_STATE
+state.field_energy_name = Fields_INC_TEMP
+state.field_velocity_name = Fields_INC_2D
+
+# which boundary is selected?
+state.selectedBoundaryName="none"
+state.selectedBoundaryIndex = 0
+
+# Boundary Condition Dictionary List (initial value)
+state.BCDictList = [{"bcName": "main_wall", "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0}]
+
 
 # disable the export file button
 state.export_disabled=True
@@ -128,7 +176,8 @@ state.solver_running = False
 #state.multiblockb1 = vtkMultiBlockDataSet()
 mb1 = vtkMultiBlockDataSet()
 state.su2_meshfile="mesh_out.su2"
-
+# 2D or 3D mesh
+state.mesh_dimension = 0
 colors = vtkNamedColors()
 
 
@@ -224,12 +273,13 @@ pipeline = PipelineManager(state, "git_tree")
 
 # main menu, note that only these are collapsible
 # These are head nodes. boundary for instance are all subnodes sharing one head node
+# note that subui points to a submenu. We can set it to an existing submenu, or point to "none"
 # 1
 id_root       = pipeline.add_node(                      name="Mesh",
                                   subui="none", visible=1, color="#9C27B0", actions=["collapsible"])
 # 2
 id_physics    = pipeline.add_node(parent=id_root,       name="Physics",
-                                  subui="subphysics", visible=1, color="#42A5F5", actions=["collapsible"])
+                                  subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
 # 3
 id_materials  = pipeline.add_node(parent=id_physics,    name="Materials",
                                   subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
@@ -252,11 +302,23 @@ id_fileio     = pipeline.add_node(parent=id_monitor,    name="File I/O",
 id_solver     = pipeline.add_node(parent=id_fileio,    name="Solver",
                                   subui="none", visible=1, color="#00ACC1", actions=["collapsible"])
 
+# first node is active initially
+state.selection=["1"]
+# important for the interactive ui
+state.setdefault("active_ui", "Mesh")
+# for submesh
+state.setdefault("active_subui", "submesh_none")
+state.setdefault("active_parent_ui", "submesh_none")
+state.setdefault("active_head_ui", "submesh_none")
+
 pipeline.update()
 
-state.active_id=0
+# which node in the gittree is active
+state.active_id=1
+# which sub ui menu is active
 state.active_sub_ui = "none"
 
+# this counter is used for the gittree items that are added and removed to/from the gittree
 state.counter = 0
 
 # -----------------------------------------------------------------------------
@@ -264,18 +326,36 @@ state.counter = 0
 # -----------------------------------------------------------------------------
 
 def actives_change(ids):
-    print("ids = ",ids)
+    print("actives_change::ids = ",ids)
     _id = ids[0]
 
     state.active_id = _id
 
-    state.boundaryText=_id
-    print("active id = ",state.active_id)
+
+    #state.boundaryText=_id
+    print("actives_change::active id = ",state.active_id)
     # get boundary name belonging to ID
     _name = pipeline.get_node(_id)
     # get the headnode of this node
     _headnode = _name['headnode']
     print("headnode=",_headnode)
+    print("active name =",_name['name'])
+
+
+    # if the headnode = active_name, then we have selected the head node
+    # if active_name != headnode, then we are a child of the headnode.
+    if _headnode == _name['name']:
+       print("   headnode = name")
+       # we are at a headnode, so we do not have a parent id
+       state.active_parent_ui = "none"
+       state.active_head_ui = _headnode
+    else:
+       print("   we are at child node")
+       state.active_parent_ui = _headnode
+       # so headnode is none
+       state.active_head_ui = "none"
+
+
 
     # check if we need to show a submenu
     _subui = _name['subui']
@@ -283,7 +363,6 @@ def actives_change(ids):
     state.active_sub_ui = _subui
     print("subnode=",_subui)
 
-    print("active name =",_name)
     print("children:",pipeline._children_map)
 
     _name = _name['name']
@@ -293,7 +372,18 @@ def actives_change(ids):
     if not selectedBoundary==None:
       state.selectedBoundaryName = selectedBoundary["name"]
     else:
-      state.selectedBoundaryName = "None"
+      # for 2D, show internal as default when we have not selected anything
+      if state.mesh_dimension == 2:
+        state.selectedBoundaryName = "internal"
+      else:
+        state.selectedBoundaryName = "None"
+
+    print("selected boundary name = ",state.selectedBoundaryName)
+
+    state.dirty('selectedBoundaryName')
+
+    # nijso: hardcode internal as selected mesh
+    #state.selectedBoundaryName = "internal"
 
     # get list of all actors, loop and color the selected actor
     actorlist = vtk.vtkActorCollection()
@@ -301,21 +391,24 @@ def actives_change(ids):
     actorlist.InitTraversal()
 
     internal=False
-    print("selected item = ",state.selectedBoundaryName)
     if state.selectedBoundaryName=="internal":
         print("internal selected")
         internal=True
 
+    # ##### show/highlight the actor based on selection ##### #
+    # we loop over all actors
     for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
         print("getnextactor: name =",actor.GetObjectName())
         if actor.GetObjectName() == state.selectedBoundaryName:
-            # current actor is selected, we switch it on
+            # current actor is selected, we highlight it
             actor.VisibilityOn()
             print("we have found the actor!")
             if (internal==False):
               # if it is not an internal, we highlight it in yellow
               actor.GetProperty().SetColor(colors.GetColor3d('yellow'))
+            else:
+               print("internal is true and selected")
         elif actor.GetObjectName()=="internal":
                 # current actor is internal but it is not selected, then we switch it off
                 print("actor is internal but not selected, we switch it off")
@@ -323,9 +416,11 @@ def actives_change(ids):
         else:
             # current actor is not selected and also not internal, then we switch it on but do not highlight
             if (internal==True):
+                print("***** actor is internal *****")
                 # then the actor is internal: switch off all other actors, only show this one
                 actor.VisibilityOff()
             else:
+              print("internal is not selected")
               # if we do not have internal selected, then show everything except internal
               actor.VisibilityOn()
               actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
@@ -338,6 +433,7 @@ def actives_change(ids):
     ctrl.view_update()
 
     print("state=",_id)
+
     # active ui is the head node of the gittree
     state.active_ui = _headnode
 
@@ -347,35 +443,9 @@ def actives_change(ids):
 # PIPELINE CARD : BOUNDARY
 ###############################################################
 state.meshText="meshtext"
-state.boundaryText="boundtext"
+#state.boundaryText="boundtext"
+#state.selectedBoundaryName = "internal"
 
-def boundary_card():
-    with ui_card(title="Boundary", ui_name="Boundaries"):
-        print("## Boundary Selection ##")
-        vuetify.VTextarea(
-                label="boundary info:",
-                rows="5",
-                v_model=("boundaryText", "bound"),
-        )
-
-
-#def new_boundary_card():
-#    with ui_card(title="NewBoundary", ui_name="newboundary"):
-#
-#        vuetify.VTextarea(
-#                label="boundary info:",
-#                rows="5",
-#                v_model=("selectedBoundaryName", "bound"),
-#        )
-
-def mesh_card():
-    with ui_card(title="Mesh", ui_name="Mesh"):
-        print("## Mesh Selection ##")
-        vuetify.VTextarea(
-                label="mesh info:",
-                rows="5",
-                v_model=("meshText", "blablabla"),
-        )
 
 
 # export su2 file
@@ -411,44 +481,104 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     color_by_array(mesh_actor, array)
     ctrl.view_update()
 
-@state.change("active_sub_ui")
-def update_active_sub_ui(active_sub_ui, **kwargs):
-    print("change active_sub_ui = ",active_sub_ui)
-    if not(state.active_id ==0):
+# every time we change the main gittree ("ui"), we end up here
+# we need to update the ui because it might have changed due to changes
+# in other git nodes
+#
+@state.change("active_ui")
+def update_active_ui(active_ui, **kwargs):
+    print("update_active_ui:: ",active_ui)
+
+    if not(state.active_id == 0):
       # get boundary name belonging to ID
       _name = pipeline.get_node(state.active_id)['name']
-      print("name=",_name)
-      if (_name=="Physics"):
-        pipeline.update_node_value("Physics","subui",active_sub_ui)
+      print("update_active_ui::name=",_name)
 
-      #array = state.dataset_arrays[mesh_color_array_idx]
-      #print("array = ",array)
-      #color_by_array(mesh_actor, array)
+      if (_name=="Physics"):
+        print("update node physics")
+        #pipeline.update_node_value("Physics","subui",active_ui)
+      elif (_name=="Initialization"):
+        print("update node Initialization")
+        #pipeline.update_node_value("Initialization","subui",active_ui)
+        # update because it might be changed elsewhere
+        initialization_card()
+
+      ctrl.view_update()
+
+@state.change("active_parent_ui")
+def update_active_ui(active_ui, **kwargs):
+    print("update_active_ui:: ",active_ui)
+    if not(state.active_id == 0):
+      # get boundary name belonging to ID
+      #_name = pipeline.get_node(state.active_id)['name']
+      #print("update_active_ui::name=",_name)
+
+      #if (_name=="Physics"):
+      #  print("update node physics")
+      #elif (_name=="Initialization"):
+      #  print("update node Initialization")
+      #  # update because it might be changed elsewhere
+      #  initialization_card()
+
+      ctrl.view_update()
+
+@state.change("active_head_ui")
+def update_active_ui(active_ui, **kwargs):
+    print("update_active_ui:: ",active_ui)
+    if not(state.active_id == 0):
+      # get boundary name belonging to ID
+      #_name = pipeline.get_node(state.active_id)['name']
+      #print("update_active_ui::name=",_name)
+
+      #if (_name=="Physics"):
+      #  print("update node physics")
+      #elif (_name=="Initialization"):
+      #  print("update node Initialization")
+      #  # update because it might be changed elsewhere
+      #  initialization_card()
+
+      ctrl.view_update()
+
+
+#
+# every time we change the main gittree ("ui"), we end up here
+# we have to set the correct "subui" again from the last visit.
+@state.change("active_sub_ui")
+def update_active_sub_ui(active_sub_ui, **kwargs):
+    print("update_active_sub_ui:: ",active_sub_ui)
+
+    if not(state.active_id == 0):
+      _name = pipeline.get_node(state.active_id)['name']
+      print("update_active_sub_ui::parent name=",_name)
+
+    print("choice = ",state.initial_option_idx)
+
+    if not(state.active_id == 0):
+      # get boundary name belonging to ID
+      _name = pipeline.get_node(state.active_id)['name']
+      print("update_active_sub_ui::name=",_name)
+      if (_name=="Physics"):
+        print("update node physics")
+        pipeline.update_node_value("Physics","subui",active_sub_ui)
+      elif (_name=="Initialization"):
+        print("update node Initialization")
+        pipeline.update_node_value("Initialization","subui",active_sub_ui)
+        # necessary?
+        #initialization_subcard()
+
       ctrl.view_update()
 
 
 # some default options
-noSSTSelected = True
-noBodyForceSelected = True
-noViscositySelected = False
-state.noSST = noSSTSelected
-# compressible
-state.compressible = True
+
 state.submodeltext = "none"
-# the SA options
-state.SAOptions={"NONE":True,
-                 "QCR2000":False,
-                 "WITHFT2":False,
-                 "COMPRESSIBILITY":False,
-                 "EDWARDS":False,
-                 "ROTATION":False,
-                 "BCM":False,
-                 "NEGATIVE":False,
-                 "EXPERIMENTAL":True
-                }
+
 
 # initial value for the materials-fluidmodel list
 state.LMaterialsFluid = LMaterialsFluidComp
+state.LMaterialsViscosity = LMaterialsViscosityComp
+state.LMaterialsConductivity = LMaterialsConductivityComp
+state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 
 # save the new json configuration file #
 # TODO: why do all the states get checked at startup?
@@ -459,11 +589,11 @@ def nijso_list_change():
     print("counter=",state.counter)
     if (state.counter==2):
       print("counter=",state.counter)
-    with open('config_new.json','w') as jsonOutputFile:
+    with open(BASE / filename_json_export,'w') as jsonOutputFile:
         json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
 
     # now convert the json file to a cfg file
-    with open('config_new.cfg','w') as f:
+    with open(BASE / filename_cfg_export,'w') as f:
       f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
       f.write("%                                                                              %\n")
       f.write("% SU2 configuration file                                                       %\n")
@@ -513,228 +643,300 @@ def nijso_list_change():
 ###############################################################
 # FILES
 ###############################################################
+
+# ##### ascii restart file #####
+@state.change("restartFile")
+def load_client_files(restartFile, **kwargs):
+
+  print("loading restart file")
+  if restartFile is None:
+    return
+
+  # type(file) will always be bytes
+  file = ClientFile(restartFile)
+
+  filecontent = file.content.decode('utf-8')
+
+  f = filecontent.splitlines()
+
+  # put everything in df
+  df = pd.read_csv(io.StringIO('\n'.join(f)))
+
+  # check if the points and cells match
+
+  # construct the dataset_arrays
+  datasetArrays = []
+  counter=0
+  for key in df.keys():
+    name = key
+    ArrayObject = vtk.vtkFloatArray()
+    ArrayObject.SetName(name)
+    # all components are scalars, no vectors for velocity
+    ArrayObject.SetNumberOfComponents(1)
+    # how many elements do we have?
+    nElems = len(df[name])
+    ArrayObject.SetNumberOfValues(nElems)
+    ArrayObject.SetNumberOfTuples(nElems)
+
+    # Nijso: TODO FIXME very slow!
+    for i in range(nElems):
+      ArrayObject.SetValue(i,df[name][i])
+
+    grid.GetPointData().AddArray(ArrayObject)
+
+    datasetArrays.append(
+            {
+                "text": name,
+                "value": counter,
+                "range": [df.min()[key],df.max()[key]],
+                "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
+            }
+    )
+    counter += 1
+
+
+  # we should now have the scalars available...
+  defaultArray = datasetArrays[0]
+  state.dataset_arrays = datasetArrays
+  print("dataset = ",datasetArrays)
+  print("dataset_0 = ",datasetArrays[0])
+  print("dataset_0 = ",datasetArrays[0].get('text'))
+
+  mesh_mapper.SetInputData(grid)
+  mesh_actor.SetMapper(mesh_mapper)
+  renderer.AddActor(mesh_actor)
+
+  mesh_mapper.SelectColorArray(defaultArray.get('text'))
+  mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
+  mesh_mapper.SetScalarVisibility(True)
+  mesh_mapper.SetUseLookupTableScalarRange(True)
+
+  # Mesh: Setup default representation to surface
+  mesh_actor.GetProperty().SetRepresentationToSurface()
+  mesh_actor.GetProperty().SetPointSize(1)
+  mesh_actor.GetProperty().EdgeVisibilityOff()
+
+  # We have loaded a mesh, so enable the exporting of files
+  state.export_disabled = False
+
+  renderer.ResetCamera()
+  ctrl.view_update()
+  pass
+
+
+
+# load SU2 .su2 mesh file #
+# currently loads a 2D or 3D .su2 file
 @state.change("file_upload")
 def load_client_files(file_upload, **kwargs):
     global pipeline
     # remove the added boundary conditions in the pipeline
 
-    print("***************************************")
+    #print("***************************************")
     pipeline.remove_right_subnode("Boundaries")
-    print("***************************************")
-    print("pipeline=",pipeline)
+    #print("***************************************")
+    #print("pipeline=",pipeline)
 
     del mesh_actor_list[:]
 
-    if file is None or isinstance(file,list):
+    #file = file_upload
+    file = ClientFile(file_upload)
+
+    if file_upload is None:
         return
+
+    print("name = ",file_upload.get("name"))
+    print("last modified = ",file_upload.get("lastModified"))
+    print("size = ",file_upload.get("size"))
+    print("type = ",file_upload.get("type"))
+
 
     # remove all actors
     renderer.RemoveAllViewProps()
 
-    # these are the scalar fields of the paraview file
-    field = "solid"
-    fields = {
-        "solid": {"value": "solid", "text": "Solid color", "range": [0, 1]},
-    }
-    meshes = []
-    filesOutput = []
-
-    # file from the client
-    file = ClientFile(file_upload)
-    filename = file_upload.get("name")
-    file_size = file_upload.get("size")
-
-    file_binary_content = file_upload.get(
-        "content"
-    )  # can be either list(bytes, ...), or bytes
-
-    with open(filename, "wb") as binary_file:
-        # uploads are sent in chunks of 2Mb, so we need to join them
-        file_binary_content = b"".join(file_binary_content)
-        binary_file.write(file_binary_content)
+    grid.Reset()
 
 
+    # ### setup of the internal data structure ###
+    root = vtkMultiBlockDataSet()
+    branch_interior = vtkMultiBlockDataSet()
+    branch_boundary = vtkMultiBlockDataSet()
 
-    if not file.get("content"):
-            return
-    else:
-            bytes = file.get("content")
-            filesOutput.append({"name": filename, "size": file_size})
-
-            # the vtm reader
-            reader = vtk.vtkXMLMultiBlockDataReader()
-
-            print("reading multiblock file")
-
-            # ***** BASE PATH ***** #
-            base_path = "user/nijso/"
-
-            filename = base_path + filename
-
-            print("file name = ",filename)
+    root.SetBlock(0, branch_interior)
+    root.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Interior')
+    root.SetBlock(1, branch_boundary)
+    root.GetMetaData(1).Set(vtk.vtkCompositeDataSet.NAME(), 'Boundary')
+    del root
+    pts = vtk.vtkPoints()
+    # ### ### #
 
 
-            # for the mesh info display
-            state.meshText = "filename: " + filename + "\n"
-            state.meshText += "filesize: " + str(file.get("size")) + "\n"
+    # mesh file format specific
+    filecontent = file.content.decode('utf-8')
+    f = filecontent.splitlines()
 
-            reader.SetFileName(filename)
-            reader.Update()
-            mb = reader.GetOutput()
-            # nr of external blocks, should be 1
-            print("nr of external blocks = ",mb.GetNumberOfBlocks())
-            global mb1
-            mb1 = mb.GetBlock(0)
-            print("type=",type(mb1))
-            print("nr of blocks inside block = ",mb1.GetNumberOfBlocks())
+    index = [idx for idx, s in enumerate(f) if 'NDIME' in s][0]
+    NDIME = int(f[index].split('=')[1])
+    #state.meshDim = NDIME
+    # for the mesh info display
+    #state.meshText += "Mesh Dimensions: " + str(NDIME) + "D \n"
 
-            blockNames=[]
-            for i in range(mb1.GetNumberOfBlocks()):
-                print("number of internal blocks = ", i+1," / ", mb1.GetNumberOfBlocks() )
-                data = mb1.GetBlock(i)
-                name = mb1.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
-                print("metadata block name = ",name)
-                blockNames.append(
-                    {
-                        "text": name,
-                        "value": i,
-                    }
-                )
-            # we now get only the first 2 blocks, if there are more we give a warning
-            if (mb1.GetNumberOfBlocks()>2) :
-                print("warning, more than 2 blocks found, we only read the first 2 blocks, which should be internal and boundary blocks")
+    index = [idx for idx, s in enumerate(f) if 'NPOIN' in s][0]
+    numPoints = int(f[index].split('=')[1])
+    #state.meshText += "Number of points: " + str(numPoints) + "\n"
 
-            internalBlock = mb1.GetBlock(0)
-            print("nr of blocks inside internal block = ",internalBlock.GetNumberOfBlocks())
-            boundaryBlock = mb1.GetBlock(1)
-            print("nr of blocks inside block = ",boundaryBlock.GetNumberOfBlocks())
+    # get all the points
+    for point in range(numPoints):
+           x = float()
+           y = float()
+           z = float()
+           line = f[index+point+1].split(" ")
+           x = float(line[0])
+           y = float(line[1])
 
-            #print(dir(internalBlock))
-            # nr of data in internal block
-            NELEM = internalBlock.GetNumberOfCells()
-            NPOINT = internalBlock.GetNumberOfPoints()
-            BOUND=[0,0,0,0,0,0]
-            internalBlock.GetBounds(BOUND)
-            # for the mesh info display
-            state.meshText += "Number of cells: " + str(NELEM) + "\n"
-            state.meshText += "Number of points: " + str(NPOINT) + "\n"
-            state.meshText += "bounds: " + str(BOUND) + "\n"
+           if (NDIME==2):
+             state.mesh_dimension = 2
+             # 2D is always x-y plane (z=0)
+             z = float(0.0)
+           else:
+             state.mesh_dimension = 3
+             z = float(line[2])
+           pts.InsertNextPoint(x,y,z)
 
+    grid.SetPoints(pts)
 
-            internalNames=[]
-            for i in range(internalBlock.GetNumberOfBlocks()):
-                print("number of internal elements = ", i+1," / ", internalBlock.GetNumberOfBlocks() )
-                data = internalBlock.GetBlock(i)
-                #print(dir(data))
-                #print(data)
-                #for p in range(NPOINT):
-                #  print(p," ",data.GetPoint(p))
+    # get the number of elements/cells
+    index = [idx for idx, s in enumerate(f) if 'NELEM' in s][0]
+    numCells = int(f[index].split('=')[1])
+    state.mesh= ["Number of cells: " + str(numCells) + "\n"]
 
-                name = internalBlock.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
-                print("metadata block name = ",name)
-                internalNames.append(
-                    {
-                        "text": name,
-                        "value": i,
-                    }
-                )
-
-            boundaryNames=[]
-            for i in range(boundaryBlock.GetNumberOfBlocks()):
-                print("number of boundary blocks = ", i+1," / ", boundaryBlock.GetNumberOfBlocks() )
-                data = boundaryBlock.GetBlock(i)
-                name = boundaryBlock.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
-                print("metadata block name = ",name)
-                boundaryNames.append(
-                    {
-                        "text": name,
-                        "value": i,
-                    }
-                )
-
-            # internal mesh
-            print("getting the single element from the internal block")
-            ds = vtk.vtkUnstructuredGrid.SafeDownCast(internalBlock.GetBlock(0))
-
-            # boundary meshes
-            ds_b = []
-            for i in range(boundaryBlock.GetNumberOfBlocks()):
-              ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(boundaryBlock.GetBlock(i)))
-             # coloring by scalar field
-            datasetArrays = []
-
-            pd = ds.GetPointData()
-            nb_arrays = pd.GetNumberOfArrays()
-            for i in range(nb_arrays):
-                array = pd.GetArray(i)
-                name = array.GetName()
-                min, max = array.GetRange(-1)
+    for cell in range(numCells):
+            data = f[index+cell+1].split(" ")
+            CellType = int(data[0])
+            # quadrilaterals
+            if(CellType==9):
+              quaddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
+              grid.InsertNextCell(VTK_QUAD,4,quaddata)
+            # triangles
+            elif(CellType==5):
+              tridata = [int(data[1]),int(data[2]),int(data[3])]
+              grid.InsertNextCell(VTK_TRIANGLE,3,tridata)
+            # hexahedral
+            elif(CellType==12):
+              hexdata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]),int(data[6]),int(data[7]),int(data[8])]
+              grid.InsertNextCell(VTK_HEXAHEDRON,8,hexdata)
+            # tetrahedral (4 faces)
+            elif(CellType==10):
+              tetdata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
+              grid.InsertNextCell(VTK_TETRA,4,tetdata)
+            # wedge
+            elif(CellType==13):
+              wedgedata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]),int(data[6])]
+              grid.InsertNextCell(VTK_WEDGE,6,wedgedata)
+            # pyramid
+            elif(CellType==14):
+              pyramiddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])]
+              grid.InsertNextCell(VTK_PYRAMID,5,pyramiddata)
+            else:
+              print("ERROR: cell type not suppported")
 
 
-                ds.GetPointData().AddArray(array)
+    branch_interior.SetBlock(0, grid)
+    branch_interior.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Fluid-Zone-1')
+    del branch_interior
 
-                datasetArrays.append(
-                    {
-                    "text": name,
-                    "value": i,
-                    "range": [min, max],
-                    "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
-                    }
-                )
+    # ### read the markers ### #
+    boundaryNames = []
 
-            #cell_arrays = []
-            #cd = ds.GetCellData()
-            #nb_arrays = cd.GetNumberOfArrays()
-            #for i in range(nb_arrays):
-            #    array = cd.GetArray(i)
-            #    name = array.GetName()
-            #    min, max = array.GetRange(-1)
-            #    fields[name] = {
-            #        "name": name,
-            #        "range": [min, max],
-            #        "value": name,
-            #        "text": name,
-            #        "type": vtkDataObject.FIELD_ASSOCIATION_CELLS,
-            #        "scalarMode": 4,
-            #    }
-            #    cell_arrays.append(name)
+    markerNames=[]
+    index = [idx for idx, s in enumerate(f) if 'NMARK' in s][0]
+    numMarkers = int(f[index].split('=')[1])
 
-            #meshes.append(
-            #    vtk_mesh(ds, point_arrays=point_arrays, cell_arrays=cell_arrays)
-            #)
+    # now loop over the markers
+    counter=0
+    for iMarker in range(numMarkers):
+          # grid for the marker
+          markergrid = vtkUnstructuredGrid()
+          # copy all the pints into the markergrid (inefficient)
+          markergrid.SetPoints(pts)
+          # next line: marker tag, marker_elem
+          counter += 1
+          # this is the name (string) of the boundary
+          markertag = f[index+counter].split("=")[1].strip()
 
-    print("meshes = ",meshes)
+          # add name to the boundaryNames list of dicts
+          boundaryNames.append(
+            {
+                "text": markertag,
+                "value": iMarker,
+            }
+          )
+          markerNames.append(markertag)
+          # next line: marker tag, marker_elem
+          counter+=1
+          line = f[index+counter].split("=")
+          numCells = int(line[1])
+          #print("number of cells = ",numCells)
 
-    defaultArray = datasetArrays[0]
-    state.dataset_arrays = datasetArrays
-    print("dataset = ",datasetArrays)
-    print("dataset_0 = ",datasetArrays[0])
-    print("dataset_0 = ",datasetArrays[0].get('text'))
+          # loop over all cells
+          for cell in range(numCells):
+            counter+=1
+            data = f[index+counter].split(" ")
+            #print("data = ",data)
+            CellType = int(data[0])
+            # line
+            if(CellType==3):
+              linedata = [int(data[1]),int(data[2])]
+              markergrid.InsertNextCell(VTK_LINE,2,linedata)
+            # triangles
+            elif(CellType==5):
+              tridata = [int(data[1]),int(data[2]),int(data[3])]
+              markergrid.InsertNextCell(VTK_TRIANGLE,3,tridata)
+            # quadrilaterals
+            elif(CellType==9):
+              quaddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
+              markergrid.InsertNextCell(VTK_QUAD,4,quaddata)
+            else:
+              print("ERROR: marker cell type not suppported")
+          # put boundary in multiblock structure
+          branch_boundary.SetBlock(iMarker, markergrid)
+          branch_boundary.GetMetaData(iMarker).Set(vtk.vtkCompositeDataSet.NAME(), markertag)
 
+
+    # end loop over lines
+
+    del markergrid
+    del pts
+
+    # boundary meshes as unstructured grids
+    ds_b = []
+    #for i in range(boundaryBlock.GetNumberOfBlocks()):
+    for i in range(branch_boundary.GetNumberOfBlocks()):
+        ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(branch_boundary.GetBlock(i)))
+    del branch_boundary
+
+
+
+    # we also clear the arrays, if any
+    for array in state.dataset_arrays:
+        arrayName = array.get("text")
+        print("removing array ",arrayName)
+        grid.GetPointData().RemoveArray(arrayName)
+    # and we only use the default array
+    state.dataset_arrays = []
 
     # Mesh - add mesh to the renderer
-    #mesh_mapper = vtkDataSetMapper()
-    #mesh_mapper.ScalarVisibilityOn()
-    #mesh_actor = vtkActor()
-
-    mesh_mapper.SetInputData(ds)
+    mesh_mapper.SetInputData(grid)
     mesh_actor.SetMapper(mesh_mapper)
     renderer.AddActor(mesh_actor)
-
-    mesh_mapper.SelectColorArray(defaultArray.get('text'))
-    mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
-    mesh_mapper.SetScalarVisibility(True)
-    mesh_mapper.SetUseLookupTableScalarRange(True)
-    # Mesh: Setup default representation to surface
-    mesh_actor.GetProperty().SetRepresentationToSurface()
-    mesh_actor.GetProperty().SetPointSize(1)
-    mesh_actor.GetProperty().EdgeVisibilityOff()
     mesh_actor.SetObjectName("internal")
-    mesh_actor.VisibilityOff()
 
+    # boundary actors
     boundary_id = 101
     i = 0
+    print("length of ds_b=",len(ds_b))
     for bcName in boundaryNames:
+        print("bc name=",bcName)
         mesh_mapper_b1 = vtkDataSetMapper()
         mesh_mapper_b1.ScalarVisibilityOff()
         mesh_actor_b1 = vtkActor()
@@ -748,69 +950,39 @@ def load_client_files(file_upload, **kwargs):
         mesh_actor_list.append({"id":boundary_id,"name":bcName.get("text"), "mesh":mesh_actor_b1})
         boundary_id += 1
 
+    # add internal mesh as well.
     mesh_actor_list.append({"id":boundary_id,"name":"internal", "mesh":mesh_actor})
+    # internal block is also a 'boundary'
     boundaryNames.append(
                             {
                         "text": "internal",
-                        "value": boundaryBlock.GetNumberOfBlocks()+1,
+                        "value": numMarkers,
                     }
     )
 
-    #for l in mesh_actor_list:
-    #    print("the name in the list = ",l["name"])
-    #actorlist = renderer.GetActors()
-    #print("number of actors: ",actorlist)
-    #print("number of actors: ",dir(actorlist))
-    #print("is actor present: ",actorlist.IsItemPresent(mesh_actor))
-    #actorlist = vtk.vtkActorCollection()
-    #actorlist = renderer.GetActors()
-    #print("number of actors: ",actorlist.GetNumberOfItems())
-    #actorlist.InitTraversal()
-    #for a in range(0, actorlist.GetNumberOfItems()):
-    #    actor = actorlist.GetNextActor()
-    #    print("getnextactor: name =",actor.GetObjectName())
 
-    renderer.ResetCamera()
-    ctrl.view_update()
-
-    state.field = field
-    state.fields = fields
-    state.meshes = meshes
-    state.files = filesOutput
-
-
-    # update the names of the boundary conditions (instantaneously in the boundary card)
-    state.bcfields = boundaryNames
-    # 4 is the position of the wall in the bc list array
-    state.boundaryType_array_idx=4
-
-    #add a dictionary to the BC list of dictionaries
-    # bcName is the su2 mesh name
-    # bcType is the VList name
-    # json is the su2 Boundary condition type MARKER_*
-
-    #for bcName in boundaryNames:
-    #    state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
-
-    #i = 101
-    #j = 200
+    # now construct the actual boundary list for the GUI
     for bcName in boundaryNames:
        print("boundary name=",bcName.get("text"))
-       #pipeline1.append({"id": "%d"%(i), "parent": "%d"%(j), "visible": 1, "name": "%s"%(bcName.get("text"))})
        # add the boundaries to the right tree and not the left tree
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
-       #j = i
-       #i = i + 1
-       #break
     print("updated pipeline",pipeline)
 
-    # the sources
-    #state.dirty("pipeline")
+    state.BCDictList = []
+    # fill the boundary conditions with initial boundary condition type
+    for bcName in boundaryNames:
+        state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
+
+
+
+    print("boundary nodes:",pipeline)
+
 
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
-
+    renderer.ResetCamera()
+    ctrl.view_update()
     pass
 
 # -----------------------------------------------------------------------------
@@ -828,6 +1000,8 @@ def on_action(event):
 def on_event(event):
     print(event)
 
+
+
 # git tree in the left drawer
 def pipeline_widget():
     trame.GitTree(
@@ -838,6 +1012,8 @@ def pipeline_widget():
         action_size=25,
         width=350,
         action=(on_action, "[$event]"),
+        # default active is first node
+        actives = ("selection",state.selection),
         actives_change=(actives_change, "[$event]"),
     )
 
@@ -877,13 +1053,13 @@ def standard_buttons():
 
 state.trame__title = "File loading"
 
-state.fields = []
-state.meshes = []
+#state.fields = []
 
 with SinglePageWithDrawerLayout(server) as layout:
 
     # text inside the toolbar
     layout.title.set_text("SU2 GUI")
+
 
     with layout.toolbar:
 
@@ -918,19 +1094,19 @@ with SinglePageWithDrawerLayout(server) as layout:
         vuetify.VFileInput(
             # read more than one file
             multiple=False,
-            #webkitdirectory=True,
             background_color="white",
             # the icon in front of the file input
             prepend_icon="mdi-file",
             show_size=True,
             small_chips=True,
             truncate_length=25,
-            v_model=("file", None),
+            v_model=("file_upload", None),
+
             dense=True,
             hide_details=True,
             style="max-width: 300px;",
             # only accepts paraview .vtm files
-            accept=".vtm",
+            accept=".su2",
             __properties=["accept"],
         )
 
@@ -939,7 +1115,6 @@ with SinglePageWithDrawerLayout(server) as layout:
             indeterminate=True, absolute=True, bottom=True, active=("trame__busy",)
         )
 
-        trame.ClientStateChange(name="meshes", change=ctrl.view_reset_camera)
 
     # left side menu
     with layout.drawer as drawer:
@@ -950,21 +1125,49 @@ with SinglePageWithDrawerLayout(server) as layout:
         # simple divider
         vuetify.VDivider(classes="mb-2")
         #
-        boundary_card()
+        print("initialize boundary card")
+        # main head/parent node
+        boundaries_card_parent()
+        # children nodes (the actual boundaries)
+        boundaries_card_children()
         #
+        print("initialize physics card")
         physics_card()
         physics_subcard()
         #
+        print("initialize materials card")
         materials_card()
-        materials_subcard()
+        #materials_subcard()
         #
+        print("initialize numerics card")
         numerics_card()
         #
-        #new_boundary_card()
-        mesh_card()
+        print("initialize initialization card")
+        initialization_card()
+        initialization_subcard()
         #
+        print("initialize mesh card")
+        mesh_card()
+        mesh_subcard()
+        #
+        print("initialize solver card")
         solver_card()
         #
+
+        # dialog cards - these are predefined 'popup windows'
+        # material dialogs
+        materials_dialog_card_fluid()
+        materials_dialog_card_viscosity()
+        materials_dialog_card_cp()
+        materials_dialog_card_conductivity()
+        #
+        # set all physics states from the json file
+        # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
+        set_json_physics()
+
+        # this necessary here?
+        state.dirty('jsonData')
+
         pass
 
     print("setting up layout content")
@@ -976,14 +1179,21 @@ with SinglePageWithDrawerLayout(server) as layout:
         ):
 
             #view = vtk_widgets.VtkRemoteView(renderWindow)
+            print("setting up view")
             view = vtk_widgets.VtkRemoteView(renderWindow)
+            print("view update")
             ctrl.view_update = view.update
             ctrl.view_reset_camera = view.reset_camera
             ctrl.on_server_ready.add(view.update)
+            print("end view update")
+
+    print("finalizing drawer layout")
 
 # -----------------------------------------------------------------------------
 # CLI
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
+
     server.start()
+    print("su2gui server ended...")

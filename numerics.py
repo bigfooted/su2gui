@@ -1,5 +1,14 @@
 # numerics gittree menu
 
+# ui_cards:
+#                appear below the gittree.
+# ui_sub_cards:
+#                appear below ui_cards, change depending on settings in ui_cards.
+# dialog_cards:
+#                popup-window called from button in ui_cards.
+# @state.change:
+#                called from ui_cards, ui_sub_cards or dialog_cards, sets the configuration option.
+
 # note that in the main menu, we need to call/add the following:
 # 1) from numerics import *
 # 2) call numerics_card() in SinglePageWithDrawerLayout

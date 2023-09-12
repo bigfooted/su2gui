@@ -83,6 +83,18 @@ def set_json_physics():
   print("       ################# compressible= ",state.physics_comp_idx)
   state.dirty('physics_comp_idx')
 
+  # the SA options
+  state.SAOptions={"NONE":True,
+                   "QCR2000":False,
+                   "WITHFT2":False,
+                   "COMPRESSIBILITY":False,
+                   "EDWARDS":False,
+                   "ROTATION":False,
+                   "BCM":False,
+                   "NEGATIVE":False,
+                   "EXPERIMENTAL":True
+                  }
+
   # turbulence model
   state.physics_turb_idx = 0
   state.physics_turb_sst_idx = 0
@@ -151,7 +163,7 @@ def physics_card():
                     # activate or deactivate/disable the checkbox
                     # only active for incompressible flow
                     # else, default is on
-                    disabled=("compressible",0),
+                    disabled=("physics_comp_idx",0),
                     classes="mt-1 pt-1",
                     hide_details=True,
                     dense=True,
@@ -300,13 +312,13 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     # incompressible selected means we have either INC_RANS or INC_NAVIER_STOKES
     # This option goes together with the turbulence option
 
-    state.compressible = bool(physics_comp_idx)
+    compressible = bool(physics_comp_idx)
 
     turb = True
     if (state.jsonData['KIND_TURB_SOLVER']=="NONE"): turb=False
 
     # physics_comp_idx=0 = compressible
-    if (state.compressible):
+    if (compressible):
         if (turb==False):
             state.jsonData['SOLVER']="NAVIER_STOKES"
         else:
@@ -323,7 +335,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     # - fluid materials (density)
     # - fluid materials (viscosity)
     # - boundary conditions
-    if (state.compressible==True):
+    if (compressible==True):
       print("       selecting compressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidComp
       state.field_state_name = "Density"
@@ -390,22 +402,22 @@ def update_physics_turb(physics_turb_idx, **kwargs):
 
     if (physics_turb_idx == 2):
         print("     SA turbulence model activated")
-        noSSTSelected=True
-        state.noSST=True
+        #noSSTSelected=True
+        #state.noSST=True
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sa"
         state.submodeltext = "SA text"
     elif (physics_turb_idx == 3):
         print("     SST turbulence model activated")
-        noSSTSelected=False
-        state.noSST=False
+        #noSSTSelected=False
+        #state.noSST=False
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sst"
         state.submodeltext = "SST text"
     else:
         print("     SST turbulence model deactivated")
-        noSSTSelected=True
-        state.noSST=True
+        #noSSTSelected=True
+        #state.noSST=True
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_none"
         state.submodeltext = "no model"
