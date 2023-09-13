@@ -26,7 +26,7 @@ state.show_materials_dialog_card_conductivity = False
 
 #label_1 = markdown.Markdown(classes="pa-0 ma-0",content=("var_name", "**formula1 =** $a \\cdot x^2$"))
 #label_2 = markdown.Markdown(classes="pa-0 ma-0",content=("var_name", "**formula2 =** $b \\cdot x^2$"))
-content1=("varname","**f=** $a \\cdot x^2$")
+#content1=("varname","**f=** $a \\cdot x^2$")
 # nijso TODO markdown text test #
 #mdstring = """
 #$a \cdot x^2

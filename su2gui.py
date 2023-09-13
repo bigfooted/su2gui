@@ -1,9 +1,7 @@
 r"""
-Version for trame 1.x - https://github.com/Kitware/trame/blob/release-v1/examples/VTK/Applications/VTPViewer/app.py
-Delta v1..v2          - https://github.com/Kitware/trame/commit/8d7fd7d3f11360637315f61ec8c66154d3b1af69
-This example reads a .vtm file, shows the boundaries in a git-tree, lights up the boundaries when you select the
-boundary in the git-tree, and when you select the internal element, you can still see the scalar fields.
+The SU2 Graphical User Interface.
 """
+
 import os, copy, io
 import pandas as pd
 from trame.app import get_server
@@ -56,7 +54,7 @@ print("****************************************")
 print("* Base path = ", BASE                    )
 print("****************************************")
 
-filename_cfg_export = "config_new.su2"
+filename_cfg_export = "config_new.cfg"
 filename_json_export = "config_new.json"
 
 local_file_manager = LocalFileManager(__file__)
@@ -174,7 +172,7 @@ state.solver_running = False
 # the imported mesh block and boundary blocks
 # must be state or else it cannot be an argument to click
 #state.multiblockb1 = vtkMultiBlockDataSet()
-mb1 = vtkMultiBlockDataSet()
+root = vtkMultiBlockDataSet()
 state.su2_meshfile="mesh_out.su2"
 # 2D or 3D mesh
 state.mesh_dimension = 0
@@ -453,7 +451,7 @@ def export_files_01(su2_filename):
     print("********** export_files_01 **********\n")
       # add the filename to the json database
     state.jsonData['MESH_FILENAME'] = su2_filename
-    export_files(mb1,su2_filename)
+    export_files(root,su2_filename)
 
 
 
@@ -755,10 +753,10 @@ def load_client_files(file_upload, **kwargs):
     renderer.RemoveAllViewProps()
 
     grid.Reset()
-
-
+    global root
     # ### setup of the internal data structure ###
-    root = vtkMultiBlockDataSet()
+    # root is now defined globally
+    #root = vtkMultiBlockDataSet()
     branch_interior = vtkMultiBlockDataSet()
     branch_boundary = vtkMultiBlockDataSet()
 
@@ -766,7 +764,7 @@ def load_client_files(file_upload, **kwargs):
     root.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Interior')
     root.SetBlock(1, branch_boundary)
     root.GetMetaData(1).Set(vtk.vtkCompositeDataSet.NAME(), 'Boundary')
-    del root
+    #del root
     pts = vtk.vtkPoints()
     # ### ### #
 
@@ -915,8 +913,6 @@ def load_client_files(file_upload, **kwargs):
         ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(branch_boundary.GetBlock(i)))
     del branch_boundary
 
-
-
     # we also clear the arrays, if any
     for array in state.dataset_arrays:
         arrayName = array.get("text")
@@ -960,7 +956,6 @@ def load_client_files(file_upload, **kwargs):
                     }
     )
 
-
     # now construct the actual boundary list for the GUI
     for bcName in boundaryNames:
        print("boundary name=",bcName.get("text"))
@@ -973,10 +968,7 @@ def load_client_files(file_upload, **kwargs):
     for bcName in boundaryNames:
         state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
 
-
-
     print("boundary nodes:",pipeline)
-
 
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
@@ -1160,7 +1152,12 @@ with SinglePageWithDrawerLayout(server) as layout:
         materials_dialog_card_viscosity()
         materials_dialog_card_cp()
         materials_dialog_card_conductivity()
-        #
+        # boundaries dialogs
+        boundaries_dialog_card_inlet()
+        boundaries_dialog_card_outlet()
+        boundaries_dialog_card_wall()
+        boundaries_dialog_card_farfield()
+
         # set all physics states from the json file
         # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
         set_json_physics()

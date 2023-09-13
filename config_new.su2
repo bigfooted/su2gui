@@ -1,0 +1,71 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                              %
+% SU2 configuration file                                                       %
+% Case description:                                                            %
+% Author:                                                                      %
+% Date: 2023-09-13                                                             %
+% SU2 version:                                                                 %
+%                                                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SOLVER= INC_EULER
+BODY_FORCE= NO
+BODY_FORCE_VECTOR= (0.0, 0.0, 0.0)
+KIND_TURB_SOLVER= NONE
+SST_OPTIONS= V1994m
+SA_OPTIONS= EXPERIMENTAL 
+KIND_TRANS_MODEL= NONE
+LM_OPTIONS= MENTER_LANGTRY
+SYSTEM_MEASUREMENTS= SI
+AXISYMMETRIC= NO
+RESTART_SOL= NO
+INC_ENERGY_EQUATION= NO
+FLUID_MODEL= CONSTANT_DENSITY
+INC_DENSITY_MODEL= CONSTANT
+VISCOSITY_MODEL= CONSTANT_VISCOSITY
+MU_CONSTANT= 1.18e-05
+MU_REF= 1.18e-05
+MU_T_REF= 273.15
+GAS_CONSTANT= 287.15
+SUTHERLAND_CONSTANT= 110.4
+SPECIFIC_HEAT_CP= 1.18e-05
+MU_POLYCOEFFS= (1.2e-05, 0, 0, 0, 0)
+CP_POLYCOEFFS= (1.2e-05, 0, 0, 0, 0)
+CONDUCTIVITY_MODEL= CONSTANT_CONDUCTIVITY
+THERMAL_CONDUCTIVITY_CONSTANT= 1005.0
+PRANDTL_LAM= 1.0
+KT_POLYCOEFFS= (1.2e-05, 0, 0, 0, 0)
+TURBULENT_CONDUCTIVITY_MODEL= CONSTANT_PRANDTL_TURB
+PRANDTL_TURB= 0.9
+MOLECULAR_WEIGHT= 287.015
+THERMODYNAMIC_PRESSURE= 10190.06
+INC_INLET_TYPE= VELOCITY_INLET
+INC_OUTLET_TYPE= PRESSURE_OUTLET
+MARKER_INLET= (inlet_1, 300.0, 1.0, 1.0, 1.0, 1.0, inlet_2, 400.0, 2.0, 0.0, 1.0, 0.0)
+MARKER_INLET_TURBULENT= (inlet, 0.1, 100.0)
+MARKER_OUTLET= (outlet1, 0.0, outlet2, 0.0)
+MARKER_SYM= (symmetry_1, symmetry_bend, symmetry_2)
+KIND_INVALID= (string1, 0.0)
+NUM_METHOD_GRAD= GREEN_GAUSS
+NUM_METHOD_GRAD_RECON= GREEN_GAUSS
+INC_NONDIM= DIMENSIONAL
+INC_DENSITY_INIT= 1.2
+INC_VELOCITY_INIT= (1.0, 0.0, 0.0)
+INC_TEMPERATURE_INIT= 293.15
+INC_INLET_DAMPING= 0.1
+INC_OUTLET_DAMPING= 0.1
+ITER= 100
+CONV_RESIDUAL_MINVAL= -14
+CONV_STARTITER= 10
+CONV_FIELD= (DRAG)
+TABULAR_FORMAT= CSV
+MESH_FORMAT= SU2
+OUTPUT_WRT_FREQ= 100
+VOLUME_FILENAME= flow
+RESTART_FILENAME= restart
+SOLUTION_FILENAME= solution
+CONV_FILENAME= history
+MESH_FILENAME= mesh_out.su2
+SCREEN_OUTPUT= (INNER_ITER, RMS_DENSITY, RMS_PRESSURE)
+OUTPUT_FILES= (RESTART, PARAVIEW_MULTIBLOCK)
+CFL_NUMBER= 1.0
+GAMMA_VALUE= 1.4

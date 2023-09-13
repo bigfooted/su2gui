@@ -21,11 +21,11 @@
         0,
         0
     ],
-    "FLUID_MODEL": "STANDARD_AIR",
+    "FLUID_MODEL": "CONSTANT_DENSITY",
     "GAMMA_VALUE": 1.4,
     "GAS_CONSTANT": 287.15,
     "INC_DENSITY_INIT": 1.2,
-    "INC_DENSITY_MODEL": "VARIABLE",
+    "INC_DENSITY_MODEL": "CONSTANT",
     "INC_ENERGY_EQUATION": false,
     "INC_INLET_DAMPING": 0.1,
     "INC_INLET_TYPE": "VELOCITY_INLET",
@@ -44,7 +44,7 @@
         0.0
     ],
     "KIND_TRANS_MODEL": "NONE",
-    "KIND_TURB_SOLVER": "SA",
+    "KIND_TURB_SOLVER": "NONE",
     "KT_POLYCOEFFS": [
         1.2e-05,
         0,
@@ -93,7 +93,7 @@
         "symmetry_bend",
         "symmetry_2"
     ],
-    "MESH_FILENAME": "mesh.su2",
+    "MESH_FILENAME": "mesh_out.su2",
     "MESH_FORMAT": "SU2",
     "MOLECULAR_WEIGHT": 287.015,
     "MU_CONSTANT": 1.18e-05,
@@ -116,15 +116,15 @@
     "PRANDTL_LAM": 1.0,
     "PRANDTL_TURB": 0.9,
     "RESTART_FILENAME": "restart",
-    "RESTART_SOL": true,
-    "SA_OPTIONS": "QCR2000 COMPRESSIBILITY ROTATION NEGATIVE EXPERIMENTAL ",
+    "RESTART_SOL": false,
+    "SA_OPTIONS": "EXPERIMENTAL ",
     "SCREEN_OUTPUT": [
         "INNER_ITER",
         "RMS_DENSITY",
         "RMS_PRESSURE"
     ],
     "SOLUTION_FILENAME": "solution",
-    "SOLVER": "INC_RANS",
+    "SOLVER": "INC_EULER",
     "SPECIFIC_HEAT_CP": 1.18e-05,
     "SST_OPTIONS": "V1994m",
     "SUTHERLAND_CONSTANT": 110.4,

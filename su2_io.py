@@ -115,11 +115,12 @@ def export_files(multiblock,su2_export_filename):
         #print(type(data))
         NCELLS = data.GetNumberOfCells()
         #print("Npoints = ", data.GetNumberOfPoints())
-        s = "MARKER_ELEMS= " + str(NCELLS)
+        s = "MARKER_ELEMS= " + str(NCELLS) + "\n"
+        f.write(s)
         for i in range(NCELLS):
             s = str(data.GetCellType(i)) + " "
             celldata.GetCellAtId(i,pts)
             for j in range(pts.GetNumberOfIds()):
               s += str(pts.GetId(j)) + " "
-            s += str(i) + "\n"
+            s += "\n"
             f.write(s)
