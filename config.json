@@ -39,6 +39,9 @@
     "MARKER_INLET_TURBULENT": [
 	    ["inlet", 0.10, 100.0]
     ],
+    "MARKER_ISOTHERMAL": [
+	    ["wall", 300.0]
+    ],
     "MARKER_OUTLET": [
 	    ["outlet1", 0.0],
 	    ["outlet2", 0.0]

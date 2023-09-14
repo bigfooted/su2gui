@@ -154,9 +154,19 @@ state.selectedBoundaryName="none"
 state.selectedBoundaryIndex = 0
 
 # Boundary Condition Dictionary List (initial value)
-state.BCDictList = [{"bcName": "main_wall", "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0}]
-
-
+state.BCDictList = [{"bcName": "main_wall",
+                     "bcType":"Wall",
+                     "bc_subtype":"Temperature",
+                     "json":"MARKER_ISOTHERMAL",
+                     "bc_velocity_magnitude":0.0,
+                     "bc_temperature":300.0,
+                     "bc_pressure":101325,
+                     "bc_density":0.0,
+                     "bc_massflow":1.0,
+                     "bc_velocity_normal":[1,0,0],
+                     "bc_heatflux":0.0,
+                     "bc_heattransfer":[1000.0,300.0],
+                     }]
 # disable the export file button
 state.export_disabled=True
 
@@ -578,7 +588,7 @@ state.LMaterialsViscosity = LMaterialsViscosityComp
 state.LMaterialsConductivity = LMaterialsConductivityComp
 state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 
-# save the new json configuration file #
+# save the new json configuration file as .json and as .cfg #
 # TODO: why do all the states get checked at startup?
 # TODO: when we click the save button, the icon color changes
 def nijso_list_change():
@@ -587,6 +597,11 @@ def nijso_list_change():
     print("counter=",state.counter)
     if (state.counter==2):
       print("counter=",state.counter)
+
+    # first, construct the boundaries using BCDictList
+    createjsonMarkers()
+    #
+    # save the json file
     with open(BASE / filename_json_export,'w') as jsonOutputFile:
         json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
 
@@ -966,7 +981,20 @@ def load_client_files(file_upload, **kwargs):
     state.BCDictList = []
     # fill the boundary conditions with initial boundary condition type
     for bcName in boundaryNames:
-        state.BCDictList.append({"bcName":bcName.get("text"), "bcType":"Wall", "bcSubtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0})
+        state.BCDictList.append({"bcName":bcName.get("text"),
+                                 "bcType":"Wall",
+                                 "bc_subtype":"Temperature",
+                                 "json":"MARKER_ISOTHERMAL",
+                                 "bc_velocity_magnitude":1.0,
+                                 "bc_temperature":300.0,
+                                 "bc_pressure":101325.0,
+                                 "bc_density":1.2,
+                                 "bc_massflow":0.0,
+                                 "bc_velocity_normal":[1.0, 0.0, 0.0],
+                                 "bc_heatflux":0.0,
+                                 "bc_heattransfer":[0.0, 300.0],
+                                 },
+                                 )
 
     print("boundary nodes:",pipeline)
 

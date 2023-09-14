@@ -29,6 +29,9 @@ state.show_boundaries_dialog_card_farfield = False
 
 state.boundaries_main_idx = 0
 
+# note that boundary information is stored in the state.BCDictList
+# {"bcName":bcName.get("text"), "bcType":"Wall", "bc_subtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0}
+# note that the currently selected boundary is in state.SelectedBoundaryName, selectedBoundaryIndex
 ############################################################################
 # Boundaries models - list options #
 ############################################################################
@@ -252,12 +255,11 @@ def boundaries_dialog_card_wall():
         vuetify.VCardTitle("Wall",
                            classes="grey lighten-1 py-1 grey--text text--darken-3")
 
-        #with vuetify.VContainer(fluid=True, v_if=("jsonData['FLUID_MODEL']=='CONSTANT_DENSITY' ")):
         with vuetify.VContainer(fluid=True):
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
-              # Then a list selection for turbulence submodels
+              # Then a list selection for wall submodels
               vuetify.VSelect(
                 # What to do when something is selected
                 v_model=("boundaries_wall_idx", 0),
@@ -386,10 +388,12 @@ def update_boundaries_dialog_card_farfield():
 # search in a list of dictionaries and return the entry based on the value of the key
 def get_entry_from_name(val,key,List):
   #print(List[0][key])
+  print("val=",val)
+  print("key=",key)
   entry=None
   # loop over all dict items in the list
   for item in List:
-      #print(item[key])
+      print("item=",item)
       if item[key]==val:
         entry=item
   return entry
@@ -398,14 +402,12 @@ def get_entry_from_name(val,key,List):
 def get_boundaries_main_idx_from_name(bcname):
     # get the entry in the list
     entry = get_entry_from_name(bcname,'bcName',state.BCDictList)
-
     idx = 0
 
     if not (entry==None):
       bctype = entry['bcType']
       entry = get_entry_from_name(bctype,'text',LBoundariesMain)
       idx = entry['value']
-
     return(idx)
 
 ###############################################################
@@ -474,6 +476,7 @@ def boundaries_card_children():
 ###############################################################
 # UI value update: boundaries model selection #
 ###############################################################
+# we get here either if we change gittree selection or if we select a different option in the VSelect
 @state.change("boundaries_main_idx")
 def update_boundaries_main(boundaries_main_idx, **kwargs):
     entry = get_entry_from_name(boundaries_main_idx,'value',LBoundariesMain)
@@ -485,22 +488,154 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
         state.BCDictList[index]['bcType'] = bctype
         break
 
-    state.selectedBoundaryIndex = str(index)
+    if bctype == "Wall":
+      # set the wall subtype for the dialog window
+      print("index = ",index)
+      print("BCDictlist[index]=",state.BCDictList[index])
+      print("subtype=",state.BCDictList[index]['bc_subtype'])
+      #state.boundaries_wall_idx = get_boundaries_main_idx_from_name(state.BCDictList[index]['bc_subtype'],'bcType',LBoundariesWall)
+
+      bc_subtype = state.BCDictList[index]['bc_subtype']
+      print("subtype=",bc_subtype)
+      # now find it in the list LBoundariesWall
+      entry = get_entry_from_name(bc_subtype,'text',LBoundariesWall)
+      print("entry = ",entry)
+      state.boundaries_wall_idx = entry['value']
+      print("stored wall idx=",state.boundaries_wall_idx)
+
+      state.boundaries_inc_temperature_idx = state.BCDictList[index]['bc_temperature']
+
+      state.dirty('boundaries_wall_idx')
+      state.dirty('boundaries_inc_temperature_idx')
+
+    #state.selectedBoundaryIndex = str(index)
+    state.selectedBoundaryIndex = index
 
 
-# when the boundary selection changes, we go here
+# when the boundary selection changes in the gittree, we go here
 # we then update the boundary_main_index
 # when the state of boundary index changes, we get the actual boundary condition name
 # and type that we stored for the boundary
 @state.change("selectedBoundaryName")
 def update_boundaries_main(selectedBoundaryName, **kwargs):
     # get the index from the boundary name
+    # this shows the right boundary type
     state.boundaries_main_idx = get_boundaries_main_idx_from_name(selectedBoundaryName)
     state.dirty('boundaries_main_idx')
 
 
 
+###############################################################
+# Boundaries - state changes
+###############################################################
 
-###############################################################
-# PIPELINE SUBCARD : PHYSICS
-###############################################################
+# wall type
+@state.change("boundaries_wall_idx")
+def update_material(boundaries_wall_idx, **kwargs):
+    print("boundaries wall type index: ",boundaries_wall_idx)
+    if boundaries_wall_idx==0:
+      print("boundaries_wall_idx:T")
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Temperature"
+    elif boundaries_wall_idx==1:
+      print("boundaries_wall_idx:hf")
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat flux"
+    elif boundaries_wall_idx==2:
+      print("boundaries_wall_idx:ht")
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat transfer"
+
+
+    print("BCDictList = ",state.BCDictList)
+    # update config option value
+    #state.jsonData['MU_CONSTANT']= materials_constant_viscosity_idx
+
+# incompressible temperature has been selected. This means the boundary is of type ISOTHERMAL
+@state.change("boundaries_inc_temperature_idx")
+def update_material(boundaries_inc_temperature_idx, **kwargs):
+    print("T:boundaries wall type index: ",boundaries_inc_temperature_idx)
+    # update config option value we cannot directly add it to the json MARKER_ISOTHERMAL
+    # because we do not know about the other boundaries so we add the information to BCDictList
+    # so first we have to get which boundary is selected
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    print("selected boundary value= ",boundaries_inc_temperature_idx)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Temperature"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_temperature'] = boundaries_inc_temperature_idx
+    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_ISOTHERMAL"
+    print("BCDictList = ",state.BCDictList)
+
+# incompressible heatflux has been selected. This means the boundary is of type HEATFLUX
+@state.change("boundaries_inc_heatflux_idx")
+def update_material(boundaries_inc_heatflux_idx, **kwargs):
+    print("HF: boundaries wall type index: ",boundaries_inc_heatflux_idx)
+    # update config option value we cannot directly add it to the json MARKER_ISOTHERMAL
+    # because we do not know about the other boundaries so we add the information to BCDictList
+    # so first we have to get which boundary is selected
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    print("selected boundary value= ",boundaries_inc_heatflux_idx)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat flux"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_heatflux'] = boundaries_inc_heatflux_idx
+    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATFLUX"
+    print("BCDictList = ",state.BCDictList)
+
+# incompressible heattransfer has been selected. This means the boundary is of type HEATTRANSFER
+@state.change("boundaries_inc_heattransfer_h_idx")
+def update_material(boundaries_inc_heattransfer_h_idx, **kwargs):
+    print("HT:boundaries wall type index: ",boundaries_inc_heattransfer_h_idx)
+    # update config option value we cannot directly add it to the json MARKER_HEATTRANSFER
+    # because we do not know about the other boundaries so we add the information to BCDictList
+    # so first we have to get which boundary is selected
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    print("selected boundary value= ",boundaries_inc_heattransfer_h_idx)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat transfer"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_heattransfer'][0] = boundaries_inc_heattransfer_h_idx
+    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATTRANSFER"
+    print("BCDictList = ",state.BCDictList)
+
+@state.change("boundaries_inc_heattransfer_T_idx")
+def update_material(boundaries_inc_heattransfer_T_idx, **kwargs):
+    print("boundaries wall type index: ",boundaries_inc_heattransfer_T_idx)
+    # update config option value we cannot directly add it to the json MARKER_HEATTRANSFER
+    # because we do not know about the other boundaries so we add the information to BCDictList
+    # so first we have to get which boundary is selected
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    print("selected boundary value= ",boundaries_inc_heattransfer_T_idx)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat transfer"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_heattransfer'][1] = boundaries_inc_heattransfer_T_idx
+    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATTRANSFER"
+    print("BCDictList = ",state.BCDictList)
+
+    #boundaries_inc_temperature_idx
+    # {"bcName":bcName.get("text"), "bcType":"Wall", "bc_subtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0}
+
+# create the json entries for the boundaries using BCDictList
+def createjsonMarkers():
+  print("creating json entry for inlet")
+  marker_inlet=[]
+  marker_isothermal=[]
+  marker_heatflux=[]
+  marker_heattransfer=[]
+  marker_symmetry=[]
+  marker_farfield=[]
+  marker_outlet=[]
+  for bcdict in state.BCDictList:
+    if bcdict['json']=="MARKER_ISOTHERMAL":
+        marker_isothermal.append([bcdict['bcName']].extend(bcdict['bc_temperature']))
+    if bcdict['json']=="MARKER_HEATFLUX":
+        marker_heatflux.append([bcdict['bcName']].extend(bcdict['bc_heatflux']))
+    if bcdict['json']=="MARKER_TRANSFER":
+        marker_heattransfer.append([bcdict['bcName']].extend(bcdict['bc_heattransfer']))
+
+  print("marker_isothermal=",marker_isothermal)
+  print("marker_heatflux=",marker_heatflux)
+  print("marker_heattransfer=",marker_heattransfer)
+  state.jsonData['MARKER_ISOTHERMAL']=[marker_isothermal]
+  state.jsonData['MARKER_HEATFLUX']=[marker_heatflux]
+  state.jsonData['MARKER_HEATTRANSFER']=[marker_heattransfer]
+
