@@ -585,7 +585,7 @@ def materials_card():
                 # the name of the list box
                 label="Fluid conductivity",
                 # note that when jsonData changes, it needs to be updated using state.dirty
-                disabled=("jsonData['INC_ENERGY_EQUATION']=='NO'",False),
+                disabled=("jsonData['INC_ENERGY_EQUATION']==0",0),
                 hide_details=True,
                 dense=True,
                 outlined=True,
@@ -598,7 +598,7 @@ def materials_card():
                                 variant="text",
                                 color="white",
                                 click=update_materials_dialog_card_conductivity,
-                                disabled=("jsonData['INC_ENERGY_EQUATION']=='NO'",False),
+                                disabled=("jsonData['INC_ENERGY_EQUATION']==0",0),
                                 icon="mdi-dots-vertical"):
                 vuetify.VIcon("mdi-dots-vertical",density="compact",color="green")
 

@@ -7,11 +7,13 @@
         0.0
     ],
     "CFL_NUMBER": 1.0,
+    "CFL_REDUCTION_TURB": 1.0,
     "CONDUCTIVITY_MODEL": "CONSTANT_CONDUCTIVITY",
     "CONV_FIELD": [
         "DRAG"
     ],
     "CONV_FILENAME": "history",
+    "CONV_NUM_METHOD_FLOW": "FDS",
     "CONV_RESIDUAL_MINVAL": -14,
     "CONV_STARTITER": 10,
     "CP_POLYCOEFFS": [
@@ -21,17 +23,26 @@
         0,
         0
     ],
-    "FLUID_MODEL": "CONSTANT_DENSITY",
+    "FLUID_MODEL": "STANDARD_AIR",
+    "FREESTREAM_DENSITY": 1.2,
+    "FREESTREAM_PRESSURE": 101325.0,
+    "FREESTREAM_TEMPERATURE": 300.0,
+    "FREESTREAM_VELOCITY": [
+        1.0,
+        0.0,
+        0.0
+    ],
     "GAMMA_VALUE": 1.4,
     "GAS_CONSTANT": 287.15,
     "INC_DENSITY_INIT": 1.2,
-    "INC_DENSITY_MODEL": "CONSTANT",
+    "INC_DENSITY_MODEL": "VARIABLE",
     "INC_ENERGY_EQUATION": false,
     "INC_INLET_DAMPING": 0.1,
-    "INC_INLET_TYPE": "VELOCITY_INLET",
+    "INC_INLET_TYPE": [
+        "VELOCITY_INLET"
+    ],
     "INC_NONDIM": "DIMENSIONAL",
     "INC_OUTLET_DAMPING": 0.1,
-    "INC_OUTLET_TYPE": "PRESSURE_OUTLET",
     "INC_TEMPERATURE_INIT": 293.15,
     "INC_VELOCITY_INIT": [
         1.0,
@@ -52,48 +63,40 @@
         0,
         0
     ],
+    "LINEAR_SOLVER": "FGMRES",
+    "LINEAR_SOLVER_ERROR": 1e-10,
+    "LINEAR_SOLVER_ITER": 5,
+    "LINEAR_SOLVER_PREC": "LU_SGS",
     "LM_OPTIONS": "MENTER_LANGTRY",
     "MARKER_INLET": [
         [
-            "inlet_1",
+            "gas_inlet",
             300.0,
+            "123",
             1.0,
-            1.0,
-            1.0,
-            1.0
-        ],
-        [
-            "inlet_2",
-            400.0,
-            2.0,
             0.0,
-            1.0,
             0.0
         ]
     ],
-    "MARKER_INLET_TURBULENT": [
+    "MARKER_ISOTHERMAL": [
         [
-            "inlet",
-            0.1,
-            100.0
-        ]
-    ],
-    "MARKER_OUTLET": [
-        [
-            "outlet1",
-            0.0
+            "air_axial_inlet",
+            300.0
         ],
         [
-            "outlet2",
-            0.0
+            "outlet",
+            300.0
+        ],
+        [
+            "axis",
+            300.0
+        ],
+        [
+            "wall",
+            300.0
         ]
     ],
-    "MARKER_SYM": [
-        "symmetry_1",
-        "symmetry_bend",
-        "symmetry_2"
-    ],
-    "MESH_FILENAME": "mesh_out.su2",
+    "MESH_FILENAME": "mesh.su2",
     "MESH_FORMAT": "SU2",
     "MOLECULAR_WEIGHT": 287.015,
     "MU_CONSTANT": 1.18e-05,
@@ -117,7 +120,7 @@
     "PRANDTL_TURB": 0.9,
     "RESTART_FILENAME": "restart",
     "RESTART_SOL": false,
-    "SA_OPTIONS": "EXPERIMENTAL ",
+    "SA_OPTIONS": "NONE EXPERIMENTAL ",
     "SCREEN_OUTPUT": [
         "INNER_ITER",
         "RMS_DENSITY",

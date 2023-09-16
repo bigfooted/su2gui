@@ -75,7 +75,7 @@ LBoundaryIncOutletType= [
 # set the state variables using the json data
 def set_json_physics():
   # energy equation on/off
-  state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']=="YES")
+  state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
   state.dirty('physics_energy_idx')
 
   # compressible or incompressible
@@ -292,12 +292,7 @@ def update_physics_energy(physics_energy_idx, **kwargs):
     # can only be activated/deactivated for incompressible
     #state.energy = bool(state.physics_energy_idx)
 
-
     state.jsonData['INC_ENERGY_EQUATION']= bool(physics_energy_idx)
-    #if (state.energy==True):
-    #  state.jsonData['INC_ENERGY_EQUATION']= "YES"
-    #else:
-    #  state.jsonData['INC_ENERGY_EQUATION']= "NO"
 
     # update jsonData
     state.dirty("jsonData")
@@ -402,22 +397,16 @@ def update_physics_turb(physics_turb_idx, **kwargs):
 
     if (physics_turb_idx == 2):
         print("     SA turbulence model activated")
-        #noSSTSelected=True
-        #state.noSST=True
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sa"
         state.submodeltext = "SA text"
     elif (physics_turb_idx == 3):
         print("     SST turbulence model activated")
-        #noSSTSelected=False
-        #state.noSST=False
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sst"
         state.submodeltext = "SST text"
     else:
         print("     SST turbulence model deactivated")
-        #noSSTSelected=True
-        #state.noSST=True
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_none"
         state.submodeltext = "no model"

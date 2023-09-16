@@ -67,6 +67,7 @@ LBoundariesWall= [
   {"text": "Heat transfer", "value": 2},
 ]
 
+# determine which boundary dialog card to show based on the boundary selection
 def update_boundaries_dialog_card(idx):
   print("idx = ",idx)
   if(idx==0):
@@ -98,7 +99,7 @@ def boundaries_dialog_card_inlet():
               # Then a list selection for turbulence submodels
               vuetify.VSelect(
                 # What to do when something is selected
-                v_model=("boundaries_inlet_inc_idx", 0),
+                v_model=("boundaries_inc_inlet_idx", 0),
                 # The items in the list
                 items=("representations_inlet_inc",LBoundariesInletInc),
                 # the name of the list box
@@ -109,6 +110,7 @@ def boundaries_dialog_card_inlet():
                 classes="py-0 my-0",
             )
 
+        with vuetify.VContainer(fluid=True,v_if=("boundaries_inc_inlet_idx==0"),):
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
@@ -118,38 +120,31 @@ def boundaries_dialog_card_inlet():
                 # the name of the list box
                 label="Velocity magnitude [m/s]",
               )
+
+        with vuetify.VContainer(fluid=True,v_if=("boundaries_inc_inlet_idx==1"),):
+          # ####################################################### #
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("boundaries_inc_pressure_idx", 1.0),
+                # the name of the list box
+                label="Pressure [Pa]",
+              )
+
+        with vuetify.VContainer(fluid=True):
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
               vuetify.VTextField(
                 # What to do when something is selected
                 v_model=("boundaries_inc_temperature_idx", 300.0),
+                # no temperature for incompressible when energy equation is off
+                disabled=("jsonData['INC_ENERGY_EQUATION']==0",0),
                 # the name of the list box
                 label="Temperature [K]",
               )
-          # ####################################################### #
-          with vuetify.VRow(classes="py-0 my-0"):
-            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
-              vuetify.VTextField(
-                # What to do when something is selected
-                v_model=("boundaries_nx_idx", 1.0),
-                # the name of the list box
-                label="n_x",
-              )
-            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
-              vuetify.VTextField(
-                # What to do when something is selected
-                v_model=("boundaries_ny_idx", 0.0),
-                # the name of the list box
-                label="n_y",
-              )
-            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
-              vuetify.VTextField(
-                # What to do when something is selected
-                v_model=("boundaries_nz_idx", 0.0),
-                # the name of the list box
-                label="n_z",
-              )
+
 
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
@@ -160,21 +155,48 @@ def boundaries_dialog_card_inlet():
                   # activate or deactivate/disable the checkbox
                   # only active for incompressible flow
                   # else, default is on
-                  #disabled=("physics_comp_idx",0),
                   classes="mt-1 pt-1",
                   hide_details=True,
                   dense=True,
               )
-
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
-            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
               vuetify.VTextField(
                 # What to do when something is selected
-                v_model=("boundaries_inc_inlet_damping_idx", 0.1),
+                v_model=("boundaries_nx_idx", 1.0),
+                disabled=("boundary_inc_vel_usenormals_idx",0),
                 # the name of the list box
-                label="inlet damping factor",
+                label="n_x",
               )
+            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("boundaries_ny_idx", 0.0),
+                disabled=("boundary_inc_vel_usenormals_idx",0),
+                # the name of the list box
+                label="n_y",
+              )
+            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("boundaries_nz_idx", 0.0),
+                disabled=("boundary_inc_vel_usenormals_idx",0),
+                # the name of the list box
+                label="n_z",
+              )
+
+
+
+          # ####################################################### #
+          #with vuetify.VRow(classes="py-0 my-0"):
+          #  with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+          #    vuetify.VTextField(
+          #      # What to do when something is selected
+          #      v_model=("boundaries_inc_inlet_damping_idx", 0.1),
+          #      # the name of the list box
+          #      label="inlet damping factor",
+          #    )
         with vuetify.VCardText():
           vuetify.VBtn("close", click=update_boundaries_dialog_card_inlet)
 
@@ -197,11 +219,11 @@ def boundaries_dialog_card_outlet():
         with vuetify.VContainer(fluid=True):
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
-            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            with vuetify.VCol(cols="10", classes="py-1 my-1 pr-0 mr-0"):
               # Then a list selection for turbulence submodels
               vuetify.VSelect(
                 # What to do when something is selected
-                v_model=("boundaries_outlet_inc_idx", 0),
+                v_model=("boundaries_inc_outlet_idx", 0),
                 # The items in the list
                 items=("representations_outlet_inc",LBoundariesOutletInc),
                 # the name of the list box
@@ -213,7 +235,7 @@ def boundaries_dialog_card_outlet():
             )
 
         # pressure outlet
-        with vuetify.VContainer(fluid=True,v_if=("boundaries_outlet_inc_idx==0"),):
+        with vuetify.VContainer(fluid=True,v_if=("boundaries_inc_outlet_idx==0"),):
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
@@ -222,10 +244,9 @@ def boundaries_dialog_card_outlet():
                 v_model=("boundaries_inc_outlet_P_idx", 300.0),
                 # the name of the list box
                 label="Pressure [Pa]",
-                #    label= ("selectedBoundaryIndex","none"),
               )
         # target massflow
-        with vuetify.VContainer(fluid=True,v_if=("boundaries_outlet_inc_idx==1"),):
+        with vuetify.VContainer(fluid=True,v_if=("boundaries_inc_outlet_idx==1"),):
           # ####################################################### #
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
@@ -234,7 +255,6 @@ def boundaries_dialog_card_outlet():
                 v_model=("boundaries_inc_outlet_m_idx", 0.0),
                 # the name of the list box
                 label="Target mass-flow [kg/s]",
-                #    label= ("selectedBoundaryIndex","none"),
               )
         with vuetify.VCardText():
           vuetify.VBtn("close", click=update_boundaries_dialog_card_outlet)
@@ -339,13 +359,28 @@ def boundaries_dialog_card_farfield():
         with vuetify.VContainer(fluid=True):
 
           with vuetify.VRow(classes="py-0 my-0"):
-            with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
               vuetify.VTextField(
                 # What to do when something is selected
-                v_model=("boundaries_farfield_V_idx", 1.0),
+                v_model=("boundaries_farfield_Vx_idx", 1.0),
                 # the name of the list box
-                label="Far-field Velocity [m/s]",
+                label="Far-field X-Velocity [m/s]",
               )
+            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("boundaries_farfield_Vy_idx", 0.0),
+                # the name of the list box
+                label="Far-field Y-Velocity [m/s]",
+              )
+            with vuetify.VCol(cols="3", classes="py-1 my-1 pr-0 mr-0"):
+              vuetify.VTextField(
+                # What to do when something is selected
+                v_model=("boundaries_farfield_Vz_idx", 0.0),
+                # the name of the list box
+                label="Far-field Z-Velocity [m/s]",
+              )
+
 
           with vuetify.VRow(classes="py-0 my-0"):
             with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
@@ -390,11 +425,18 @@ def get_entry_from_name(val,key,List):
   #print(List[0][key])
   print("val=",val)
   print("key=",key)
-  entry=None
+
+  #NOTE: if the entry is not in the list, we return the first item.
+  # This happens when we want to retrieve the subtype, of bctype, but bctype has changed
+  # in the mean time. Since we have only one subtype that is shared with all types, there is
+  # a mismatch.
+  entry=List[0]
+
   # loop over all dict items in the list
   for item in List:
       print("item=",item)
       if item[key]==val:
+        print("value found for item:",item)
         entry=item
   return entry
 
@@ -467,6 +509,7 @@ def boundaries_card_children():
                     outlined=True,
                     classes="mt-0 pt-0",
                 )
+            # Button to call/show the dialog card. Which dialog card to show depends on the chosen boundary condition
             with vuetify.VCol(cols="4", classes=""):
               with vuetify.VBtn(classes="mx-0 py-0 mt-0 mb-0",elevation=1,variant="text",color="white", click=(update_boundaries_dialog_card,"[boundaries_main_idx]"), icon="mdi-dots-vertical"):
                 vuetify.VIcon("mdi-dots-vertical",density="compact",color="green")
@@ -477,39 +520,104 @@ def boundaries_card_children():
 # UI value update: boundaries model selection #
 ###############################################################
 # we get here either if we change gittree selection or if we select a different option in the VSelect
+# here, we have to update the values for the dialog windows from the stored BCDict values to show the correct
+# values for each boundary
 @state.change("boundaries_main_idx")
 def update_boundaries_main(boundaries_main_idx, **kwargs):
+    print("update boundaries main, idx=",boundaries_main_idx)
     entry = get_entry_from_name(boundaries_main_idx,'value',LBoundariesMain)
     bctype = entry['text']
 
-    # update the BCDictList
+    # update the BCDictList with the new boundary type
     for index in range(len(state.BCDictList)):
       if state.BCDictList[index]['bcName']==state.selectedBoundaryName:
         state.BCDictList[index]['bcType'] = bctype
         break
 
-    if bctype == "Wall":
-      # set the wall subtype for the dialog window
-      print("index = ",index)
-      print("BCDictlist[index]=",state.BCDictList[index])
-      print("subtype=",state.BCDictList[index]['bc_subtype'])
-      #state.boundaries_wall_idx = get_boundaries_main_idx_from_name(state.BCDictList[index]['bc_subtype'],'bcType',LBoundariesWall)
 
-      bc_subtype = state.BCDictList[index]['bc_subtype']
-      print("subtype=",bc_subtype)
-      # now find it in the list LBoundariesWall
-      entry = get_entry_from_name(bc_subtype,'text',LBoundariesWall)
-      print("entry = ",entry)
-      state.boundaries_wall_idx = entry['value']
-      print("stored wall idx=",state.boundaries_wall_idx)
-
-      state.boundaries_inc_temperature_idx = state.BCDictList[index]['bc_temperature']
-
-      state.dirty('boundaries_wall_idx')
-      state.dirty('boundaries_inc_temperature_idx')
-
-    #state.selectedBoundaryIndex = str(index)
+    print("boundaries_main_idx::selected index=",index)
     state.selectedBoundaryIndex = index
+
+    # from the main ui, we can call a dialog window.
+    # 1. We have to get the dialog window corresponding to the chosen boundary condition.
+    # 2. We have to set the values in the dialog window to the ones that were chosen/stored before.
+    print("boundaries_main_idx::bc type = ",bctype)
+    if bctype == "Wall":
+      # set the wall subtype for the dialog window from the saved state
+      bc_subtype = state.BCDictList[index]['bc_subtype']
+      # now find the subtype in the list LBoundariesWall and retrieve the index in the list
+      entry = get_entry_from_name(bc_subtype,'text',LBoundariesWall)
+      # set the state - this also calls the state function
+      state.boundaries_wall_idx = entry['value']
+      # force update of state, so we call the state.change
+      state.dirty('boundaries_wall_idx')
+
+    elif bctype == "Outlet":
+      # massflow or pressure
+      bc_subtype = state.BCDictList[index]['bc_subtype']
+      print("bc_subtype=",bc_subtype)
+      # now find the subtype in the list LBoundariesWall and retrieve the index in the list
+      entry = get_entry_from_name(bc_subtype,'text',LBoundariesOutletInc)
+      # set the state - this also calls the state function
+      state.boundaries_inc_outlet_idx = entry['value']
+      # force update of state, so we call the state.change
+      state.dirty('boundaries_inc_outlet_idx')
+
+    elif bctype == "Inlet":
+      # velocity or pressure
+      bc_subtype = state.BCDictList[index]['bc_subtype']
+      print("bc_subtype=",bc_subtype)
+      # now find the subtype in the list LBoundariesInletInc and retrieve the index in the list
+      entry = get_entry_from_name(bc_subtype,'text',LBoundariesInletInc)
+      # set the state - this also calls the state function
+      state.boundaries_inc_inlet_idx = entry['value']
+      # force update of state, so we call the state.change
+      state.dirty('boundaries_inc_inlet_idx')
+
+    elif bctype == "Symmetry":
+      # symmetry has no other options
+      #bc_subtype = state.BCDictList[index]['bc_subtype']
+      print("bc_type=symmetry")
+      # set the subtype to symmetry because this is what we use in the su2_io file writing
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Symmetry"
+
+      # now find the subtype in the list LBoundariesWall and retrieve the index in the list
+      #entry = get_entry_from_name(bc_subtype,'text',LBoundariesOutletInc)
+      # set the state - this also calls the state function
+      #state.boundaries_inc_outlet_idx = entry['value']
+      # force update of state, so we call the state.change
+      #state.dirty('boundaries_inc_outlet_idx')
+    elif bctype == "Far-field":
+      print("bc_type=farfield :",state.BCDictList[state.selectedBoundaryIndex])
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Far-field"
+      #state.boundaries_farfield_Vx_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0]
+      #state.boundaries_farfield_Vy_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][1]
+      #state.boundaries_farfield_Vz_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][2]
+      #state.boundaries_farfield_T_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_temperature']
+      #state.boundaries_farfield_P_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_pressure']
+      #state.boundaries_farfield_rho_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_density']
+      state.boundaries_farfield_Vx_idx = state.jsonData['FREESTREAM_VELOCITY'][0]
+      state.boundaries_farfield_Vy_idx = state.jsonData['FREESTREAM_VELOCITY'][1]
+      state.boundaries_farfield_Vz_idx = state.jsonData['FREESTREAM_VELOCITY'][2]
+      state.boundaries_farfield_T_idx = state.jsonData['FREESTREAM_TEMPERATURE']
+      state.boundaries_farfield_P_idx = state.jsonData['FREESTREAM_PRESSURE']
+      state.boundaries_farfield_rho_idx = state.jsonData['FREESTREAM_DENSITY']
+      # in the case of farfield, the farfield is:
+      # 1. the same for all farfield boundaries
+      # 2. stored in the freestream conditions
+      state.dirty('boundaries_farfield_Vx_idx')
+      state.dirty('boundaries_farfield_Vy_idx')
+      state.dirty('boundaries_farfield_Vz_idx')
+      state.dirty('boundaries_farfield_T_idx')
+      state.dirty('boundaries_farfield_P_idx')
+      state.dirty('boundaries_farfield_rho_idx')
+
+      # set the state - this also calls the state function
+      #state.boundaries_farfield_idx = entry['value']
+      # force update of state, so we call the state.change
+      #state.dirty('boundaries_farfield_idx')
+
+
 
 
 # when the boundary selection changes in the gittree, we go here
@@ -520,8 +628,11 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
 def update_boundaries_main(selectedBoundaryName, **kwargs):
     # get the index from the boundary name
     # this shows the right boundary type
-    state.boundaries_main_idx = get_boundaries_main_idx_from_name(selectedBoundaryName)
-    state.dirty('boundaries_main_idx')
+    print("update boundaries main, selected name=",selectedBoundaryName)
+    # ignore selection of the internal boundary (for now, we do not do anything)
+    if selectedBoundaryName != 'internal':
+      state.boundaries_main_idx = get_boundaries_main_idx_from_name(selectedBoundaryName)
+      state.dirty('boundaries_main_idx')
 
 
 
@@ -529,24 +640,27 @@ def update_boundaries_main(selectedBoundaryName, **kwargs):
 # Boundaries - state changes
 ###############################################################
 
-# wall type
+# wall type - we get here when we change the wall type in the selection list
+# we also have to set/update all the values that are shown in the same dialog window
 @state.change("boundaries_wall_idx")
 def update_material(boundaries_wall_idx, **kwargs):
     print("boundaries wall type index: ",boundaries_wall_idx)
     if boundaries_wall_idx==0:
       print("boundaries_wall_idx:T")
       state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Temperature"
+      state.boundaries_inc_temperature_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_temperature']
+
     elif boundaries_wall_idx==1:
       print("boundaries_wall_idx:hf")
       state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat flux"
+      state.boundaries_inc_heatflux_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_heatflux']
+
     elif boundaries_wall_idx==2:
       print("boundaries_wall_idx:ht")
       state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat transfer"
-
-
+      state.boundaries_inc_heattransfer_h_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_heattransfer'][0]
+      state.boundaries_inc_heattransfer_T_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_heattransfer'][1]
     print("BCDictList = ",state.BCDictList)
-    # update config option value
-    #state.jsonData['MU_CONSTANT']= materials_constant_viscosity_idx
 
 # incompressible temperature has been selected. This means the boundary is of type ISOTHERMAL
 @state.change("boundaries_inc_temperature_idx")
@@ -561,7 +675,7 @@ def update_material(boundaries_inc_temperature_idx, **kwargs):
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
     state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Temperature"
     state.BCDictList[state.selectedBoundaryIndex]['bc_temperature'] = boundaries_inc_temperature_idx
-    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_ISOTHERMAL"
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_ISOTHERMAL"
     print("BCDictList = ",state.BCDictList)
 
 # incompressible heatflux has been selected. This means the boundary is of type HEATFLUX
@@ -577,7 +691,7 @@ def update_material(boundaries_inc_heatflux_idx, **kwargs):
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
     state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat flux"
     state.BCDictList[state.selectedBoundaryIndex]['bc_heatflux'] = boundaries_inc_heatflux_idx
-    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATFLUX"
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATFLUX"
     print("BCDictList = ",state.BCDictList)
 
 # incompressible heattransfer has been selected. This means the boundary is of type HEATTRANSFER
@@ -593,7 +707,7 @@ def update_material(boundaries_inc_heattransfer_h_idx, **kwargs):
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
     state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat transfer"
     state.BCDictList[state.selectedBoundaryIndex]['bc_heattransfer'][0] = boundaries_inc_heattransfer_h_idx
-    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATTRANSFER"
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATTRANSFER"
     print("BCDictList = ",state.BCDictList)
 
 @state.change("boundaries_inc_heattransfer_T_idx")
@@ -604,38 +718,217 @@ def update_material(boundaries_inc_heattransfer_T_idx, **kwargs):
     # so first we have to get which boundary is selected
     print("selected boundary name= ",state.selectedBoundaryName)
     print("selected boundary index= ",state.selectedBoundaryIndex)
-    print("selected boundary value= ",boundaries_inc_heattransfer_T_idx)
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Wall"
     state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Heat transfer"
     state.BCDictList[state.selectedBoundaryIndex]['bc_heattransfer'][1] = boundaries_inc_heattransfer_T_idx
-    state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATTRANSFER"
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_HEATTRANSFER"
     print("BCDictList = ",state.BCDictList)
 
-    #boundaries_inc_temperature_idx
-    # {"bcName":bcName.get("text"), "bcType":"Wall", "bc_subtype":"Heatflux", "json":"MARKER_HEATFLUX", "bcValue":0.0}
+# #################################################################### #
+# ############################## INLET ############################### #
+# #################################################################### #
 
-# create the json entries for the boundaries using BCDictList
-def createjsonMarkers():
-  print("creating json entry for inlet")
-  marker_inlet=[]
-  marker_isothermal=[]
-  marker_heatflux=[]
-  marker_heattransfer=[]
-  marker_symmetry=[]
-  marker_farfield=[]
-  marker_outlet=[]
-  for bcdict in state.BCDictList:
-    if bcdict['json']=="MARKER_ISOTHERMAL":
-        marker_isothermal.append([bcdict['bcName']].extend(bcdict['bc_temperature']))
-    if bcdict['json']=="MARKER_HEATFLUX":
-        marker_heatflux.append([bcdict['bcName']].extend(bcdict['bc_heatflux']))
-    if bcdict['json']=="MARKER_TRANSFER":
-        marker_heattransfer.append([bcdict['bcName']].extend(bcdict['bc_heattransfer']))
+# Inlet type, pressure or velocity (for INC_INLET_TYPE)
+@state.change("boundaries_inc_inlet_idx")
+def update_material(boundaries_inc_inlet_idx, **kwargs):
+    print("boundaries wall type index: ",boundaries_inc_inlet_idx)
+    # velocity inlet
+    if boundaries_inc_inlet_idx==0:
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Velocity inlet"
+      # set the state, this will also call state.change
+      state.boundaries_inc_velocity_magnitude_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_magnitude']
+      # normal vector (when not using 'normal to boundary face')
+      state.boundaries_inc_nx_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0]
+      state.boundaries_inc_ny_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][1]
+      state.boundaries_inc_nz_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][2]
 
-  print("marker_isothermal=",marker_isothermal)
-  print("marker_heatflux=",marker_heatflux)
-  print("marker_heattransfer=",marker_heattransfer)
-  state.jsonData['MARKER_ISOTHERMAL']=[marker_isothermal]
-  state.jsonData['MARKER_HEATFLUX']=[marker_heatflux]
-  state.jsonData['MARKER_HEATTRANSFER']=[marker_heattransfer]
+    # pressure inlet
+    elif boundaries_inc_inlet_idx==1:
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Pressure inlet"
+      # set the state, this will also call state.change
+      state.boundaries_inc_pressure_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_pressure']
+
+    # temperature (only when energy equation is active)
+    state.boundaries_inc_temperature_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_temperature']
+
+
+
+
+
+@state.change("boundaries_inc_velocity_magnitude_idx")
+def update_material(boundaries_inc_velocity_magnitude_idx, **kwargs):
+    print("boundaries inc velocity type index: ",boundaries_inc_velocity_magnitude_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Velocity inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_magnitude'] = boundaries_inc_velocity_magnitude_idx
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_INLET"
+    print("BCDictList = ",state.BCDictList)
+
+
+@state.change("boundaries_inc_temperature_idx")
+def update_material(boundaries_inc_temperature_idx, **kwargs):
+    print("boundaries temp type index: ",boundaries_inc_temperature_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Velocity inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_temperature'] = boundaries_inc_temperature_idx
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_INLET"
+    print("BCDictList = ",state.BCDictList)
+
+
+@state.change("boundaries_inc_pressure_idx")
+def update_material(boundaries_inc_pressure_idx, **kwargs):
+    print("boundaries pres type index: ",boundaries_inc_pressure_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Pressure inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_pressure'] = boundaries_inc_pressure_idx
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_INLET"
+    print("BCDictList = ",state.BCDictList)
+
+
+@state.change("boundaries_inc_nx_idx")
+def update_material(boundaries_inc_nx_idx, **kwargs):
+    print("boundaries nx type index: ",boundaries_inc_nx_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Velocity inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0] = boundaries_inc_nx_idx
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_INLET"
+    print("BCDictList = ",state.BCDictList)
+
+@state.change("boundaries_inc_ny_idx")
+def update_material(boundaries_inc_ny_idx, **kwargs):
+    print("boundaries ny type index: ",boundaries_inc_ny_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Velocity inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][1] = boundaries_inc_ny_idx
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_INLET"
+    print("BCDictList = ",state.BCDictList)
+
+@state.change("boundaries_inc_nz_idx")
+def update_material(boundaries_inc_nz_idx, **kwargs):
+    print("boundaries nz type index: ",boundaries_inc_nz_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Velocity inlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][2] = boundaries_inc_nz_idx
+    #state.BCDictList[state.selectedBoundaryIndex]['json'] = "MARKER_INLET"
+    print("BCDictList = ",state.BCDictList)
+
+
+
+# #################################################################### #
+# ############################## OUTLET ############################## #
+# #################################################################### #
+
+# Outlet type, pressure or target mass flow rate (for INC_OUTLET_TYPE)
+@state.change("boundaries_inc_outlet_idx")
+def update_material(boundaries_inc_outlet_idx, **kwargs):
+    print("boundaries wall type index: ",boundaries_inc_outlet_idx)
+    # pressure outlet
+    if boundaries_inc_outlet_idx==0:
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Pressure outlet"
+      # set the state, this will also call state.change
+      state.boundaries_inc_outlet_P_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_pressure']
+
+    # target mass flow rate
+    elif boundaries_inc_outlet_idx==1:
+      state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Target mass flow rate"
+      state.boundaries_inc_outlet_m_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_massflow']
+
+@state.change("boundaries_inc_outlet_P_idx")
+def update_material(boundaries_inc_outlet_P_idx, **kwargs):
+    print("boundaries P outlet type index: ",boundaries_inc_outlet_P_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Outlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Pressure outlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_pressure'] = boundaries_inc_outlet_P_idx
+    print("BCDictList = ",state.BCDictList)
+
+@state.change("boundaries_inc_outlet_m_idx")
+def update_material(boundaries_inc_outlet_m_idx, **kwargs):
+    print("boundaries m outlet type index: ",boundaries_inc_outlet_m_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Outlet"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Target mass flow rate"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_massflow'] = boundaries_inc_outlet_m_idx
+    print("BCDictList = ",state.BCDictList)
+
+
+# #################################################################### #
+# ############################## OUTLET ############################## #
+# #################################################################### #
+
+@state.change("boundaries_farfield_Vx_idx")
+def update_material(boundaries_farfield_Vx_idx, **kwargs):
+    print("boundaries farfield type index: ",boundaries_farfield_Vx_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0] = boundaries_farfield_Vx_idx
+    print("BCDictList = ",state.BCDictList)
+    state.jsonData['FREESTREAM_VELOCITY'][0]=boundaries_farfield_Vx_idx
+
+@state.change("boundaries_farfield_Vy_idx")
+def update_material(boundaries_farfield_Vy_idx, **kwargs):
+    print("boundaries farfield type index: ",boundaries_farfield_Vy_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][1] = boundaries_farfield_Vy_idx
+    print("BCDictList = ",state.BCDictList)
+    state.jsonData['FREESTREAM_VELOCITY'][1]=boundaries_farfield_Vy_idx
+
+@state.change("boundaries_farfield_Vz_idx")
+def update_material(boundaries_farfield_Vz_idx, **kwargs):
+    print("boundaries farfield type index: ",boundaries_farfield_Vz_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0] = boundaries_farfield_Vz_idx
+    print("BCDictList = ",state.BCDictList)
+    state.jsonData['FREESTREAM_VELOCITY'][2]=boundaries_farfield_Vz_idx
+
+@state.change("boundaries_farfield_T_idx")
+def update_material(boundaries_farfield_T_idx, **kwargs):
+    print("boundaries farfield type index: ",boundaries_farfield_T_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_temperature'] = boundaries_farfield_T_idx
+    print("BCDictList = ",state.BCDictList)
+    state.jsonData['FREESTREAM_TEMPERATURE']=boundaries_farfield_T_idx
+
+@state.change("boundaries_farfield_P_idx")
+def update_material(boundaries_farfield_P_idx, **kwargs):
+    print("boundaries farfield type index: ",boundaries_farfield_P_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_pressure'] = boundaries_farfield_P_idx
+    print("BCDictList = ",state.BCDictList)
+    state.jsonData['FREESTREAM_PRESSURE']=boundaries_farfield_P_idx
+
+@state.change("boundaries_farfield_rho_idx")
+def update_material(boundaries_farfield_rho_idx, **kwargs):
+    print("boundaries farfield type index: ",boundaries_farfield_rho_idx)
+    print("selected boundary name= ",state.selectedBoundaryName)
+    print("selected boundary index= ",state.selectedBoundaryIndex)
+    state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
+    state.BCDictList[state.selectedBoundaryIndex]['bc_density'] = boundaries_farfield_rho_idx
+    print("BCDictList = ",state.BCDictList)
+    state.jsonData['FREESTREAM_DENSITY']=boundaries_farfield_rho_idx
+
+
 

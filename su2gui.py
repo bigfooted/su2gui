@@ -18,48 +18,10 @@ from datetime import date
 # Import json setup for writing the config file in json and cfg file format.
 from su2_json import *
 # Export su2 mesh file.
-from su2_io import export_files
+from su2_io import export_files,nijso_list_change
 
 # Definition of ui_card and the server.
 from uicard import ui_card, server
-
-#############################################################################
-# Gittree menu                                                              #
-# We have defined each of the tabs in its own module and we import it here. #
-# We then call the card in the SinglePageWithDrawerLayout() function.       #
-#############################################################################
-# gittree menu : import mesh tab                                            #
-from mesh import *
-# gittree menu : import physics tab                                         #
-from physics import *
-# gittree menu : import materials tab                                       #
-from materials import *
-# gittree menu : import numerics tab                                        #
-from numerics import *
-# gittree menu : import boundaries tab                                      #
-from boundaries import *
-# gittree menu : import solver tab                                          #
-from solver import *
-# gittree menu : import initialization tab                                  #
-from initialization import *
-#############################################################################
-
-
-from pipeline import PipelineManager
-from pathlib import Path
-BASE = Path(__file__).parent
-from trame.assets.local import LocalFileManager
-
-print("****************************************")
-print("* Base path = ", BASE                    )
-print("****************************************")
-
-filename_cfg_export = "config_new.cfg"
-filename_json_export = "config_new.json"
-
-local_file_manager = LocalFileManager(__file__)
-local_file_manager.url("collapsed", BASE / "icons/chevron-up.svg")
-local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
 
 import vtk
 # vtm reader
@@ -101,6 +63,49 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleSwitch  # noqa
 # local rendering, but doesn't hurt to include it
 import vtkmodules.vtkRenderingOpenGL2  # noqa
 
+#############################################################################
+# Gittree menu                                                              #
+# We have defined each of the tabs in its own module and we import it here. #
+# We then call the card in the SinglePageWithDrawerLayout() function.       #
+#############################################################################
+# gittree menu : import mesh tab                                            #
+from mesh import *
+# gittree menu : import physics tab                                         #
+from physics import *
+# gittree menu : import materials tab                                       #
+from materials import *
+# gittree menu : import numerics tab                                        #
+from numerics import *
+# gittree menu : import boundaries tab                                      #
+from boundaries import *
+# gittree menu : import solver tab                                          #
+from solver import *
+# gittree menu : import initialization tab                                  #
+from initialization import *
+#############################################################################
+
+
+# -----------------------------------------------------------------------------
+# Trame setup
+# -----------------------------------------------------------------------------
+state, ctrl = server.state, server.controller
+
+from pipeline import PipelineManager
+from pathlib import Path
+BASE = Path(__file__).parent
+from trame.assets.local import LocalFileManager
+
+print("****************************************")
+print("* Base path = ", BASE                    )
+print("****************************************")
+
+state.filename_cfg_export = "config_new.cfg"
+state.filename_json_export = "config_new.json"
+
+local_file_manager = LocalFileManager(__file__)
+local_file_manager.url("collapsed", BASE / "icons/chevron-up.svg")
+local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
+
 # -----------------------------------------------------------------------------
 
 renderer = vtkRenderer()
@@ -138,12 +143,9 @@ Fields_ENERGY="Energy"
 Fields_SA=["Nu_Tilde"]
 Fields_SST=["Turb_Kin_Energy","Omega"]
 
-# -----------------------------------------------------------------------------
-# Trame setup
-# -----------------------------------------------------------------------------
-
-state, ctrl = server.state, server.controller
-
+state.initialize=-1
+# number of dimensions of the mesh (2 or 3)
+state.nDim = 2
 # initial state for the initialization gittree
 state.field_state_name = Fields_INC_STATE
 state.field_energy_name = Fields_INC_TEMP
@@ -153,7 +155,9 @@ state.field_velocity_name = Fields_INC_2D
 state.selectedBoundaryName="none"
 state.selectedBoundaryIndex = 0
 
-# Boundary Condition Dictionary List (initial value)
+# Boundary Condition Dictionary List
+# This is the internal list of dictionaries for the boundary conditions
+# This will be converted and written as MARKER info to .json and .cfg files.
 state.BCDictList = [{"bcName": "main_wall",
                      "bcType":"Wall",
                      "bc_subtype":"Temperature",
@@ -189,15 +193,7 @@ state.mesh_dimension = 0
 colors = vtkNamedColors()
 
 
-# define initial square (counterclockwise)
-x = [[0.0, 0.0, 0.0],[1.0, 0.0, 0.0],[1.0, 1.0, 0.0],[0.0, 1.0, 0.0]]
-pts=[[0,1,2,3]]
-points = vtk.vtkPoints()
-for i in range(0, len(x)):
-        points.InsertPoint(i, x[i])
-grid = vtkUnstructuredGrid()
-grid.SetPoints(points)
-grid.InsertNextCell(VTK_QUAD,4,pts[0])
+
 
 # list of all the mesh actors (boundaries)
 state.selectedBoundary = 0
@@ -507,9 +503,11 @@ def update_active_ui(active_ui, **kwargs):
         #pipeline.update_node_value("Physics","subui",active_ui)
       elif (_name=="Initialization"):
         print("update node Initialization")
+        # force update of initial_option_idx so we get the submenu
+        state.dirty('initial_option_idx')
         #pipeline.update_node_value("Initialization","subui",active_ui)
         # update because it might be changed elsewhere
-        initialization_card()
+        #initialization_card()
 
       ctrl.view_update()
 
@@ -588,68 +586,6 @@ state.LMaterialsViscosity = LMaterialsViscosityComp
 state.LMaterialsConductivity = LMaterialsConductivityComp
 state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 
-# save the new json configuration file as .json and as .cfg #
-# TODO: why do all the states get checked at startup?
-# TODO: when we click the save button, the icon color changes
-def nijso_list_change():
-    print("write config file"),
-    state.counter = state.counter + 1
-    print("counter=",state.counter)
-    if (state.counter==2):
-      print("counter=",state.counter)
-
-    # first, construct the boundaries using BCDictList
-    createjsonMarkers()
-    #
-    # save the json file
-    with open(BASE / filename_json_export,'w') as jsonOutputFile:
-        json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
-
-    # now convert the json file to a cfg file
-    with open(BASE / filename_cfg_export,'w') as f:
-      f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-      f.write("%                                                                              %\n")
-      f.write("% SU2 configuration file                                                       %\n")
-      f.write("% Case description:                                                            %\n")
-      f.write("% Author:                                                                      %\n")
-      s = "% Date: " \
-        + str(date.today()) \
-        + "                                                             %\n"
-      f.write(s)
-      f.write("% SU2 version:                                                                 %\n")
-      f.write("%                                                                              %\n")
-      f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-      #for k in state.jsonData:
-      for attribute, value in state.jsonData.items():
-        print(attribute, value)
-        # convert boolean
-        if isinstance(value, bool):
-            if value==True:
-                value="YES"
-            else:
-                value="NO"
-        # we can have lists or lists of lists
-        # we can simply flatten the list, remove the quotations,
-        # convert square brackets to round brackets and done.
-        if isinstance(value, list):
-          #flatlist = [x for row in value for x in row]
-          #flatlist = sum(value,[])
-          #flatlist = list(itertools.chain(*value))
-          flat_list = []
-          for sublist in value:
-            print(sublist)
-            if isinstance(sublist,list):
-              for num in sublist:
-                flat_list.append(num)
-            else:
-              flat_list.append(sublist)
-
-          flatlist = ', '.join(str(e) for e in flat_list)
-          value = "(" + flatlist + ")"
-
-
-        filestring=str(attribute) + "= " + str(value) + "\n"
-        f.write(filestring)
 
 
 
@@ -676,6 +612,7 @@ def load_client_files(restartFile, **kwargs):
   df = pd.read_csv(io.StringIO('\n'.join(f)))
 
   # check if the points and cells match
+  # <...>
 
   # construct the dataset_arrays
   datasetArrays = []
@@ -738,17 +675,103 @@ def load_client_files(restartFile, **kwargs):
 
 
 
+# @state.change("initialize")
+#def su2_initialize(initialize, **kwargs):
+#  print("Initialize SU2 fields! ",initialize),
+
+#     # at this point we need to know which variables we have
+#     Fields = ["PointID","x","y"]
+
+#     # incompressible:
+#     if "INC" in (state.jsonData["SOLVER"]):
+#       Fields.extend(["Pressure","Velocity_x","Velocity_y"])
+#     #   P
+#     #   Ux
+#     #   Uy
+#     # dim=3:
+#     #   Uz
+#     if state.nDim==3:
+#       Fields.extend(["Velocity_z"])
+#     # energy:
+#     #  T
+#     if state.jsonData['INC_ENERGY_EQUATION']==True:
+#       Fields.extend(["Temperature"])
+#     #
+#     # compressible
+
+#     print("Fields = ",Fields)
+
+#       # construct the dataset_arrays
+#     datasetArrays = []
+#     counter=0
+#     for name in Fields:
+#       #name = key
+#       ArrayObject = vtk.vtkFloatArray()
+#       ArrayObject.SetName(name)
+#       # all components are scalars, no vectors for velocity
+#       ArrayObject.SetNumberOfComponents(1)
+#       # how many elements do we have?
+#       nElems = grid.GetNumberOfCells()
+#       print("number of elements=",nElems)
+#       nPoints = grid.GetNumberOfPoints()
+#       print("number of points=",nPoints)
+#       #nElems = len(df[name])
+
+#       ArrayObject.SetNumberOfValues(nPoints)
+#       ArrayObject.SetNumberOfTuples(nPoints)
+
+#       # Nijso: TODO FIXME very slow!
+#       # second variable is the value at the point
+#       for i in range(nPoints):
+#         ArrayObject.SetValue(i,0.0125*i)
+
+#       grid.GetPointData().AddArray(ArrayObject)
+
+#       datasetArrays.append(
+#             {
+#                 "text": name,
+#                 "value": counter,
+#                 "range": [1.0,1.0],
+#                 "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
+#             }
+#       )
+#       counter += 1
+
+
+#     # we should now have the scalars available...
+#     defaultArray = datasetArrays[0]
+#     state.dataset_arrays = datasetArrays
+#     print("dataset = ",datasetArrays)
+#     print("dataset_0 = ",datasetArrays[0])
+#     print("dataset_0 = ",datasetArrays[0].get('text'))
+
+#     mesh_mapper.SetInputData(grid)
+#     mesh_actor.SetMapper(mesh_mapper)
+#     renderer.AddActor(mesh_actor)
+#     mesh_mapper.SelectColorArray(defaultArray.get('text'))
+#     mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
+#     mesh_mapper.SetScalarVisibility(True)
+#     mesh_mapper.SetUseLookupTableScalarRange(True)
+
+#     # Mesh: Setup default representation to surface
+#     mesh_actor.GetProperty().SetRepresentationToSurface()
+#     mesh_actor.GetProperty().SetPointSize(1)
+#     mesh_actor.GetProperty().EdgeVisibilityOff()
+
+#     renderer.ResetCamera()
+#     ctrl.view_update()
+
+
+
+
 # load SU2 .su2 mesh file #
 # currently loads a 2D or 3D .su2 file
 @state.change("file_upload")
 def load_client_files(file_upload, **kwargs):
+
     global pipeline
     # remove the added boundary conditions in the pipeline
-
-    #print("***************************************")
     pipeline.remove_right_subnode("Boundaries")
-    #print("***************************************")
-    #print("pipeline=",pipeline)
 
     del mesh_actor_list[:]
 
@@ -763,18 +786,17 @@ def load_client_files(file_upload, **kwargs):
     print("size = ",file_upload.get("size"))
     print("type = ",file_upload.get("type"))
 
-
     # remove all actors
     renderer.RemoveAllViewProps()
 
     grid.Reset()
-    global root
     # ### setup of the internal data structure ###
     # root is now defined globally
     #root = vtkMultiBlockDataSet()
     branch_interior = vtkMultiBlockDataSet()
     branch_boundary = vtkMultiBlockDataSet()
 
+    global root
     root.SetBlock(0, branch_interior)
     root.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Interior')
     root.SetBlock(1, branch_boundary)
@@ -790,7 +812,7 @@ def load_client_files(file_upload, **kwargs):
 
     index = [idx for idx, s in enumerate(f) if 'NDIME' in s][0]
     NDIME = int(f[index].split('=')[1])
-    #state.meshDim = NDIME
+    state.nDim = NDIME
     # for the mesh info display
     #state.meshText += "Mesh Dimensions: " + str(NDIME) + "D \n"
 
@@ -976,11 +998,13 @@ def load_client_files(file_upload, **kwargs):
        print("boundary name=",bcName.get("text"))
        # add the boundaries to the right tree and not the left tree
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
-    print("updated pipeline",pipeline)
 
     state.BCDictList = []
     # fill the boundary conditions with initial boundary condition type
     for bcName in boundaryNames:
+      print("*************** BCNAME **********",bcName)
+      # do not add internal boundaries to bcdictlist
+      if bcName.get("text") != "internal":
         state.BCDictList.append({"bcName":bcName.get("text"),
                                  "bcType":"Wall",
                                  "bc_subtype":"Temperature",
@@ -995,8 +1019,22 @@ def load_client_files(file_upload, **kwargs):
                                  "bc_heattransfer":[0.0, 300.0],
                                  },
                                  )
+      else:
+        state.BCDictList.append({"bcName":bcName.get("text"),
+                                 "bcType":"Internal",
+                                 "bc_subtype":"None",
+                                 "json":"NONE",
+                                 "bc_velocity_magnitude":0.0,
+                                 "bc_temperature":0.0,
+                                 "bc_pressure":0.0,
+                                 "bc_density":0.0,
+                                 "bc_massflow":0.0,
+                                 "bc_velocity_normal":[0.0, 0.0, 0.0],
+                                 "bc_heatflux":0.0,
+                                 "bc_heattransfer":[0.0, 0.0],
+                                 },
+                                 )
 
-    print("boundary nodes:",pipeline)
 
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
@@ -1048,7 +1086,7 @@ def standard_buttons():
     with vuetify.VBtn("download",click=(export_files_01,"[su2_meshfile]")):
         vuetify.VIcon("mdi-download-box-outline")
 
-    with vuetify.VBtn(icon=True, click=nijso_list_change, disabled=("export_disabled",True)):
+    with vuetify.VBtn(icon=True, click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
         vuetify.VIcon("mdi-lightbulb-outline")
 
     #
@@ -1189,11 +1227,11 @@ with SinglePageWithDrawerLayout(server) as layout:
         # set all physics states from the json file
         # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
         set_json_physics()
+        set_json_initialization()
 
-        # this necessary here?
-        state.dirty('jsonData')
-
-        pass
+        #this necessary here?
+        #state.dirty('jsonData')
+        #pass
 
     print("setting up layout content")
     with layout.content:
@@ -1203,7 +1241,6 @@ with SinglePageWithDrawerLayout(server) as layout:
             style="position: relative;"
         ):
 
-            #view = vtk_widgets.VtkRemoteView(renderWindow)
             print("setting up view")
             view = vtk_widgets.VtkRemoteView(renderWindow)
             print("view update")

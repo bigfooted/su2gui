@@ -31,8 +31,11 @@ def read_json_data(filenam):
 # ##################################### JSON ##############################
 
 # Read the default values for the SU2 configuration.
+# this is done at startup
 state.jsonData = read_json_data(BASE / "config.json")
 
+# we now have to add all mandatory fields that were not found in the json file
+# nijso: actually, they are added automatically when we add an item for the first time
 
 # get the "json" name from the dictionary
 def GetJsonName(value,List):
