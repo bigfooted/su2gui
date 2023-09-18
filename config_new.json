@@ -8,7 +8,7 @@
     ],
     "CFL_NUMBER": 1.0,
     "CFL_REDUCTION_TURB": 1.0,
-    "CONDUCTIVITY_MODEL": "CONSTANT_CONDUCTIVITY",
+    "CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL",
     "CONV_FIELD": [
         "DRAG"
     ],
@@ -17,13 +17,13 @@
     "CONV_RESIDUAL_MINVAL": -14,
     "CONV_STARTITER": 10,
     "CP_POLYCOEFFS": [
-        1.2e-05,
-        0,
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
     ],
-    "FLUID_MODEL": "STANDARD_AIR",
+    "FLUID_MODEL": "INC_IDEAL_GAS",
     "FREESTREAM_DENSITY": 1.2,
     "FREESTREAM_PRESSURE": 101325.0,
     "FREESTREAM_TEMPERATURE": 300.0,
@@ -33,52 +33,40 @@
         0.0
     ],
     "GAMMA_VALUE": 1.4,
-    "GAS_CONSTANT": 287.15,
-    "INC_DENSITY_INIT": 1.2,
+    "GAS_CONSTANT": 287.058,
+    "INC_DENSITY_INIT": 1.2886,
     "INC_DENSITY_MODEL": "VARIABLE",
-    "INC_ENERGY_EQUATION": false,
+    "INC_ENERGY_EQUATION": true,
     "INC_INLET_DAMPING": 0.1,
-    "INC_INLET_TYPE": [
-        "VELOCITY_INLET"
-    ],
+    "INC_INLET_USENORMAL": false,
     "INC_NONDIM": "DIMENSIONAL",
     "INC_OUTLET_DAMPING": 0.1,
-    "INC_TEMPERATURE_INIT": 293.15,
+    "INC_TEMPERATURE_INIT": 288.15,
     "INC_VELOCITY_INIT": [
         1.0,
         0.0,
         0.0
     ],
     "ITER": 100,
-    "KIND_INVALID": [
-        "string1",
-        0.0
-    ],
     "KIND_TRANS_MODEL": "NONE",
-    "KIND_TURB_SOLVER": "NONE",
+    "KIND_TURB_MODEL": "SA",
     "KT_POLYCOEFFS": [
-        1.2e-05,
-        0,
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
     ],
     "LINEAR_SOLVER": "FGMRES",
     "LINEAR_SOLVER_ERROR": 1e-10,
     "LINEAR_SOLVER_ITER": 5,
     "LINEAR_SOLVER_PREC": "LU_SGS",
     "LM_OPTIONS": "MENTER_LANGTRY",
-    "MARKER_INLET": [
+    "MARKER_ISOTHERMAL": [
         [
             "gas_inlet",
-            300.0,
-            "123",
-            1.0,
-            0.0,
-            0.0
-        ]
-    ],
-    "MARKER_ISOTHERMAL": [
+            300.0
+        ],
         [
             "air_axial_inlet",
             300.0
@@ -98,16 +86,16 @@
     ],
     "MESH_FILENAME": "mesh.su2",
     "MESH_FORMAT": "SU2",
-    "MOLECULAR_WEIGHT": 287.015,
-    "MU_CONSTANT": 1.18e-05,
+    "MOLECULAR_WEIGHT": 28.9,
+    "MU_CONSTANT": 1.716e-05,
     "MU_POLYCOEFFS": [
-        1.2e-05,
-        0,
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
     ],
-    "MU_REF": 1.18e-05,
+    "MU_REF": 1.716e-05,
     "MU_T_REF": 273.15,
     "NUM_METHOD_GRAD": "GREEN_GAUSS",
     "NUM_METHOD_GRAD_RECON": "GREEN_GAUSS",
@@ -116,26 +104,26 @@
         "PARAVIEW_MULTIBLOCK"
     ],
     "OUTPUT_WRT_FREQ": 100,
-    "PRANDTL_LAM": 1.0,
+    "PRANDTL_LAM": 0.72,
     "PRANDTL_TURB": 0.9,
     "RESTART_FILENAME": "restart",
     "RESTART_SOL": false,
-    "SA_OPTIONS": "NONE EXPERIMENTAL ",
+    "SA_OPTIONS": "WITHFT2 NEGATIVE EXPERIMENTAL ",
     "SCREEN_OUTPUT": [
         "INNER_ITER",
         "RMS_DENSITY",
         "RMS_PRESSURE"
     ],
     "SOLUTION_FILENAME": "solution",
-    "SOLVER": "INC_EULER",
-    "SPECIFIC_HEAT_CP": 1.18e-05,
+    "SOLVER": "INC_RANS",
+    "SPECIFIC_HEAT_CP": 1001.0,
     "SST_OPTIONS": "V1994m",
     "SUTHERLAND_CONSTANT": 110.4,
     "SYSTEM_MEASUREMENTS": "SI",
     "TABULAR_FORMAT": "CSV",
-    "THERMAL_CONDUCTIVITY_CONSTANT": 1005.0,
-    "THERMODYNAMIC_PRESSURE": 10190.06,
+    "THERMAL_CONDUCTIVITY_CONSTANT": 0.0257,
+    "THERMODYNAMIC_PRESSURE": 106819.1,
     "TURBULENT_CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL_TURB",
-    "VISCOSITY_MODEL": "CONSTANT_VISCOSITY",
+    "VISCOSITY_MODEL": "SUTHERLAND",
     "VOLUME_FILENAME": "flow"
 }

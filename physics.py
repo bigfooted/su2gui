@@ -1,5 +1,12 @@
 # physics gittree menu
 
+
+# note that in the main menu, we need to call add the following:
+# 1) from fileio import *
+# 2) call fileio_card() in SinglePageWithDrawerLayout
+# 3) define a node in the gittree (pipeline)
+# 4) define any global state variables that might be needed
+
 # definition of ui_card
 from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
@@ -72,16 +79,19 @@ LBoundaryIncOutletType= [
 
 
 
-# set the state variables using the json data
+# set the state variables using the json data from the config file
 def set_json_physics():
   # energy equation on/off
   state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
-  state.dirty('physics_energy_idx')
+  print("       ################# energy equation = ",state.physics_energy_idx)
 
   # compressible or incompressible
   state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
   print("       ################# compressible= ",state.physics_comp_idx)
-  state.dirty('physics_comp_idx')
+
+  # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
+  state.physics_energy_always_on = 0 if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS') else 1
+  print("energy always on = ",state.physics_energy_always_on)
 
   # the SA options
   state.SAOptions={"NONE":True,
@@ -105,20 +115,45 @@ def set_json_physics():
   state.physics_turb_sa_rotation_idx = 0
   state.physics_turb_sa_bcm_idx = 0
 
-  if "RANS" in state.jsonData['KIND_TURB_SOLVER']:
-    if state.jsonData['KIND_TURB_SOLVER'] == "SST":
-      state.physics_turb_idx = 3
-      state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
-    else:
+  if "EULER" in state.jsonData['SOLVER']:
+     print("EULER solver")
+     state.physics_turb_idx = 0
+  elif "NAVIER_STOKES" in state.jsonData['SOLVER']:
+     print("NAVIER-STOKES solver")
+     state.physics_turb_idx = 1
+  elif "RANS" in state.jsonData['SOLVER']:
+    print("RANS solver")
+    if state.jsonData['KIND_TURB_MODEL'] == "SA":
+      print("SA model")
       # must be SA
       state.physics_turb_idx = 2
-      state.physics_turb_sa_idx= GetJsonIndex(state.jsonData['SA_OPTIONS'],LPhysicsTurbSSTOptions)
+      # activate sub_ui
+      #state.active_sub_ui = "subphysics_sa"
+      #pipeline.update_node_value("Physics","subui",active_sub_ui)
+
+      if "NEGATIVE" in state.jsonData['SA_OPTIONS']:
+         state.physics_turb_sa_idx = 1
+      elif "EDWARDS" in state.jsonData['SA_OPTIONS']:
+         state.physics_turb_sa_idx = 2
+
       # SA submodels
       state.physics_turb_sa_ft2_idx= bool("WITHFT2" in state.jsonData['SA_OPTIONS'])
       state.physics_turb_sa_qcr2000_idx= bool("QCR200" in state.jsonData['SA_OPTIONS'])
       state.physics_turb_sa_compressibility_idx= bool("COMPRESSIBILITY" in state.jsonData['SA_OPTIONS'])
       state.physics_turb_sa_rotation_idx= bool("ROTATION" in state.jsonData['SA_OPTIONS'])
       state.physics_turb_sa_bcm_idx= bool("BCM" in state.jsonData['SA_OPTIONS'])
+    else:
+      print("SST model")
+      state.physics_turb_idx = 3
+      # activate sub_ui
+      #state.active_sub_ui = "subphysics_sst"
+      state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
+  else:
+     print("no proper solver defined")
+
+  state.dirty('physics_energy_idx')
+  state.dirty('physics_comp_idx')
+  state.dirty('physics_energy_always_on')
 
   state.dirty('physics_turb_idx')
   state.dirty('physics_turb_sa_ft2_idx')
@@ -128,6 +163,9 @@ def set_json_physics():
   state.dirty('physics_turb_sa_bcm_idx')
   state.dirty('physics_turb_sst_idx')
 
+  update_physics_comp(state.physics_comp_idx)
+
+  # call sub_ui to update if we need to show the subui or not
 
 ###############################################################
 # PIPELINE CARD : PHYSICS
@@ -163,7 +201,8 @@ def physics_card():
                     # activate or deactivate/disable the checkbox
                     # only active for incompressible flow
                     # else, default is on
-                    disabled=("physics_comp_idx",0),
+                    #disabled=("physics_comp_idx",0),
+                    disabled=("physics_energy_always_on",0),
                     classes="mt-1 pt-1",
                     hide_details=True,
                     dense=True,
@@ -197,7 +236,7 @@ def update_physics_turb_sst(physics_turb_sst_idx, **kwargs):
     state.jsonData['SST_OPTIONS']= GetJsonName(physics_turb_sst_idx,LPhysicsTurbSSTOptions)
 
 ###############################################################
-# turbulence - SST - model options
+# turbulence - SA - model options
 ###############################################################
 @state.change("physics_turb_sa_idx")
 def update_physics_turb_sa(physics_turb_sa_idx, **kwargs):
@@ -297,34 +336,23 @@ def update_physics_energy(physics_energy_idx, **kwargs):
     # update jsonData
     state.dirty("jsonData")
 
+
+
 ############################################################################
 # UI value update: Physics properties #
 ############################################################################
 @state.change("physics_comp_idx")
 def update_physics_comp(physics_comp_idx, **kwargs):
     print("     compressible selection: ",physics_comp_idx)
-    # compressible selected means we have either NAVIER_STOKES or RANS
-    # incompressible selected means we have either INC_RANS or INC_NAVIER_STOKES
+    # compressible selected means we have either NAVIER_STOKES or RANS or EULER
+    # incompressible selected means we have either INC_RANS or INC_NAVIER_STOKES or INC_EULER
     # This option goes together with the turbulence option
 
     compressible = bool(physics_comp_idx)
+    print("compressible = ",compressible)
 
-    turb = True
-    if (state.jsonData['KIND_TURB_SOLVER']=="NONE"): turb=False
-
-    # physics_comp_idx=0 = compressible
-    if (compressible):
-        if (turb==False):
-            state.jsonData['SOLVER']="NAVIER_STOKES"
-        else:
-            state.jsonData['SOLVER']="RANS"
-    else:
-        if (turb==False):
-            state.jsonData['SOLVER']="INC_NAVIER_STOKES"
-        else:
-            state.jsonData['SOLVER']="INC_RANS"
-
-
+    # update the turbulence models from compressible to incompressible or vice versa
+    update_physics_turb(state.physics_turb_idx)
 
     # select compressible or incompressible options for:
     # - fluid materials (density)
@@ -348,6 +376,13 @@ def update_physics_comp(physics_comp_idx, **kwargs):
       print("       selecting incompressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryIncInletType
       state.bcoutletsubtype = LBoundaryIncOutletType
+    # communicate to update all options when loading json config file
+    state.dirty('LMaterialsFluid')
+    state.dirty('LMaterialsViscosity')
+    state.dirty('LMaterialsConductivity')
+    state.dirty('field_state_name')
+    state.dirty('bcinletsubtype')
+    state.dirty('bcoutletsubtype')
 
 
 ###############################################################
@@ -359,41 +394,42 @@ def update_physics_turb(physics_turb_idx, **kwargs):
     # if turbulence is selected, we also need to select a default turbulence model
     # if turbulence is deselected, we put turbulence model to "NONE"
 
-    compressible=True
-    if "INC" in (state.jsonData["SOLVER"]): compressible=False
+    compressible = bool(state.physics_comp_idx)
 
     # physics_turb_idx=0 = Euler
     if (physics_turb_idx==0):
         if (compressible==True):
             state.jsonData['SOLVER']="EULER"
-            state.jsonData['KIND_TURB_SOLVER']="NONE"
+            state.jsonData['KIND_TURB_MODEL']="NONE"
         else:
             state.jsonData['SOLVER']="INC_EULER"
-            state.jsonData['KIND_TURB_SOLVER']="NONE"
+            state.jsonData['KIND_TURB_MODEL']="NONE"
+            state.physics_energy_idx = 1
+            state.dirty('physics_energy_idx')
     # 1 = laminar
     elif (physics_turb_idx==1):
         if (compressible==True):
             state.jsonData['SOLVER']="NAVIER_STOKES"
-            state.jsonData['KIND_TURB_SOLVER']="NONE"
+            state.jsonData['KIND_TURB_MODEL']="NONE"
         else:
             state.jsonData['SOLVER']="INC_NAVIER_STOKES"
-            state.jsonData['KIND_TURB_SOLVER']="NONE"
+            state.jsonData['KIND_TURB_MODEL']="NONE"
     # 2 = turbulent - SA
     elif (physics_turb_idx==2):
         if (compressible==True):
             state.jsonData['SOLVER']="RANS"
-            state.jsonData['KIND_TURB_SOLVER']="SA"
+            state.jsonData['KIND_TURB_MODEL']="SA"
         else:
             state.jsonData['SOLVER']="INC_RANS"
-            state.jsonData['KIND_TURB_SOLVER']="SA"
+            state.jsonData['KIND_TURB_MODEL']="SA"
     # 3 = turbulent - SST
     elif (physics_turb_idx==3):
         if (compressible==True):
             state.jsonData['SOLVER']="RANS"
-            state.jsonData['KIND_TURB_SOLVER']="SST"
+            state.jsonData['KIND_TURB_MODEL']="SST"
         else:
             state.jsonData['SOLVER']="INC_RANS"
-            state.jsonData['KIND_TURB_SOLVER']="SST"
+            state.jsonData['KIND_TURB_MODEL']="SST"
 
     if (physics_turb_idx == 2):
         print("     SA turbulence model activated")
@@ -410,6 +446,17 @@ def update_physics_turb(physics_turb_idx, **kwargs):
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_none"
         state.submodeltext = "no model"
+
+    # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
+    print("solver = ",state.jsonData['SOLVER'])
+    if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS'):
+      state.physics_energy_always_on = 0
+    else:
+      state.physics_energy_always_on = 1
+
+    state.dirty('physics_energy_always_on')
+    print("Is energy always on? ",state.physics_energy_always_on)
+
 
 
 ###############################################################

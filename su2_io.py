@@ -88,7 +88,7 @@ def createjsonMarkers():
   state.jsonData['MARKER_OUTLET']=marker_outlet
   state.jsonData['INC_OUTLET_TYPE']=marker_inc_outlet_type
 
-  state.jsonData['MARKER_SYMMETRY']=marker_symmetry
+  state.jsonData['MARKER_SYM']=marker_symmetry
   state.jsonData['MARKER_FAR']=marker_farfield
 
   state.jsonData['MARKER_INLET']=marker_inlet
@@ -99,7 +99,7 @@ def createjsonMarkers():
   print("marker_heattransfer=",state.jsonData['MARKER_HEATTRANSFER'])
   print("marker_outlet=",state.jsonData['MARKER_OUTLET'])
   print("marker_inc_outlet_type=",state.jsonData['INC_OUTLET_TYPE'])
-  print("marker_symmetry=",state.jsonData['MARKER_SYMMETRY'])
+  print("marker_symmetry=",state.jsonData['MARKER_SYM'])
   print("marker_far=",state.jsonData['MARKER_FAR'])
   print("marker_inlet=",state.jsonData['MARKER_INLET'])
   print("marker_inc_inlet_type=",state.jsonData['INC_INLET_TYPE'])

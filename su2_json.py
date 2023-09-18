@@ -34,14 +34,15 @@ def read_json_data(filenam):
 # this is done at startup
 state.jsonData = read_json_data(BASE / "config.json")
 
-# we now have to add all mandatory fields that were not found in the json file
-# nijso: actually, they are added automatically when we add an item for the first time
+# Q:we now have to add all mandatory fields that were not found in the json file?
+# A:nijso: actually, they are added automatically when we add an item for the first time
 
 # get the "json" name from the dictionary
 def GetJsonName(value,List):
   print("value=",value)
   print("list=",List)
   entry = [item for item in List if item["value"] == value]
+  print("entry=",entry)
   return(entry[0]["json"])
 
 # get the "value" from the dictionary

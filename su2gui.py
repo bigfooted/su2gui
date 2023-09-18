@@ -20,6 +20,7 @@ from su2_json import *
 # Export su2 mesh file.
 from su2_io import export_files,nijso_list_change
 
+
 # Definition of ui_card and the server.
 from uicard import ui_card, server
 
@@ -82,6 +83,8 @@ from boundaries import *
 from solver import *
 # gittree menu : import initialization tab                                  #
 from initialization import *
+# gittree menu : import file I/O tab                                        #
+from fileio import *
 #############################################################################
 
 
@@ -188,17 +191,14 @@ state.solver_running = False
 #state.multiblockb1 = vtkMultiBlockDataSet()
 root = vtkMultiBlockDataSet()
 state.su2_meshfile="mesh_out.su2"
-# 2D or 3D mesh
-state.mesh_dimension = 0
-colors = vtkNamedColors()
-
-
 
 
 # list of all the mesh actors (boundaries)
 state.selectedBoundary = 0
 mesh_actor_list = [{"id":0,"name":"None","mesh":0}]
 
+# vtk named colors
+colors = vtkNamedColors()
 # Mesh
 mesh_mapper = vtkDataSetMapper()
 
@@ -210,7 +210,9 @@ mesh_actor.SetObjectName("initial_square")
 # Mesh: Setup default representation to surface
 mesh_actor.GetProperty().SetRepresentationToSurface()
 mesh_actor.GetProperty().SetPointSize(1)
+# show the edges
 mesh_actor.GetProperty().EdgeVisibilityOn()
+# color is based on field values
 renderer.AddActor(mesh_actor)
 
 ###################################
@@ -245,7 +247,6 @@ for i in range(nElems):
 grid.GetPointData().AddArray(ArrayObject)
 # as soon as we add the array, it is being used for coloring.
 
-
 datasetArrays.append(
     {
         "text": name,
@@ -266,8 +267,6 @@ mesh_mapper.SetScalarModeToUsePointFieldData()
 mesh_mapper.SetScalarVisibility(True)
 mesh_mapper.SetUseLookupTableScalarRange(True)
 
-#mesh_mapper.ScalarVisibilityOff()
-#mesh_actor.GetProperty().SetColor(colors.GetColor3d('Peacock'))
 
 # -----------------------------------------------------------------------------
 # Constants
@@ -349,7 +348,7 @@ def actives_change(ids):
     # if the headnode = active_name, then we have selected the head node
     # if active_name != headnode, then we are a child of the headnode.
     if _headnode == _name['name']:
-       print("   headnode = name")
+       print("   headnode =", _headnode)
        # we are at a headnode, so we do not have a parent id
        state.active_parent_ui = "none"
        state.active_head_ui = _headnode
@@ -377,7 +376,7 @@ def actives_change(ids):
       state.selectedBoundaryName = selectedBoundary["name"]
     else:
       # for 2D, show internal as default when we have not selected anything
-      if state.mesh_dimension == 2:
+      if state.nDim == 2:
         state.selectedBoundaryName = "internal"
       else:
         state.selectedBoundaryName = "None"
@@ -394,44 +393,59 @@ def actives_change(ids):
     actorlist = renderer.GetActors()
     actorlist.InitTraversal()
 
-    internal=False
-    if state.selectedBoundaryName=="internal":
+    # only if we have selected a boundary
+    if _headnode!="Boundaries":
+      print("************* headnode is boundaries")
+      for a in range(0, actorlist.GetNumberOfItems()):
+        actor = actorlist.GetNextActor()
+        if (state.nDim==3 and actor.GetObjectName()=="internal"):
+          actor.VisibilityOff()
+        else:
+            # the color of the geometry when we are outside of the boundary gittree
+            actor.VisibilityOn()
+            actor.GetProperty().SetLineWidth(2)
+            actor.GetProperty().RenderLinesAsTubesOn()
+            actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
+    else:
+
+
+      internal=False
+      if state.selectedBoundaryName=="internal":
         print("internal selected")
         internal=True
 
-    # ##### show/highlight the actor based on selection ##### #
-    # we loop over all actors
-    for a in range(0, actorlist.GetNumberOfItems()):
+      # ##### show/highlight the actor based on selection ##### #
+      # we loop over all actors and switch it on or off
+      for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
+        actor.GetProperty().SetRoughness(0.5)
+        actor.GetProperty().SetDiffuse(0.5)
+        actor.GetProperty().SetAmbient(0.5)
+        actor.GetProperty().SetSpecular(0.1)
+        actor.GetProperty().SetSpecularPower(10)
         print("getnextactor: name =",actor.GetObjectName())
-        if actor.GetObjectName() == state.selectedBoundaryName:
+        print("ambient=",actor.GetProperty().GetAmbient())
+        print("diffuse=",actor.GetProperty().GetDiffuse())
+        print("specular=",actor.GetProperty().GetSpecular())
+        print("roughness=",actor.GetProperty().GetRoughness())
+
+
+        #elif actor.GetObjectName()=="internal":
+        if (state.nDim==3 and actor.GetObjectName()=="internal"):
+          actor.VisibilityOff()
+        elif actor.GetObjectName() == state.selectedBoundaryName:
             # current actor is selected, we highlight it
             actor.VisibilityOn()
-            print("we have found the actor!")
-            if (internal==False):
-              # if it is not an internal, we highlight it in yellow
+            actor.GetProperty().SetLineWidth(2)
+            actor.GetProperty().RenderLinesAsTubesOn()
+            actor.GetProperty().SetColor(colors.GetColor3d('yellow'))
+        else:
+            actor.VisibilityOn()
+            if (state.nDim==3 and internal==True):
               actor.GetProperty().SetColor(colors.GetColor3d('yellow'))
             else:
-               print("internal is true and selected")
-        elif actor.GetObjectName()=="internal":
-                # current actor is internal but it is not selected, then we switch it off
-                print("actor is internal but not selected, we switch it off")
-                actor.VisibilityOff()
-        else:
-            # current actor is not selected and also not internal, then we switch it on but do not highlight
-            if (internal==True):
-                print("***** actor is internal *****")
-                # then the actor is internal: switch off all other actors, only show this one
-                actor.VisibilityOff()
-            else:
-              print("internal is not selected")
-              # if we do not have internal selected, then show everything except internal
-              actor.VisibilityOn()
               actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
 
-    # if the actor name is "internal", then we switch off all other actors
-    # and we use the scalars for coloring
-    # if the actor name is not internal, then we switch off internal
 
 
     ctrl.view_update()
@@ -533,11 +547,15 @@ def update_active_ui(active_ui, **kwargs):
     print("update_active_ui:: ",active_ui)
     if not(state.active_id == 0):
       # get boundary name belonging to ID
-      #_name = pipeline.get_node(state.active_id)['name']
+      _name = pipeline.get_node(state.active_id)['name']
       #print("update_active_ui::name=",_name)
 
-      #if (_name=="Physics"):
-      #  print("update node physics")
+      if (_name=="Physics"):
+        print("*********** update ui: physics ************************")
+        # call to update physics submenu visibility
+        # this is important when setting all options from the config file
+        state.dirty('physics_turb_idx')
+
       #elif (_name=="Initialization"):
       #  print("update node Initialization")
       #  # update because it might be changed elsewhere
@@ -566,6 +584,7 @@ def update_active_sub_ui(active_sub_ui, **kwargs):
       if (_name=="Physics"):
         print("update node physics")
         pipeline.update_node_value("Physics","subui",active_sub_ui)
+
       elif (_name=="Initialization"):
         print("update node Initialization")
         pipeline.update_node_value("Initialization","subui",active_sub_ui)
@@ -664,6 +683,7 @@ def load_client_files(restartFile, **kwargs):
   # Mesh: Setup default representation to surface
   mesh_actor.GetProperty().SetRepresentationToSurface()
   mesh_actor.GetProperty().SetPointSize(1)
+  #do not show the edges
   mesh_actor.GetProperty().EdgeVisibilityOff()
 
   # We have loaded a mesh, so enable the exporting of files
@@ -801,7 +821,6 @@ def load_client_files(file_upload, **kwargs):
     root.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(), 'Interior')
     root.SetBlock(1, branch_boundary)
     root.GetMetaData(1).Set(vtk.vtkCompositeDataSet.NAME(), 'Boundary')
-    #del root
     pts = vtk.vtkPoints()
     # ### ### #
 
@@ -812,6 +831,7 @@ def load_client_files(file_upload, **kwargs):
 
     index = [idx for idx, s in enumerate(f) if 'NDIME' in s][0]
     NDIME = int(f[index].split('=')[1])
+    # number of dimensions of the su2 mesh (2D or 3D)
     state.nDim = NDIME
     # for the mesh info display
     #state.meshText += "Mesh Dimensions: " + str(NDIME) + "D \n"
@@ -830,11 +850,9 @@ def load_client_files(file_upload, **kwargs):
            y = float(line[1])
 
            if (NDIME==2):
-             state.mesh_dimension = 2
              # 2D is always x-y plane (z=0)
              z = float(0.0)
            else:
-             state.mesh_dimension = 3
              z = float(line[2])
            pts.InsertNextPoint(x,y,z)
 
@@ -892,7 +910,7 @@ def load_client_files(file_upload, **kwargs):
     for iMarker in range(numMarkers):
           # grid for the marker
           markergrid = vtkUnstructuredGrid()
-          # copy all the pints into the markergrid (inefficient)
+          # copy all the points into the markergrid (inefficient)
           markergrid.SetPoints(pts)
           # next line: marker tag, marker_elem
           counter += 1
@@ -945,7 +963,6 @@ def load_client_files(file_upload, **kwargs):
 
     # boundary meshes as unstructured grids
     ds_b = []
-    #for i in range(boundaryBlock.GetNumberOfBlocks()):
     for i in range(branch_boundary.GetNumberOfBlocks()):
         ds_b.append(vtk.vtkUnstructuredGrid.SafeDownCast(branch_boundary.GetBlock(i)))
     del branch_boundary
@@ -958,11 +975,21 @@ def load_client_files(file_upload, **kwargs):
     # and we only use the default array
     state.dataset_arrays = []
 
+    # show the internal mesh in 2D
+    if (NDIME==2):
+      mesh_actor.VisibilityOn()
+      mesh_actor.GetProperty().EdgeVisibilityOn()
+    else:
+      mesh_actor.VisibilityOff()
+    # initial color of the geometry
+    mesh_actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
     # Mesh - add mesh to the renderer
     mesh_mapper.SetInputData(grid)
+
     mesh_actor.SetMapper(mesh_mapper)
-    renderer.AddActor(mesh_actor)
     mesh_actor.SetObjectName("internal")
+
+    renderer.AddActor(mesh_actor)
 
     # boundary actors
     boundary_id = 101
@@ -973,13 +1000,23 @@ def load_client_files(file_upload, **kwargs):
         mesh_mapper_b1 = vtkDataSetMapper()
         mesh_mapper_b1.ScalarVisibilityOff()
         mesh_actor_b1 = vtkActor()
+        # in 2D, we show the interior (2D surface) and in 3D, we show all boundaries
+        if (NDIME==2):
+          mesh_actor_b1.VisibilityOff()
+        else:
+          mesh_actor_b1.VisibilityOn()
+          mesh_actor_b1.GetProperty().EdgeVisibilityOn()
+
+
         mesh_actor_b1.GetProperty().SetColor(colors.GetColor3d('Peacock'))
 
         mesh_mapper_b1.SetInputData(ds_b[i])
         i += 1
         mesh_actor_b1.SetMapper(mesh_mapper_b1)
         mesh_actor_b1.SetObjectName(bcName.get("text"))
+
         renderer.AddActor(mesh_actor_b1)
+
         mesh_actor_list.append({"id":boundary_id,"name":bcName.get("text"), "mesh":mesh_actor_b1})
         boundary_id += 1
 
@@ -1075,8 +1112,30 @@ def pipeline_widget():
         actives_change=(actives_change, "[$event]"),
     )
 
-# buttons in the top header
+###############################################################
+# checnge edge visibility
+###############################################################
+@state.change("vtkEdgeVisibility")
+def changevtkEdgeVisibility(vtkEdgeVisibility, **kwargs):
 
+    print("edge: ",vtkEdgeVisibility)
+    # can only be activated/deactivated for incompressible
+    #state.energy = bool(state.physics_energy_idx)
+    # get list of all actors, loop and color the selected actor
+    actorlist = vtk.vtkActorCollection()
+    actorlist = renderer.GetActors()
+    actorlist.InitTraversal()
+    for a in range(0, actorlist.GetNumberOfItems()):
+        actor = actorlist.GetNextActor()
+        if vtkEdgeVisibility==True:
+          actor.GetProperty().EdgeVisibilityOn()
+        else:
+          actor.GetProperty().EdgeVisibilityOff()
+
+    ctrl.view_update()
+
+
+# buttons in the top header
 def standard_buttons():
     # export su2 mesh file button
     #global mb1
@@ -1089,13 +1148,13 @@ def standard_buttons():
     with vuetify.VBtn(icon=True, click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
         vuetify.VIcon("mdi-lightbulb-outline")
 
-    #
+    # switch on/off edge visibility in the mesh
     vuetify.VCheckbox(
-        v_model=("viewMode", "local"),
-        on_icon="mdi-lan-disconnect",
-        off_icon="mdi-lan-connect",
-        true_value="local",
-        false_value="remote",
+        v_model=("vtkEdgeVisibility", True),
+        on_icon="mdi-grid",
+        off_icon="mdi-grid-off",
+        #true_value="gridOff",
+        #false_value="gridOn",
         classes="mx-1",
         hide_details=True,
         dense=True,
@@ -1208,6 +1267,10 @@ with SinglePageWithDrawerLayout(server) as layout:
         mesh_card()
         mesh_subcard()
         #
+        print("initialize fileio card")
+        fileio_card()
+        #
+
         print("initialize solver card")
         solver_card()
         #
@@ -1227,8 +1290,9 @@ with SinglePageWithDrawerLayout(server) as layout:
         # set all physics states from the json file
         # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
         set_json_physics()
+        set_json_materials()
         set_json_initialization()
-
+        set_json_fileio()
         #this necessary here?
         #state.dirty('jsonData')
         #pass
