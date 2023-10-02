@@ -58,7 +58,7 @@ def createjsonMarkers():
     elif bcdict['bc_subtype']=="Pressure outlet":
         marker = [bcdict['bcName'], bcdict['bc_pressure']]
         marker_outlet.append( marker )
-        marker_inc_outlet_type.append("MASS_FLOW_OUTLET")
+        marker_inc_outlet_type.append("PRESSURE_OUTLET")
     # ##### INLET BOUNDARY CONDITIONS #####
     elif bcdict['bc_subtype']=="Velocity inlet":
         # note that temperature is always saved.

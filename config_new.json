@@ -10,11 +10,11 @@
     "CFL_REDUCTION_TURB": 1.0,
     "CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL",
     "CONV_FIELD": [
-        "DRAG"
+        "RMS_PRESSURE"
     ],
     "CONV_FILENAME": "history",
     "CONV_NUM_METHOD_FLOW": "FDS",
-    "CONV_RESIDUAL_MINVAL": -14,
+    "CONV_RESIDUAL_MINVAL": -12,
     "CONV_STARTITER": 10,
     "CP_POLYCOEFFS": [
         0.0,
@@ -34,6 +34,7 @@
     ],
     "GAMMA_VALUE": 1.4,
     "GAS_CONSTANT": 287.058,
+    "HISTORY_WRT_FREQ_INNER": 10,
     "INC_DENSITY_INIT": 1.2886,
     "INC_DENSITY_MODEL": "VARIABLE",
     "INC_ENERGY_EQUATION": true,
@@ -64,11 +65,7 @@
     "LM_OPTIONS": "MENTER_LANGTRY",
     "MARKER_ISOTHERMAL": [
         [
-            "gas_inlet",
-            300.0
-        ],
-        [
-            "air_axial_inlet",
+            "inlet",
             300.0
         ],
         [
@@ -76,15 +73,15 @@
             300.0
         ],
         [
-            "axis",
+            "wall_up",
             300.0
         ],
         [
-            "wall",
+            "wall_down",
             300.0
         ]
     ],
-    "MESH_FILENAME": "mesh.su2",
+    "MESH_FILENAME": "mesh_out.su2",
     "MESH_FORMAT": "SU2",
     "MOLECULAR_WEIGHT": 28.9,
     "MU_CONSTANT": 1.716e-05,
@@ -100,14 +97,18 @@
     "NUM_METHOD_GRAD": "GREEN_GAUSS",
     "NUM_METHOD_GRAD_RECON": "GREEN_GAUSS",
     "OUTPUT_FILES": [
-        "RESTART",
+        "RESTART_ASCII",
         "PARAVIEW_MULTIBLOCK"
     ],
-    "OUTPUT_WRT_FREQ": 100,
+    "OUTPUT_WRT_FREQ": [
+        100,
+        100
+    ],
     "PRANDTL_LAM": 0.72,
     "PRANDTL_TURB": 0.9,
+    "READ_BINARY_RESTART": false,
     "RESTART_FILENAME": "restart",
-    "RESTART_SOL": false,
+    "RESTART_SOL": true,
     "SA_OPTIONS": "WITHFT2 NEGATIVE EXPERIMENTAL ",
     "SCREEN_OUTPUT": [
         "INNER_ITER",
@@ -125,5 +126,12 @@
     "THERMODYNAMIC_PRESSURE": 106819.1,
     "TURBULENT_CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL_TURB",
     "VISCOSITY_MODEL": "SUTHERLAND",
-    "VOLUME_FILENAME": "flow"
+    "VOLUME_FILENAME": "flow",
+    "VOLUME_OUTPUT": [
+        "RESIDUAL",
+        "SOLUTION",
+        "PRIMITIVE"
+    ],
+    "WRT_RESTART_OVERWRITE": true,
+    "WRT_VOLUME_OVERWRITE": false
 }

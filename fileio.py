@@ -11,6 +11,9 @@
 #    and set all state variables using the json file
 # 6) call set_json_fileio() from the main su2gui
 
+# 7) write the results to file in su2_ui.py. Here, we need to construct any 'special' config options
+#    that are not simply the output of the json options.
+
 # definition of ui_card
 from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
@@ -37,8 +40,8 @@ state, ctrl = server.state, server.controller
 def set_json_fileio():
   state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
   state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
-  state.fileio_restart_binary_idx = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
-  state.fileio_restart_overwrite_idx = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
+  state.fileio_restart_binary = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
+  state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
 
   state.fileio_volume_name = state.jsonData['VOLUME_FILENAME']
   state.fileio_volume_frequency = state.jsonData['OUTPUT_WRT_FREQ'][1]
@@ -49,11 +52,11 @@ def set_json_fileio():
 
   state.dirty('fileio_restart_name')
   state.dirty('fileio_restart_frequency')
-  state.dirty('fileio_restart_binary_idx')
-  state.dirty('fileio_restart_overwrite_idx')
+  state.dirty('fileio_restart_binary')
+  state.dirty('fileio_restart_overwrite')
   state.dirty('fileio_volume_name')
   state.dirty('fileio_volume_frequency')
-  state.dirty('fileio_volume_overwrite_idx')
+  state.dirty('fileio_volume_overwrite')
   state.dirty('fileio_history_name')
   state.dirty('fileio_history_frequency')
 
@@ -98,7 +101,7 @@ def fileio_card():
               )
             with vuetify.VCol(cols="2",classes="py-1 pl-4 pr-0"):
               vuetify.VCheckbox(
-                v_model=("fileio_restart_binary_idx", False),
+                v_model=("fileio_restart_binary", False),
                 #label="binary",
                 outlined=True,
                 hide_details=True,
@@ -106,7 +109,7 @@ def fileio_card():
             )
             with vuetify.VCol(cols="2",classes="py-1 pl-4 pr-0"):
               vuetify.VCheckbox(
-                v_model=("fileio_restart_overwrite_idx", False),
+                v_model=("fileio_restart_overwrite", False),
                 #label="overwrite",
                 outlined=True,
                 hide_details=True,
@@ -141,7 +144,7 @@ def fileio_card():
             #)
             with vuetify.VCol(cols="2",offset="2",classes="py-1 pl-4 pr-0"):
               vuetify.VCheckbox(
-                v_model=("fileio_volume_overwrite_idx", False),
+                v_model=("fileio_volume_overwrite", False),
                 #label="overwrite",
                 outlined=True,
                 hide_details=True,

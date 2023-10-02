@@ -42,7 +42,6 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
 )
 
-from vtkmodules.vtkCommonDataModel import vtkMultiBlockDataSet
 
 from vtkmodules.vtkCommonDataModel import (
     VTK_HEXAHEDRON,
@@ -105,14 +104,23 @@ print("****************************************")
 state.filename_cfg_export = "config_new.cfg"
 state.filename_json_export = "config_new.json"
 
+# for server side, we need to use a file manager
 local_file_manager = LocalFileManager(__file__)
 local_file_manager.url("collapsed", BASE / "icons/chevron-up.svg")
 local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
+local_file_manager.url("su2logo", BASE / "img/logoSU2small.png")
+
+print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+print("local_file_manager=",local_file_manager)
+print("local_file_manager=",type(local_file_manager))
+print("local_file_manager=",type(local_file_manager.assets))
+print("local_file_manager=",dir(local_file_manager.assets.items()))
+print("local_file_manager=",local_file_manager.assets.keys())
+print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 # -----------------------------------------------------------------------------
 
-renderer = vtkRenderer()
-renderWindow = vtkRenderWindow()
+
 renderWindow.AddRenderer(renderer)
 # offscreen rendering, no additional pop-up window
 renderWindow.SetOffScreenRendering(1)
@@ -189,7 +197,6 @@ state.solver_running = False
 # the imported mesh block and boundary blocks
 # must be state or else it cannot be an argument to click
 #state.multiblockb1 = vtkMultiBlockDataSet()
-root = vtkMultiBlockDataSet()
 state.su2_meshfile="mesh_out.su2"
 
 
@@ -199,11 +206,8 @@ mesh_actor_list = [{"id":0,"name":"None","mesh":0}]
 
 # vtk named colors
 colors = vtkNamedColors()
-# Mesh
-mesh_mapper = vtkDataSetMapper()
 
 
-mesh_actor = vtkActor()
 mesh_actor.SetMapper(mesh_mapper)
 mesh_actor.SetObjectName("initial_square")
 
@@ -430,20 +434,23 @@ def actives_change(ids):
         print("roughness=",actor.GetProperty().GetRoughness())
 
 
-        #elif actor.GetObjectName()=="internal":
         if (state.nDim==3 and actor.GetObjectName()=="internal"):
           actor.VisibilityOff()
         elif actor.GetObjectName() == state.selectedBoundaryName:
             # current actor is selected, we highlight it
             actor.VisibilityOn()
-            actor.GetProperty().SetLineWidth(2)
+            actor.GetProperty().SetLineWidth(4)
             actor.GetProperty().RenderLinesAsTubesOn()
             actor.GetProperty().SetColor(colors.GetColor3d('yellow'))
         else:
             actor.VisibilityOn()
             if (state.nDim==3 and internal==True):
+              actor.GetProperty().SetLineWidth(2)
+              actor.GetProperty().RenderLinesAsTubesOn()
               actor.GetProperty().SetColor(colors.GetColor3d('yellow'))
             else:
+              actor.GetProperty().SetLineWidth(2)
+              actor.GetProperty().RenderLinesAsTubesOn()
               actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
 
 
@@ -466,13 +473,30 @@ state.meshText="meshtext"
 
 
 
-# export su2 file
-def export_files_01(su2_filename):
-    print("********** export_files_01 **********\n")
+# export su2 file (save on the server)
+def save_file_su2(su2_filename):
+    print("********** save .su2 **********\n")
       # add the filename to the json database
     state.jsonData['MESH_FILENAME'] = su2_filename
     export_files(root,su2_filename)
 
+@ctrl.trigger("download_file_su2")
+def download_file_su2():
+    print("********** download .su2 **********\n")
+    su2_filename = state.jsonData['MESH_FILENAME']
+    export_files(root,su2_filename)
+    with open(su2_filename, 'r') as f:
+      #su2_content = f.readlines()
+      su2_content = f.read()
+    return su2_content
+
+@ctrl.trigger("download_file_cfg")
+def download_file_cfg():
+    print("********** download .cfg **********\n")
+    with open(state.filename_cfg_export, 'r') as f:
+      #cfg_content = f.readlines()
+      cfg_content = f.read()
+    return cfg_content
 
 
 # Color By Callbacks
@@ -612,7 +636,7 @@ state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 # FILES
 ###############################################################
 
-# ##### ascii restart file #####
+# ##### import ascii restart file #####
 @state.change("restartFile")
 def load_client_files(restartFile, **kwargs):
 
@@ -691,95 +715,7 @@ def load_client_files(restartFile, **kwargs):
 
   renderer.ResetCamera()
   ctrl.view_update()
-  pass
 
-
-
-# @state.change("initialize")
-#def su2_initialize(initialize, **kwargs):
-#  print("Initialize SU2 fields! ",initialize),
-
-#     # at this point we need to know which variables we have
-#     Fields = ["PointID","x","y"]
-
-#     # incompressible:
-#     if "INC" in (state.jsonData["SOLVER"]):
-#       Fields.extend(["Pressure","Velocity_x","Velocity_y"])
-#     #   P
-#     #   Ux
-#     #   Uy
-#     # dim=3:
-#     #   Uz
-#     if state.nDim==3:
-#       Fields.extend(["Velocity_z"])
-#     # energy:
-#     #  T
-#     if state.jsonData['INC_ENERGY_EQUATION']==True:
-#       Fields.extend(["Temperature"])
-#     #
-#     # compressible
-
-#     print("Fields = ",Fields)
-
-#       # construct the dataset_arrays
-#     datasetArrays = []
-#     counter=0
-#     for name in Fields:
-#       #name = key
-#       ArrayObject = vtk.vtkFloatArray()
-#       ArrayObject.SetName(name)
-#       # all components are scalars, no vectors for velocity
-#       ArrayObject.SetNumberOfComponents(1)
-#       # how many elements do we have?
-#       nElems = grid.GetNumberOfCells()
-#       print("number of elements=",nElems)
-#       nPoints = grid.GetNumberOfPoints()
-#       print("number of points=",nPoints)
-#       #nElems = len(df[name])
-
-#       ArrayObject.SetNumberOfValues(nPoints)
-#       ArrayObject.SetNumberOfTuples(nPoints)
-
-#       # Nijso: TODO FIXME very slow!
-#       # second variable is the value at the point
-#       for i in range(nPoints):
-#         ArrayObject.SetValue(i,0.0125*i)
-
-#       grid.GetPointData().AddArray(ArrayObject)
-
-#       datasetArrays.append(
-#             {
-#                 "text": name,
-#                 "value": counter,
-#                 "range": [1.0,1.0],
-#                 "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
-#             }
-#       )
-#       counter += 1
-
-
-#     # we should now have the scalars available...
-#     defaultArray = datasetArrays[0]
-#     state.dataset_arrays = datasetArrays
-#     print("dataset = ",datasetArrays)
-#     print("dataset_0 = ",datasetArrays[0])
-#     print("dataset_0 = ",datasetArrays[0].get('text'))
-
-#     mesh_mapper.SetInputData(grid)
-#     mesh_actor.SetMapper(mesh_mapper)
-#     renderer.AddActor(mesh_actor)
-#     mesh_mapper.SelectColorArray(defaultArray.get('text'))
-#     mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
-#     mesh_mapper.SetScalarVisibility(True)
-#     mesh_mapper.SetUseLookupTableScalarRange(True)
-
-#     # Mesh: Setup default representation to surface
-#     mesh_actor.GetProperty().SetRepresentationToSurface()
-#     mesh_actor.GetProperty().SetPointSize(1)
-#     mesh_actor.GetProperty().EdgeVisibilityOff()
-
-#     renderer.ResetCamera()
-#     ctrl.view_update()
 
 
 
@@ -1078,7 +1014,6 @@ def load_client_files(file_upload, **kwargs):
 
     renderer.ResetCamera()
     ctrl.view_update()
-    pass
 
 # -----------------------------------------------------------------------------
 # GUI elements
@@ -1140,13 +1075,26 @@ def standard_buttons():
     # export su2 mesh file button
     #global mb1
     #print("mb1 = ",mb1)
-    #with vuetify.VBtn("{{ mb1 }}",icon=True, click=(export_files,"[mb1]"), disabled=("export_disabled",True)):
-    #    vuetify.VIcon("mdi-download-box-outline")
-    with vuetify.VBtn("download",click=(export_files_01,"[su2_meshfile]")):
+    ##with vuetify.VBtn("{{ mb1 }}",icon=True, click=(export_files,"[mb1]"), disabled=("export_disabled",True)):
+    ##    vuetify.VIcon("mdi-download-box-outline")
+    with vuetify.VBtn(".su2",click=(save_file_su2,"[su2_meshfile]")):
+        vuetify.VIcon("mdi-download-box-outline")
+    with vuetify.VBtn(
+                      ".su2",
+                      click="utils.download('mesh.su2', trigger('download_file_su2'), 'text/plain')",
+                      ):
         vuetify.VIcon("mdi-download-box-outline")
 
-    with vuetify.VBtn(icon=True, click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
-        vuetify.VIcon("mdi-lightbulb-outline")
+    #with vuetify.VBtn(icon=True, click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
+    with vuetify.VBtn(".cfg", click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
+        vuetify.VIcon("mdi-download")
+
+    with vuetify.VBtn(
+                      ".cfg",
+                      click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
+                      ):
+        vuetify.VIcon("mdi-download-box-outline")
+
 
     # switch on/off edge visibility in the mesh
     vuetify.VCheckbox(
@@ -1175,10 +1123,18 @@ state.trame__title = "File loading"
 with SinglePageWithDrawerLayout(server) as layout:
 
     # text inside the toolbar
-    layout.title.set_text("SU2 GUI")
-
+    layout.title.set_text(" ")
 
     with layout.toolbar:
+
+        #vuetify.VSpacer()
+        with vuetify.VBtn():
+          vuetify.VImg(
+            src=local_file_manager.assets['su2logo'],
+            contain=True,
+            height=50,
+            width=50,
+          )
 
         # vertical spacer inside the toolbar
         vuetify.VSpacer()
@@ -1261,7 +1217,9 @@ with SinglePageWithDrawerLayout(server) as layout:
         #
         print("initialize initialization card")
         initialization_card()
-        initialization_subcard()
+        initialization_patch_subcard()
+        initialization_file_subcard()
+        initialization_uniform_subcard()
         #
         print("initialize mesh card")
         mesh_card()
@@ -1287,6 +1245,7 @@ with SinglePageWithDrawerLayout(server) as layout:
         boundaries_dialog_card_wall()
         boundaries_dialog_card_farfield()
 
+        solver_dialog_card_convergence()
         # set all physics states from the json file
         # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
         set_json_physics()
@@ -1295,7 +1254,6 @@ with SinglePageWithDrawerLayout(server) as layout:
         set_json_fileio()
         #this necessary here?
         #state.dirty('jsonData')
-        #pass
 
     print("setting up layout content")
     with layout.content:

@@ -21,6 +21,16 @@ from vtkmodules.vtkCommonDataModel import (
     VTK_VERTEX,
     vtkUnstructuredGrid)
 
+from vtkmodules.vtkCommonDataModel import vtkMultiBlockDataSet
+
+from vtkmodules.vtkRenderingCore import (
+    vtkActor,
+    vtkDataSetMapper,
+    vtkRenderer,
+    vtkRenderWindow,
+    vtkRenderWindowInteractor,
+)
+
 state, ctrl = server.state, server.controller
 
 ############################################################################
@@ -35,12 +45,17 @@ for i in range(0, len(x)):
 
 # We need this global structure
 grid = vtkUnstructuredGrid()
+root = vtkMultiBlockDataSet()
 
 # initial mesh
 grid.SetPoints(points)
 grid.InsertNextCell(VTK_QUAD,4,pts[0])
 
-
+# Mesh
+mesh_mapper = vtkDataSetMapper()
+mesh_actor = vtkActor()
+renderer = vtkRenderer()
+renderWindow = vtkRenderWindow()
 
 ############################################################################
 # Mesh models - list options #

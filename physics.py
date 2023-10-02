@@ -456,6 +456,7 @@ def update_physics_turb(physics_turb_idx, **kwargs):
 
     state.dirty('physics_energy_always_on')
     print("Is energy always on? ",state.physics_energy_always_on)
+    state.dirty('jsonData')
 
 
 

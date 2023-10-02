@@ -12,12 +12,26 @@ from trame.widgets import vuetify
 from su2_json import *
 
 # import the grid from the mesh module
-from mesh import grid
+from mesh import *
 
 import vtk
 from vtkmodules.vtkCommonDataModel import vtkDataObject
 
 state, ctrl = server.state, server.controller
+
+state.init_pressure = 0.0
+state.init_density = 1.0
+state.init_velx = 1.0
+state.init_vely = 1.0
+state.init_velz = 1.0
+state.init_temperature = 1.0
+state.init_momx = 1.0
+state.init_momy = 1.0
+state.init_momz = 1.0
+state.init_energy = 1.0
+state.init_nut = 1.0
+state.init_tke = 1.0
+state.init_dissipation = 1.0
 
 ############################################################################
 # Initialization models - list options #
@@ -39,9 +53,11 @@ state, ctrl = server.state, server.controller
 ############################################################################
 
 # List: initialization model: options
-LInitializationOption= [
+# patch is enabled when uniform or restart has been used
+state.LInitializationOption= [
   {"text": "Uniform", "value": 0},
   {"text": "From file (Restart)", "value": 1},
+  {"text": "Patch", "value": 2, "disabled": True},
 ]
 
 LInitializationPatch= [
@@ -50,17 +66,37 @@ LInitializationPatch= [
   {"text": "Sphere", "value": 2},
 ]
 
-# set the state variables using the json data
+# set the state variables using the json configuration file data
 def set_json_initialization():
   state.initial_option_idx = 0
   if state.jsonData['RESTART_SOL']==True:
     print("restarting solution from file")
     state.initial_option_idx = 1
   else:
+    # note that we always restart from file, but in this case we create the file from uniform conditions
     print("restarting from uniform initial conditions")
     state.initial_option_idx = 0
   state.dirty('initial_option_idx')
 
+  if ("INC" in str(state.jsonData['SOLVER'])):
+    compressible = False
+  else:
+    compressible = True
+
+  # if incompressible, we check if temperature is on
+  energy = False
+  if (compressible == False):
+    if (state.jsonData['INC_ENERGY_EQUATION']==True):
+       energy = True
+
+  if (compressible==True):
+    state.init_momx = 1.0
+  else:
+    state.init_velx = state.jsonData['INC_VELOCITY_INIT'][0]
+    state.init_vely = state.jsonData['INC_VELOCITY_INIT'][1]
+    state.init_velz = state.jsonData['INC_VELOCITY_INIT'][2]
+    if (energy==True):
+      state.init_temperature = state.jsonData['INC_TEMPERATURE_INIT']
 
 ###############################################################
 # PIPELINE CARD : Initialization
@@ -79,7 +115,8 @@ def initialization_card():
                 # What to do when something is selected
                 v_model=("initial_option_idx", 0),
                 # The items in the list
-                items=("representations_initial",LInitializationOption),
+                #items=("representations_initial",state.LInitializationOption),
+                items=("Object.values(LInitializationOption)",),
                 # the name of the list box
                 label="Initialize from:",
                 hide_details=True,
@@ -87,45 +124,7 @@ def initialization_card():
                 outlined=True,
                 classes="pt-1 mt-1",
             )
-            vuetify.VSelect(
-                # What to do when something is selected
-                v_model=("initial_patch_idx", 0),
-                # The items in the list
-                items=("representations_init_patch",LInitializationPatch),
-                # the name of the list box
-                label="Patch:",
-                hide_details=True,
-                dense=True,
-                outlined=True,
-                classes="pt-1 mt-1",
-                disabled = True,
-            )
 
-            # restart file input inside the toolbar
-            # note that this should be moved elsewhere
-            vuetify.VFileInput(
-              # single file only
-              multiple=False,
-              background_color="white",
-              # the icon in front of the file input
-              prepend_icon="mdi-file",
-              show_size=True,
-              small_chips=True,
-              truncate_length=25,
-              v_model=("restartFile", None),
-              dense=True,
-              hide_details=True,
-              style="max-width: 300px;",
-              accept=".dat",
-              __properties=["accept"],
-            )
-
-            vuetify.VTextField(
-              # What to do when something is selected
-              v_model=("initialization_state_idx", 1.0),
-              # the name of the list box
-              label=state.field_state_name,
-            )
 
     # update the initial option to recompute based on upstream changes
     # this makes sure that the incompressible vs compressible subui
@@ -149,11 +148,8 @@ def update_initial_option(initial_option_idx, **kwargs):
 
     # option=0 : uniform values
     # option=1 : restart from file
-    if (state.initial_option_idx==1):
-      print("initialization from file")
-      if state.active_ui=="Initialization":
-        state.active_sub_ui = "subinitialization_none"
-    else:
+    # option=2 : patch
+    if (state.initial_option_idx==0):
       # uniform (constant) initialization
       print("state.jsonData solve = ",state.jsonData["SOLVER"])
       if "INC" in (state.jsonData["SOLVER"]):
@@ -164,112 +160,425 @@ def update_initial_option(initial_option_idx, **kwargs):
         print("initialization for compressible")
         if state.active_ui=="Initialization":
           state.active_sub_ui = "subinitialization_comp"
+    elif (state.initial_option_idx==1):
+      print("initialization from file")
+      if state.active_ui=="Initialization":
+        state.active_sub_ui = "subinitialization_file"
+    else:
+      # patch
+      if state.active_ui=="Initialization":
+        state.active_sub_ui = "subinitialization_patch"
 
-    # note that RESTART is the second option in LInitializationOption, so its value is 1.
-    state.jsonData['RESTART_SOL']= bool (state.initial_option_idx)
-    #state.dirty('active_sub_ui')
 
 @state.change("initial_patch_idx")
 def update_initial_patch(initial_patch_idx, **kwargs):
     print("patch selection: ",initial_patch_idx)
 
-def initialization():
-  print("initialize")
-  #su2_initialize()
+
+
+#@state.change("initialize")
+def initialize_uniform():
+
+  print("initialize solution")
+
+  # construct the dataset_arrays
+  datasetArrays = []
+  counter=0
+
+  FieldNames=[]
+  FieldValues=[]
+  if ("INC" in str(state.jsonData['SOLVER'])):
+    compressible = False
+  else:
+    compressible = True
+
+  # if incompressible, we check if temperature is on
+  energy = False
+  if (compressible == False):
+    if (state.jsonData['INC_ENERGY_EQUATION']==True):
+       energy = True
+
+  if (compressible==True):
+    print("compressible")
+    FieldNames.extend(["Density","Momentum_x","Momentum_y"])
+    FieldValues.extend([state.init_density,state.init_momx,state.init_momy])
+    if state.nDim==3:
+        FieldNames.append("Momentum_z")
+        FieldValues.append(state.init_momz)
+    FieldNames.append("Energy")
+    FieldValues.append(state.init_energy)
+  else:
+    print("incompressible")
+    print("pressure:",state.init_pressure)
+    print("velocity:",state.init_velx," ",state.init_vely)
+    FieldNames.extend(["Pressure","Velocity_x","Velocity_y"])
+    FieldValues.extend([state.init_pressure,state.init_velx,state.init_vely])
+    if state.nDim==3:
+        FieldNames.append("Velocity_z")
+        FieldValues.append(state.init_velz)
+    if energy==True:
+      FieldNames.append("Temperature")
+      FieldValues.append(state.init_temperature)
+
+  turbmodelSA = False
+  turbmodelSST = False
+  turbulence = False
+  if ("RANS" in str(state.jsonData['SOLVER'])):
+    turbulence = True
+    if state.jsonData['KIND_TURB_MODEL'] == "SA":
+      turbmodelSA=True
+    elif state.jsonData['KIND_TURB_MODEL'] == "SST":
+      turbmodelSST = True
+
+  if (turbmodelSA == True):
+    FieldNames.append("Nu_Tilde")
+    FieldValues.append(state.init_nut)
+  elif (turbmodelSST == True):
+    FieldNames.extend(["Tke","Dissipation"])
+    FieldValues.extend([state.init_tke,state.init_dissipation])
+
+  print("fieldnames=",FieldNames)
+
+  #LIST=["Velocity", "Pressure"]
+
+  nPoints = grid.GetPoints().GetNumberOfPoints()
+  print("number of points = ",nPoints)
+
+
+  for i in range(len(FieldNames)):
+    name = FieldNames[i]
+    value = FieldValues[i]
+
+    ArrayObject = vtk.vtkFloatArray()
+    ArrayObject.SetName(name)
+    # all components are scalars, no vectors for velocity
+    ArrayObject.SetNumberOfComponents(1)
+    # how many elements do we have?
+    ArrayObject.SetNumberOfValues(nPoints)
+    ArrayObject.SetNumberOfTuples(nPoints)
+
+    print("name = ",name, " , value = ",value )
+
+    # Nijso: TODO FIXME very slow!
+    for i in range(nPoints):
+      #ArrayObject.SetValue(i,df[name][i])
+      ArrayObject.SetValue(i,float(value))
+
+    grid.GetPointData().AddArray(ArrayObject)
+
+    # note that range is equal because value is uniform
+    datasetArrays.append(
+            {
+                "text": name,
+                "value": counter,
+                #"range": [df.min()[key],df.max()[key]],
+                "range": [float(value),float(value)],
+                "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
+            }
+    )
+    counter += 1
+
+
+  # we should now have the scalars available...
+  defaultArray = datasetArrays[0]
+  state.dataset_arrays = datasetArrays
+  print("dataset = ",datasetArrays)
+  print("dataset_0 = ",datasetArrays[0])
+  print("dataset_0 = ",datasetArrays[0].get('text'))
+
+  mesh_mapper.SetInputData(grid)
+  mesh_actor.SetMapper(mesh_mapper)
+  renderer.AddActor(mesh_actor)
+
+  mesh_mapper.SelectColorArray(defaultArray.get('text'))
+  mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
+  mesh_mapper.SetScalarVisibility(True)
+  mesh_mapper.SetUseLookupTableScalarRange(True)
+
+  # Mesh: Setup default representation to surface
+  mesh_actor.GetProperty().SetRepresentationToSurface()
+  mesh_actor.GetProperty().SetPointSize(1)
+  #do not show the edges
+  mesh_actor.GetProperty().EdgeVisibilityOff()
+
+  # We have loaded a mesh, so enable the exporting of files
+  state.export_disabled = False
+
+  renderer.ResetCamera()
+  ctrl.view_update()
+
+  # save the restart file (should be a separate save/export button)
+  # this routine should be in su2_io.py
+  # note that we save the file in the solution file, and we always start from
+  # the saved file
+  solution_filename = state.jsonData['SOLUTION_FILENAME'] + ".csv"
+  with open(BASE / solution_filename,'w') as f:
+    fields = ["PointID","x","y"]
+    if (state.nDim==3):
+        fields.append("z")
+    fields.extend(FieldNames)
+    # convert to string, including double quotes
+    stringfields = ', '.join(f'"{name}"' for name in fields) +"\n"
+    f.write(stringfields)
+    print(grid.GetPointData().GetNumberOfArrays())
+    print(grid.GetPointData().GetArrayName(i))
+    # now loop over points and get the coordinates
+
+    # loop over all points
+    for p in range(nPoints):
+        # loop over all field names to be saved
+        coord = grid.GetPoint(p)
+        datalist = str(p) + "," + str(coord[0]) + "," + str(coord[1])
+        if state.nDim==3:
+            datalist = datalist + "," + str(coord[2])
+        for name in FieldNames:
+            datapoint =  grid.GetPointData().GetArray(name).GetValue(p)
+            datalist = datalist + "," + str(datapoint)
+        datalist = datalist+"\n"
+        f.write(datalist)
+        print(p, " ",grid.GetPoint(p))
+  f.close()
+
+  print("options=",state.LInitializationOption)
+  # switch patch option on
+  state.LInitializationOption[2]= {"text": "Patch", "value": 2, "disabled": False}
+  print("options=",state.LInitializationOption)
+  state.dirty('LInitializationOption')
+
+
+
+
+def initialization_patch_subcard():
+  print("initialization_file_subcard:: set the ui_subcard")
+  with ui_subcard(title="initialization from file", sub_ui_name="subinitialization_patch"):
+    with vuetify.VContainer(fluid=True):
+      # ####################################################### #
+      with vuetify.VRow(classes="py-0 my-0"):
+        with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VSelect(
+                # What to do when something is selected
+                v_model=("initial_patch_idx", 0),
+                # The items in the list
+                items=("representations_init_patch",LInitializationPatch),
+                # the name of the list box
+                label="Patch:",
+                hide_details=True,
+                dense=True,
+                outlined=True,
+                classes="pt-1 mt-1",
+                #disabled = True,
+            )
+
+
+def initialization_file_subcard():
+  print("initialization_file_subcard:: set the ui_subcard")
+  with ui_subcard(title="initialization from file", sub_ui_name="subinitialization_file"):
+    with vuetify.VContainer(fluid=True):
+      # ####################################################### #
+      with vuetify.VRow(classes="py-0 my-0"):
+        with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):    # restart file input inside the toolbar
+          # note that this should be moved elsewhere
+          vuetify.VFileInput(
+            # single file only
+            multiple=False,
+            background_color="white",
+            # the icon in front of the file input
+            prepend_icon="mdi-file",
+            show_size=True,
+            small_chips=True,
+            truncate_length=25,
+            v_model=("restartFile", None),
+            dense=True,
+            hide_details=True,
+            style="max-width: 300px;",
+            accept=".dat",
+            __properties=["accept"],
+          )
+
 
 ###############################################################
 # PIPELINE SUBCARD : INITIALIZATION
 ###############################################################
 # secondary card
-def initialization_subcard():
+def initialization_uniform_subcard():
 
-    print("initialization_subcard:: set the ui_subcard")
+    print("initialization_uniform_subcard:: set the ui_subcard")
     #with vuetify.VContainer(fluid=True):
     # 1 row of option lists
-    with vuetify.VRow(classes="pt-0"):
+    energy = bool(state.jsonData['INC_ENERGY_EQUATION'])
+    print("energy equation=",energy)
+    # for the card to be visible, we have to set state.active_sub_ui = subinitialization_inc
+    with ui_subcard(title="initialization (incompressible)", sub_ui_name="subinitialization_inc"):
+      with vuetify.VContainer(fluid=True):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_pressure", 1.0),
+              # the name of the list box
+              label="pressure",
+            )
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_velx", 1.0),
+              # the name of the list box
+              label="Velocity X",
+            )
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_vely", 1.0),
+              # the name of the list box
+              label="Velocity_Y",
+            )
+      with vuetify.VContainer(fluid=True, v_if=("nDim==3")):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_velz", 1.0),
+              # the name of the list box
+              label="Velocity_Z",
+              #disabled=("nDim==2",0)
+            )
+      with vuetify.VContainer(fluid=True, v_if=("jsonData['INC_ENERGY_EQUATION']==1")):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_temperature", 300.0),
+              # the name of the list box
+              label="temperature",
+              # is temperature disabled?
+              #disabled= ("jsonData['INC_ENERGY_EQUATION']==0",0)
+            )
+      # turbulence quantities (nijso TODO: add turbulence intensity and turb ratio and computed results for k,w)
+      with vuetify.VContainer(fluid=True, v_if=("jsonData['KIND_TURB_MODEL']=='SA' ")):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_nu_tilde_idx", 1.2),
+              # the name of the list box
+              label="nu_tilde",
+            )
+      # turbulence quantities
+      with vuetify.VContainer(fluid=True, v_if=("jsonData['KIND_TURB_MODEL']=='SST' ")):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_sst_k_idx", 1.2),
+              # the name of the list box
+              label="tke",
+            )
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_sst_w_idx", 100),
+              # the name of the list box
+              label="dissipation",
+            )
 
-      with vuetify.VCol(cols="12"):
-        energy = bool(state.jsonData['INC_ENERGY_EQUATION'])
-        print("energy equation=",energy)
-          # for the card to be visible, we have to set state.active_sub_ui = subinitialization_inc
-        with ui_subcard(title="initialization (incompressible)", sub_ui_name="subinitialization_inc"):
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Pressure", 1.0),
-            # the name of the list box
-            label="pressure",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Velocity_x", 1.0),
-            # the name of the list box
-            label="Velocity X",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Velocity_y", 1.0),
-            # the name of the list box
-            label="Velocity_Y",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Velocity_z", 1.0),
-            # the name of the list box
-            label="Velocity_Z",
-            disabled=("nDim==2",0)
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Temperature", 1.0),
-            # the name of the list box
-            label="temperature",
-            # is temperature disabled?
-            disabled= ("jsonData['INC_ENERGY_EQUATION']==0",0)
-          )
+      with vuetify.VContainer(fluid=True):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
           with vuetify.VCol(cols="12"):   #with vuetify.VBtn(icon=True, click=su2_play, disabled=("export_disabled",False)):
-            with vuetify.VBtn("Initialize",click=initialization):
+            with vuetify.VBtn("Initialize",click=initialize_uniform):
               vuetify.VIcon("{{solver_icon}}",color="purple")
 
     # use a vcontainer if you want to have a border around everything
     #with vuetify.VContainer(fluid=True):
     # 1 row of option lists
-    with vuetify.VRow(classes="pt-0"):
-      with vuetify.VCol(cols="12"):
-        # for the card to be visible, we have to set state.active_sub_ui = subinitialization
-        with ui_subcard(title="initialization (compressible)", sub_ui_name="subinitialization_comp"):
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Density", 1.2),
-            # the name of the list box
-            label="density",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Velocity_x", 1.0),
-            # the name of the list box
-            label="Velocity X",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Velocity_y", 1.0),
-            # the name of the list box
-            label="Velocity_Y",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Velocity_z", 1.0),
-            # the name of the list box
-            label="Velocity_Z",
-          )
-          vuetify.VTextField(
-            # What to do when something is selected
-            v_model=("Energy", 1.0),
-            # the name of the list box
-            label="energy",
-          )
-          with vuetify.VCol(cols="12"):   #with vuetify.VBtn(icon=True, click=su2_play, disabled=("export_disabled",False)):
-            with vuetify.VBtn("Initialize",click=initialization):
-              vuetify.VIcon("{{solver_icon}}",color="purple")
+    # for the card to be visible, we have to set state.active_sub_ui = subinitialization
+    with ui_subcard(title="initialization (compressible)", sub_ui_name="subinitialization_comp"):
+      with vuetify.VContainer(fluid=True):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_density", 1.2),
+              # the name of the list box
+              label="density",
+            )
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_momx", 1.0),
+              # the name of the list box
+              label="Momentum X",
+            )
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_momy", 1.0),
+              # the name of the list box
+              label="Momentum Y",
+            )
+
+      with vuetify.VContainer(fluid=True, v_if=("nDim==3")):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_momz", 1.0),
+              # the name of the list box
+              label="Momentum Z",
+            )
+
+      with vuetify.VContainer(fluid=True):
+        # ####################################################### #
+        with vuetify.VRow(classes="py-0 my-0"):
+          with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+            vuetify.VTextField(
+              # What to do when something is selected
+              v_model=("init_energy", 1.0),
+              # the name of the list box
+              label="energy",
+            )
+
+          # turbulence quantities (nijso TODO: add turbulence intensity and turb ratio and computed results for k,w)
+          with vuetify.VContainer(fluid=True, v_if=("jsonData['KIND_TURB_MODEL']=='SA' ")):
+            # ####################################################### #
+            with vuetify.VRow(classes="py-0 my-0"):
+              with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+                vuetify.VTextField(
+                  # What to do when something is selected
+                  v_model=("init_nu_tilde_idx", 1.2),
+                  # the name of the list box
+                  label="nu_tilde",
+                )
+          # turbulence quantities
+          with vuetify.VContainer(fluid=True, v_if=("jsonData['KIND_TURB_MODEL']=='SST' ")):
+            # ####################################################### #
+            with vuetify.VRow(classes="py-0 my-0"):
+              with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+                vuetify.VTextField(
+                  # What to do when something is selected
+                  v_model=("init_sst_k_idx", 1.2),
+                  # the name of the list box
+                  label="tke",
+                )
+            with vuetify.VRow(classes="py-0 my-0"):
+              with vuetify.VCol(cols="8", classes="py-1 my-1 pr-0 mr-0"):
+                vuetify.VTextField(
+                  # What to do when something is selected
+                  v_model=("init_sst_w_idx", 100),
+                  # the name of the list box
+                  label="dissipation",
+                )
+
+          with vuetify.VContainer(fluid=True):
+            # ####################################################### #
+            with vuetify.VRow(classes="py-0 my-0"):
+              with vuetify.VCol(cols="12"):   #with vuetify.VBtn(icon=True, click=su2_play, disabled=("export_disabled",False)):
+                with vuetify.VBtn("Initialize",click=initialize_uniform):
+                  vuetify.VIcon("{{solver_icon}}",color="purple")
 
 
 
