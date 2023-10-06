@@ -30,10 +30,11 @@ import vtk
 #from vtkmodules.web.utils import mesh as vtk_mesh
 from vtkmodules.vtkCommonDataModel import vtkDataObject
 #from vtkmodules.vtkFiltersCore import vtkContourFilter #noqa
-
+from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
+from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkCommonColor import vtkNamedColors
-
-#from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor
+from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor
+from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkDataSetMapper,
@@ -62,6 +63,18 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleSwitch  # noqa
 # Required for rendering initialization, not necessary for
 # local rendering, but doesn't hurt to include it
 import vtkmodules.vtkRenderingOpenGL2  # noqa
+
+
+
+import matplotlib
+matplotlib.use("agg")
+import matplotlib.pyplot as plt
+from trame.widgets import matplotlib as tramematplotlib
+
+# line 'i' has fixed color so the color does not change if a line is deselected
+mplColorList=['blue','orange','red','green','purple','brown','pink','gray','olive','cyan',
+              'black','gold','yellow','springgreen','thistle','beige','coral','navy','salmon','lightsteelblue']
+
 
 #############################################################################
 # Gittree menu                                                              #
@@ -118,6 +131,15 @@ print("local_file_manager=",dir(local_file_manager.assets.items()))
 print("local_file_manager=",local_file_manager.assets.keys())
 print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
+
+# matplotlib history
+state.show_dialog = False
+history_filename = 'history.csv'
+
+state.monitorLinesVisibility = []
+state.monitorLinesNames = []
+state.monitorLinesRange = []
+
 # -----------------------------------------------------------------------------
 
 
@@ -129,7 +151,6 @@ renderWindowInteractor = vtkRenderWindowInteractor()
 renderWindowInteractor.SetRenderWindow(renderWindow)
 renderWindowInteractor.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
 
-renderer.ResetCamera()
 
 # -----------------------------------------------------------------------------
 # SU2 setup
@@ -219,6 +240,9 @@ mesh_actor.GetProperty().EdgeVisibilityOn()
 # color is based on field values
 renderer.AddActor(mesh_actor)
 
+
+
+
 ###################################
 # ##### gradient background ##### #
 ###################################
@@ -270,6 +294,62 @@ mesh_mapper.GetLookupTable().SetRange(default_min, default_max)
 mesh_mapper.SetScalarModeToUsePointFieldData()
 mesh_mapper.SetScalarVisibility(True)
 mesh_mapper.SetUseLookupTableScalarRange(True)
+
+
+print("start init cube axes")
+# Cube Axes
+cube_axes = vtkCubeAxesActor()
+cube_axes.SetObjectName("CubeAxes")
+print("start init cube axes")
+renderer.AddActor(cube_axes)
+
+print("start init cube axes")
+# Cube Axes: Boundaries, camera, and styling
+cube_axes.SetBounds(mesh_actor.GetBounds())
+print("axes bounds = ",mesh_actor.GetBounds())
+cube_axes.SetCamera(renderer.GetActiveCamera())
+cube_axes.SetXLabelFormat("%6.1f")
+cube_axes.SetYLabelFormat("%6.1f")
+cube_axes.SetZLabelFormat("%6.1f")
+cube_axes.SetFlyModeToStaticEdges()
+print("end init cube axes")
+
+
+# coordinate axes
+#coord_axes = vtkAxesActor()
+#coord_axes.SetObjectName("CoordAxes")
+#transform = vtkTransform()
+#transform.Translate(1.0, 0.0, 0.0)
+#coord_axes.SetUserTransform(transform)
+#renderer.AddActor(coord_axes)
+
+
+def MakeAxesActor():
+    axes = vtkAxesActor()
+    axes.SetShaftTypeToCylinder()
+    axes.SetXAxisLabelText('X')
+    axes.SetYAxisLabelText('Y')
+    axes.SetZAxisLabelText('Z')
+    axes.SetTotalLength(1.0, 1.0, 1.0)
+    axes.SetCylinderRadius(0.5 * axes.GetCylinderRadius())
+    axes.SetConeRadius(1.025 * axes.GetConeRadius())
+    axes.SetSphereRadius(1.5 * axes.GetSphereRadius())
+    return axes
+
+axes1 = MakeAxesActor()
+coord_axes = vtkOrientationMarkerWidget()
+coord_axes.SetOrientationMarker(axes1)
+# Position lower left in the viewport.
+coord_axes.SetViewport(0, 0, 0.2, 0.2)
+coord_axes.SetInteractor(renderWindowInteractor)
+coord_axes.SetEnabled(True)
+coord_axes.InteractiveOn()
+
+
+renderer.ResetCamera()
+
+
+
 
 
 # -----------------------------------------------------------------------------
@@ -331,6 +411,125 @@ state.counter = 0
 # -----------------------------------------------------------------------------
 # Callbacks
 # -----------------------------------------------------------------------------
+
+# matplotlib
+def update_dialog():
+    state.show_dialog = not state.show_dialog
+    state.dirty('monitorLinesVisibility')
+    state.dirty('monitorLinesNames')
+    state.dirty('monitorLinesRange')
+
+
+
+
+# Read the history file
+# set the names and visibility
+def readHistory(filename):
+    print("read_history, filename=",filename)
+    skipNrRows=[]
+    # read the history file
+    dataframe = pd.read_csv(filename,skiprows=skipNrRows)
+    # get rid of quotation marks in the column names
+    dataframe.columns = dataframe.columns.str.replace('"','')
+    # get rid of spaces in the column names
+    dataframe.columns = dataframe.columns.str.replace(' ','')
+
+    # limit the columns to the ones containing the strings rms and Res
+    dfrms = dataframe.filter(regex='rms|Res')
+    #print("keys=",dfrms.keys())
+    #print("list=",list(dataframe))
+    #print("list=",list(dfrms))
+
+    state.monitorLinesNames = list(dfrms)
+    state.monitorLinesRange = list(range(0,len(state.monitorLinesNames)))
+    state.monitorLinesVisibility = [True for i in dfrms]
+
+    state.dirty('monitorLinesVisibility')
+    state.dirty('monitorLinesNames')
+    state.dirty('monitorLinesRange')
+
+    state.x = [i for i in range(len(dfrms.index))]
+    print("x = ",state.x)
+    state.ylist=[]
+    for c in range(len(dfrms.columns)):
+        state.ylist.append(dfrms.iloc[:,c].tolist())
+
+
+    dialog_card()
+    return [state.x,state.ylist]
+
+
+def figure_size():
+    if state.figure_size is None:
+        return {}
+
+
+    dpi = state.figure_size.get("dpi")
+    rect = state.figure_size.get("size")
+    w_inch = rect.get("width") / dpi
+    h_inch = rect.get("height") / dpi
+
+    if ((w_inch<=0) or (h_inch<=0)):
+       return {}
+
+    return {
+        "figsize": (w_inch, h_inch),
+        "dpi": dpi,
+    }
+
+###############################################################################
+def DotsandPoints():
+    plt.close('all')
+    fig, ax = plt.subplots(1,1,**figure_size(),facecolor='blue')
+    #ax.cla()
+
+    #fig.set_facecolor('black')
+    #fig.tight_layout()
+    #fig.patch.set_linewidth(10)
+    #fig.patch.set_edgecolor('purple')
+    ax.set_facecolor('#eafff5')
+    fig.set_facecolor('blue')
+    fig.patch.set_facecolor('blue')
+    #ax.plot(
+    #    np.random.rand(20),
+    #    "-o",
+    #    alpha=0.5,
+    #    color="black",
+    #    linewidth=5,
+    #    markerfacecolor="green",
+    #    markeredgecolor="lightgreen",
+    #    markersize=20,
+    #    markeredgewidth=10,
+    #)
+    #fig.subplots_adjust(top=0.95, bottom=0.1, left=0.1, right=0.9,hspace=0.8)
+
+    fig.subplots_adjust(top=0.98, bottom=0.15, left=0.05, right=0.99, hspace=0.0,wspace=0.0)
+    #fig.tight_layout()
+
+    # loop over the list and plot
+    for idx in state.monitorLinesRange:
+      #print("line= ",idx,", name= ",state.monitorLinesNames[idx]," visible:",state.monitorLinesVisibility[idx])
+      #print("__ range x = ", min(state.x), " ",max(state.x))
+      # only plot if the visibility is True
+      if state.monitorLinesVisibility[idx]:
+        #print("printing line ",idx)
+        ax.plot( state.x,state.ylist[idx], label=state.monitorLinesNames[idx],linewidth=5, markersize=20, markeredgewidth=10,color=mplColorList[idx])
+
+    ax.set_xlabel('iterations',labelpad=10)
+    ax.set_ylabel('residuals',labelpad=-15)
+    ax.grid(True, color="lightgray", linestyle="solid")
+    ax.legend(framealpha=1,facecolor='white')
+
+    # autoscale the axis
+    ax.autoscale(enable=True,axis="x")
+    ax.autoscale(enable=True,axis="y")
+    #ax.set_xlim(0, 22)
+    #ax.set_ylim(-20, 0)
+    #frame = ax.legend.get_frame()
+    #frame.set_color('white')
+
+    return fig
+
 
 def actives_change(ids):
     print("actives_change::ids = ",ids)
@@ -402,9 +601,11 @@ def actives_change(ids):
       print("************* headnode is boundaries")
       for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
-        if (state.nDim==3 and actor.GetObjectName()=="internal"):
-          actor.VisibilityOff()
-        else:
+        print("actor name=",actor.GetObjectName())
+        if ("Axes" in actor.GetObjectName()):
+          if (state.nDim==3 and actor.GetObjectName()=="internal"):
+            actor.VisibilityOff()
+          else:
             # the color of the geometry when we are outside of the boundary gittree
             actor.VisibilityOn()
             actor.GetProperty().SetLineWidth(2)
@@ -422,16 +623,21 @@ def actives_change(ids):
       # we loop over all actors and switch it on or off
       for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
+        print("actor name=",actor.GetObjectName())
+
+        if ("Axes" in actor.GetObjectName()):
+           continue
+
         actor.GetProperty().SetRoughness(0.5)
         actor.GetProperty().SetDiffuse(0.5)
         actor.GetProperty().SetAmbient(0.5)
         actor.GetProperty().SetSpecular(0.1)
         actor.GetProperty().SetSpecularPower(10)
-        print("getnextactor: name =",actor.GetObjectName())
-        print("ambient=",actor.GetProperty().GetAmbient())
-        print("diffuse=",actor.GetProperty().GetDiffuse())
-        print("specular=",actor.GetProperty().GetSpecular())
-        print("roughness=",actor.GetProperty().GetRoughness())
+        #print("getnextactor: name =",actor.GetObjectName())
+        #print("ambient=",actor.GetProperty().GetAmbient())
+        #print("diffuse=",actor.GetProperty().GetDiffuse())
+        #print("specular=",actor.GetProperty().GetSpecular())
+        #print("roughness=",actor.GetProperty().GetRoughness())
 
 
         if (state.nDim==3 and actor.GetObjectName()=="internal"):
@@ -470,6 +676,60 @@ def actives_change(ids):
 state.meshText="meshtext"
 #state.boundaryText="boundtext"
 #state.selectedBoundaryName = "internal"
+
+# matplotlib
+state.active_figure="DotsandPoints"
+state.graph_update=True
+@state.change("active_figure", "figure_size", "countdown","monitorLinesVisibility")
+def update_chart(active_figure, **kwargs):
+    print("updating figure 1")
+    ctrl.update_figure(globals()[active_figure]())
+    #ctrl.update_figure2(globals()[active_figure]())
+
+
+def update_visibility(index, visibility):
+    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    state.monitorLinesVisibility[index] = visibility
+    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    state.dirty("monitorLinesVisibility")
+    print(f"Toggle {index} to {visibility}")
+    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+######################################################################
+def dialog_card():
+    print("dialog card, lines=",state.monitorLinesNames)
+    # show_dialog2 determines if the entire dialog is shown or not
+    with vuetify.VDialog(width=200,position='{X:10,Y:10}',transition="dialog-top-transition",v_model=("show_dialog",False)):
+      #with vuetify.VCard(color="light-gray"):
+      with vuetify.VCard():
+        vuetify.VCardTitle("Line visibility", classes="grey lighten-1 grey--text text--darken-3")
+
+        #with vuetify.VListGroup(value=("true",), sub_group=True):
+        #    with vuetify.Template(v_slot_activator=True):
+        #            vuetify.VListItemTitle("Bars")
+        #    with vuetify.VListItemContent():
+        #            #with vuetify.VListItem(v_for="id in monitorLinesRange", key="id"):
+        vuetify.VCheckbox(
+                              # loop over list monitorLinesRange
+                              v_for="id in monitorLinesRange",
+                              key="id",
+                              # checkbox changes the state of monitorLinesVisibility[id]
+                              v_model=("monitorLinesVisibility[id]",),
+                              # name of the checkbox
+                              label=("`label= ${ monitorLinesNames[id] }`",),
+                              # on each change, immediately go to update_visibility
+                              change=(update_visibility,"[id, $event]"),
+                              classes="mt-1 pt-1",
+                              hide_details=True,
+                              dense=True,
+        )
+
+
+        # close dialog window button
+        #with vuetify.VCardText():
+        # right-align the button
+        with vuetify.VCol(classes="text-right"):
+          vuetify.VBtn("Close", classes="mt-5",click=update_dialog)
+
 
 
 
@@ -1012,6 +1272,54 @@ def load_client_files(file_upload, **kwargs):
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
+
+    global cube_axes
+
+    # Cube Axes
+    cube_axes = vtkCubeAxesActor()
+    cube_axes.SetObjectName("CubeAxes")
+
+    renderer.AddActor(cube_axes)
+
+
+    # Cube Axes: Boundaries, camera, and styling
+    cube_axes.SetBounds(mesh_actor.GetBounds())
+    cube_axes.SetCamera(renderer.GetActiveCamera())
+    cube_axes.SetXLabelFormat("%6.1f")
+    cube_axes.SetYLabelFormat("%6.1f")
+    cube_axes.SetZLabelFormat("%6.1f")
+    #cube_axes.SetFlyModeToOuterEdges()
+    #cube_axes.SetUseTextActor3D(1)
+    cube_axes.GetTitleTextProperty(0).SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetTitleTextProperty(1).SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetTitleTextProperty(2).SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetLabelTextProperty(0).SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetLabelTextProperty(1).SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetLabelTextProperty(2).SetColor(0.0, 0.0, 0.0)
+    cube_axes.DrawXGridlinesOn()
+    cube_axes.DrawYGridlinesOn()
+    cube_axes.DrawZGridlinesOn()
+    cube_axes.GetXAxesLinesProperty().SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetYAxesLinesProperty().SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetZAxesLinesProperty().SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetXAxesGridlinesProperty().SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetYAxesGridlinesProperty().SetColor(0.0, 0.0, 0.0)
+    cube_axes.GetZAxesGridlinesProperty().SetColor(0.0, 0.0, 0.0)
+    cube_axes.XAxisMinorTickVisibilityOff()
+    cube_axes.YAxisMinorTickVisibilityOff()
+    cube_axes.ZAxisMinorTickVisibilityOff()
+
+
+    #global coord_axes
+    ## coordinate axes
+    #coord_axes = vtkAxesActor()
+    #coord_axes.SetObjectName("CoordAxes")
+    #transform = vtkTransform()
+    #transform.Translate(1.0, 0.0, 0.0)
+    #coord_axes.SetUserTransform(transform)
+    #renderer.AddActor(coord_axes)
+
+
     renderer.ResetCamera()
     ctrl.view_update()
 
@@ -1069,6 +1377,19 @@ def changevtkEdgeVisibility(vtkEdgeVisibility, **kwargs):
 
     ctrl.view_update()
 
+# visibility if the cube axes (bounding box)
+@state.change("cube_axes_visibility")
+def update_cube_axes_visibility(cube_axes_visibility, **kwargs):
+    print("change axes visibility")
+    cube_axes.SetVisibility(cube_axes_visibility)
+    ctrl.view_update()
+
+# visibility if the coordinate axes
+@state.change("coord_axes_visibility")
+def update_coord_axes_visibility(coord_axes_visibility, **kwargs):
+    print("change coord axes visibility")
+    coord_axes.SetEnabled(coord_axes_visibility)
+    ctrl.view_update()
 
 # buttons in the top header
 def standard_buttons():
@@ -1097,20 +1418,20 @@ def standard_buttons():
 
 
     # switch on/off edge visibility in the mesh
-    vuetify.VCheckbox(
-        v_model=("vtkEdgeVisibility", True),
-        on_icon="mdi-grid",
-        off_icon="mdi-grid-off",
-        #true_value="gridOff",
-        #false_value="gridOn",
-        classes="mx-1",
-        hide_details=True,
-        dense=True,
-    )
+    #vuetify.VCheckbox(
+    #    v_model=("vtkEdgeVisibility", True),
+    #    on_icon="mdi-grid",
+    #    off_icon="mdi-grid-off",
+    #    #true_value="gridOff",
+    #    #false_value="gridOn",
+    #    classes="mx-1",
+    #    hide_details=True,
+    #    dense=True,
+    #)
 
     # reset the view
-    with vuetify.VBtn(icon=True, click="$refs.view.resetCamera()"):
-        vuetify.VIcon("mdi-crop-free")
+    #with vuetify.VBtn(icon=True, click="$refs.view.resetCamera()"):
+    #    vuetify.VIcon("mdi-crop-free")
 
 # -----------------------------------------------------------------------------
 # Web App setup
@@ -1118,12 +1439,19 @@ def standard_buttons():
 
 state.trame__title = "File loading"
 
+
 #state.fields = []
 
 with SinglePageWithDrawerLayout(server) as layout:
 
     # text inside the toolbar
     layout.title.set_text(" ")
+
+    # matplotlib monitor: read the initial history file
+    [state.x,state.ylist] = readHistory(history_filename)
+    print("x=",state.x)
+    print("y=",state.ylist)
+
 
     with layout.toolbar:
 
@@ -1257,19 +1585,89 @@ with SinglePageWithDrawerLayout(server) as layout:
 
     print("setting up layout content")
     with layout.content:
-        with vuetify.VContainer(
+
+      # create the tabs
+      with vuetify.VTabs(v_model=("active_tab", 0), right=True):
+        vuetify.VTab("Geometry")
+        vuetify.VTab("History")
+
+      with vuetify.VContainer(
             fluid=True,
             classes="pa-0 fill-height",
             style="position: relative;"
+      ):
+        # create the tabs
+        with vuetify.VTabsItems(
+            value=("active_tab",), style="width: 100%; height: 100%;"
         ):
+            # first tab
+            with vuetify.VTabItem(
+                value=(0,), style="width: 100%; height: 100%;"
+            ):
+              # row containing everything
+              with vuetify.VRow(dense=True, style="height: 100%;", classes="pa-0 ma-0"):
+                # First column containing renderview buttons
+                with vuetify.VCol(cols="1",classes="pa-0 ma-0"):
 
-            print("setting up view")
-            view = vtk_widgets.VtkRemoteView(renderWindow)
-            print("view update")
-            ctrl.view_update = view.update
-            ctrl.view_reset_camera = view.reset_camera
-            ctrl.on_server_ready.add(view.update)
-            print("end view update")
+                  with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
+                    # reset the view
+                    with vuetify.VBtn(icon=True, click="$refs.view.resetCamera()"):
+                      vuetify.VIcon("mdi-crop-free")
+
+                  with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
+                    # switch on/off edge visibility in the mesh
+                    vuetify.VCheckbox(
+                      v_model=("vtkEdgeVisibility", True),
+                      on_icon="mdi-grid",
+                      off_icon="mdi-grid-off",
+                      #true_value="gridOff",
+                      #false_value="gridOn",
+                      classes="mx-1",
+                      hide_details=True,
+                      dense=True,
+                    )
+
+                  with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
+                    # switch on/off the bounding box visualisation
+                    vuetify.VCheckbox(
+                      v_model=("cube_axes_visibility", True),
+                      on_icon="mdi-cube-outline",
+                      off_icon="mdi-cube-off-outline",
+                      classes="mx-1",
+                      hide_details=True,
+                      dense=True,
+                  )
+                  with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
+                    # switch on/off the bounding box visualisation
+                    vuetify.VCheckbox(
+                      v_model=("coord_axes_visibility", True),
+                      on_icon="mdi-axis-arrow",
+                      off_icon="mdi-square-outline",
+                      classes="mx-1",
+                      hide_details=True,
+                      dense=True,
+                  )
+                # second column containing the renderview (move window left by 12)
+                with vuetify.VCol(cols="11", classes="pa-0 ml-n12 mr-0 my-0"):
+                  view = vtk_widgets.VtkRemoteView(renderWindow)
+                  ctrl.view_update = view.update
+                  ctrl.view_reset_camera = view.reset_camera
+                  ctrl.on_server_ready.add(view.update)
+
+            # second tab
+            with vuetify.VTabItem(
+               value=(1,), style="width: 100%; height: 100%;"
+            ):
+             with vuetify.VRow(dense=True, style="height: 100%;", classes="pa-0 ma-0"):
+                with vuetify.VBtn(classes="ml-2 mr-0 mt-16 mb-0 pa-0", elevation=1,variant="text",color="white",click=update_dialog, icon="mdi-dots-vertical"):
+                  vuetify.VIcon("mdi-dots-vertical",density="compact",color="red")
+                with vuetify.VCol(
+                    classes="pa-0 ma-0",
+                    #style="border-right: 1px solid #ccc; position: relative;",
+                ):
+                  with trame.SizeObserver("figure_size"):
+                    html_figure = tramematplotlib.Figure(style="position: absolute")
+                    ctrl.update_figure = html_figure.update
 
     print("finalizing drawer layout")
 

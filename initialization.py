@@ -301,6 +301,7 @@ def initialize_uniform():
   #do not show the edges
   mesh_actor.GetProperty().EdgeVisibilityOff()
 
+
   # We have loaded a mesh, so enable the exporting of files
   state.export_disabled = False
 

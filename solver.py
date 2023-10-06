@@ -113,7 +113,7 @@ def su2_play():
 
 
 
-def update_visibility(index, visibility):
+def update_convergence_fields_visibility(index, visibility):
     print("index=",index)
     print("visible=",state.convergence_fields_visibility)
     state.convergence_fields_visibility[index] = visibility
@@ -143,8 +143,8 @@ def solver_dialog_card_convergence():
                               v_model=("convergence_fields_visibility[id]",),
                               # name of the checkbox
                               label=("`${ convergence_fields[id] }`",),
-                              # on each change, immediately go to update_visibility
-                              change=(update_visibility,"[id, $event]"),
+                              # on each change, immediately go to update_convergence_fields_visibility
+                              change=(update_convergence_fields_visibility,"[id, $event]"),
                               classes="mt-1 pt-1",
                               hide_details=True,
                               dense=True,
