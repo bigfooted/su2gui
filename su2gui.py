@@ -478,7 +478,7 @@ def figure_size():
     }
 
 ###############################################################################
-def DotsandPoints():
+def mpl_plot_history():
     plt.close('all')
     fig, ax = plt.subplots(1,1,**figure_size(),facecolor='blue')
     #ax.cla()
@@ -678,7 +678,7 @@ state.meshText="meshtext"
 #state.selectedBoundaryName = "internal"
 
 # matplotlib
-state.active_figure="DotsandPoints"
+state.active_figure="mpl_plot_history"
 state.graph_update=True
 @state.change("active_figure", "figure_size", "countdown","monitorLinesVisibility")
 def update_chart(active_figure, **kwargs):
@@ -1308,7 +1308,7 @@ def load_client_files(file_upload, **kwargs):
     cube_axes.XAxisMinorTickVisibilityOff()
     cube_axes.YAxisMinorTickVisibilityOff()
     cube_axes.ZAxisMinorTickVisibilityOff()
-
+    cube_axes.SetVisibility(False)
 
     #global coord_axes
     ## coordinate axes
@@ -1319,6 +1319,15 @@ def load_client_files(file_upload, **kwargs):
     #coord_axes.SetUserTransform(transform)
     #renderer.AddActor(coord_axes)
 
+    global coord_axes
+    axes1 = MakeAxesActor()
+    coord_axes = vtkOrientationMarkerWidget()
+    coord_axes.SetOrientationMarker(axes1)
+    # Position lower left in the viewport.
+    coord_axes.SetViewport(0, 0, 0.2, 0.2)
+    coord_axes.SetInteractor(renderWindowInteractor)
+    coord_axes.SetEnabled(True)
+    coord_axes.InteractiveOn()
 
     renderer.ResetCamera()
     ctrl.view_update()
@@ -1630,7 +1639,7 @@ with SinglePageWithDrawerLayout(server) as layout:
                   with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
                     # switch on/off the bounding box visualisation
                     vuetify.VCheckbox(
-                      v_model=("cube_axes_visibility", True),
+                      v_model=("cube_axes_visibility", False),
                       on_icon="mdi-cube-outline",
                       off_icon="mdi-cube-off-outline",
                       classes="mx-1",
