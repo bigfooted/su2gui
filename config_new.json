@@ -48,7 +48,7 @@
         0.0,
         0.0
     ],
-    "ITER": 100,
+    "ITER": 10000,
     "KIND_TRANS_MODEL": "NONE",
     "KIND_TURB_MODEL": "SA",
     "KT_POLYCOEFFS": [
@@ -65,7 +65,11 @@
     "LM_OPTIONS": "MENTER_LANGTRY",
     "MARKER_ISOTHERMAL": [
         [
-            "inlet",
+            "gas_inlet",
+            300.0
+        ],
+        [
+            "air_axial_inlet",
             300.0
         ],
         [
@@ -73,11 +77,11 @@
             300.0
         ],
         [
-            "wall_up",
+            "axis",
             300.0
         ],
         [
-            "wall_down",
+            "wall",
             300.0
         ]
     ],
