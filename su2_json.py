@@ -32,7 +32,7 @@ def read_json_data(filenam):
 
 # Read the default values for the SU2 configuration.
 # this is done at startup
-state.jsonData = read_json_data(BASE / "config.json")
+state.jsonData = read_json_data(BASE / "user" / "config.json")
 
 # Q:we now have to add all mandatory fields that were not found in the json file?
 # A:nijso: actually, they are added automatically when we add an item for the first time

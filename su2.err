@@ -1,1 +1,1 @@
-Invalid MIT-MAGIC-COOKIE-1 keyAuthorization required, but no authorization protocol specified
+Abort(1) on node 0 (rank 0 in comm 0): application called MPI_Abort(MPI_COMM_WORLD, 1) - process 0

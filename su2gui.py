@@ -20,7 +20,7 @@ from datetime import date
 # Import json setup for writing the config file in json and cfg file format.
 from su2_json import *
 # Export su2 mesh file.
-from su2_io import export_files,nijso_list_change
+from su2_io import save_su2mesh, save_json_cfg_file
 
 
 # Definition of ui_card and the server.
@@ -101,6 +101,7 @@ state, ctrl = server.state, server.controller
 from pipeline import PipelineManager
 from pathlib import Path
 BASE = Path(__file__).parent
+
 from trame.assets.local import LocalFileManager
 
 print("****************************************")
@@ -127,8 +128,10 @@ print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 # matplotlib history
 state.show_dialog = False
-# TODO FIXME add user defined working folders
-state.history_filename = 'user/nijso/history.csv'
+
+# TODO FIXME update from user input / cfg file
+state.history_filename = 'history.csv'
+state.restart_filename = 'restart.csv'
 
 state.monitorLinesVisibility = []
 state.monitorLinesNames = []
@@ -478,19 +481,25 @@ def actives_change(ids):
 
     # only if we have selected a boundary
     if _headnode!="Boundaries":
-      print("************* headnode is boundaries")
+      print("************* headnode is not a boundary")
       for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
         print("actor name=",actor.GetObjectName())
+
+        # ignore everything that is not a boundary, so CoordAxes and CubeAxes
         if ("Axes" in actor.GetObjectName()):
-          if (state.nDim==3 and actor.GetObjectName()=="internal"):
-            actor.VisibilityOff()
-          else:
-            # the color of the geometry when we are outside of the boundary gittree
-            actor.VisibilityOn()
-            actor.GetProperty().SetLineWidth(2)
-            actor.GetProperty().RenderLinesAsTubesOn()
-            actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
+          continue
+
+        # for 3D, no visualization of internal points
+        if (state.nDim==3 and actor.GetObjectName()=="internal"):
+          actor.VisibilityOff()
+        else:
+          # visualize everything
+          # the color of the geometry when we are outside of the boundary gittree
+          actor.VisibilityOn()
+          actor.GetProperty().SetLineWidth(2)
+          actor.GetProperty().RenderLinesAsTubesOn()
+          actor.GetProperty().SetColor(colors.GetColor3d('floralwhite'))
     else:
 
 
@@ -567,13 +576,15 @@ def save_file_su2(su2_filename):
     print("********** save .su2 **********\n")
       # add the filename to the json database
     state.jsonData['MESH_FILENAME'] = su2_filename
-    export_files(root,su2_filename)
+    global root
+    save_su2mesh(root,su2_filename)
 
 @ctrl.trigger("download_file_su2")
 def download_file_su2():
     print("********** download .su2 **********\n")
     su2_filename = state.jsonData['MESH_FILENAME']
-    export_files(root,su2_filename)
+    global root
+    save_su2mesh(root,su2_filename)
     with open(su2_filename, 'r') as f:
       #su2_content = f.readlines()
       su2_content = f.read()
@@ -725,85 +736,7 @@ state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 # FILES
 ###############################################################
 
-# ##### import ascii restart file #####
-@state.change("restartFile")
-def load_client_files(restartFile, **kwargs):
 
-  print("loading restart file")
-  if restartFile is None:
-    return
-
-  # type(file) will always be bytes
-  file = ClientFile(restartFile)
-
-  filecontent = file.content.decode('utf-8')
-
-  f = filecontent.splitlines()
-
-  # put everything in df
-  df = pd.read_csv(io.StringIO('\n'.join(f)))
-
-  # check if the points and cells match
-  # <...>
-
-  # construct the dataset_arrays
-  datasetArrays = []
-  counter=0
-  for key in df.keys():
-    name = key
-    ArrayObject = vtk.vtkFloatArray()
-    ArrayObject.SetName(name)
-    # all components are scalars, no vectors for velocity
-    ArrayObject.SetNumberOfComponents(1)
-    # how many elements do we have?
-    nElems = len(df[name])
-    ArrayObject.SetNumberOfValues(nElems)
-    ArrayObject.SetNumberOfTuples(nElems)
-
-    # Nijso: TODO FIXME very slow!
-    for i in range(nElems):
-      ArrayObject.SetValue(i,df[name][i])
-
-    grid.GetPointData().AddArray(ArrayObject)
-
-    datasetArrays.append(
-            {
-                "text": name,
-                "value": counter,
-                "range": [df.min()[key],df.max()[key]],
-                "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
-            }
-    )
-    counter += 1
-
-
-  # we should now have the scalars available...
-  defaultArray = datasetArrays[0]
-  state.dataset_arrays = datasetArrays
-  print("dataset = ",datasetArrays)
-  print("dataset_0 = ",datasetArrays[0])
-  print("dataset_0 = ",datasetArrays[0].get('text'))
-
-  mesh_mapper.SetInputData(grid)
-  mesh_actor.SetMapper(mesh_mapper)
-  renderer.AddActor(mesh_actor)
-
-  mesh_mapper.SelectColorArray(defaultArray.get('text'))
-  mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
-  mesh_mapper.SetScalarVisibility(True)
-  mesh_mapper.SetUseLookupTableScalarRange(True)
-
-  # Mesh: Setup default representation to surface
-  mesh_actor.GetProperty().SetRepresentationToSurface()
-  mesh_actor.GetProperty().SetPointSize(1)
-  #do not show the edges
-  mesh_actor.GetProperty().EdgeVisibilityOff()
-
-  # We have loaded a mesh, so enable the exporting of files
-  state.export_disabled = False
-
-  renderer.ResetCamera()
-  ctrl.view_update()
 
 
 
@@ -836,8 +769,6 @@ def load_client_files(file_upload, **kwargs):
 
     grid.Reset()
     # ### setup of the internal data structure ###
-    # root is now defined globally
-    #root = vtkMultiBlockDataSet()
     branch_interior = vtkMultiBlockDataSet()
     branch_boundary = vtkMultiBlockDataSet()
 
@@ -1215,14 +1146,14 @@ def changevtkEdgeVisibility(vtkEdgeVisibility, **kwargs):
 
     ctrl.view_update()
 
-# visibility if the cube axes (bounding box)
+# visibility if the cube axes (bounding box) is on
 @state.change("cube_axes_visibility")
 def update_cube_axes_visibility(cube_axes_visibility, **kwargs):
     print("change axes visibility")
     cube_axes.SetVisibility(cube_axes_visibility)
     ctrl.view_update()
 
-# visibility if the coordinate axes
+# visibility if the coordinate axes is on
 @state.change("coord_axes_visibility")
 def update_coord_axes_visibility(coord_axes_visibility, **kwargs):
     print("change coord axes visibility")
@@ -1231,45 +1162,28 @@ def update_coord_axes_visibility(coord_axes_visibility, **kwargs):
 
 # buttons in the top header
 def standard_buttons():
-    # export su2 mesh file button
-    #global mb1
-    #print("mb1 = ",mb1)
-    ##with vuetify.VBtn("{{ mb1 }}",icon=True, click=(export_files,"[mb1]"), disabled=("export_disabled",True)):
-    ##    vuetify.VIcon("mdi-download-box-outline")
-    with vuetify.VBtn(".su2",click=(save_file_su2,"[su2_meshfile]")):
-        vuetify.VIcon("mdi-download-box-outline")
-    with vuetify.VBtn(
-                      ".su2",
-                      click="utils.download('mesh.su2', trigger('download_file_su2'), 'text/plain')",
-                      ):
-        vuetify.VIcon("mdi-download-box-outline")
 
-    #with vuetify.VBtn(icon=True, click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
-    with vuetify.VBtn(".cfg", click=(nijso_list_change,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
+    # Save the .su2 file
+    #with vuetify.VBtn(".su2",click=(save_file_su2,"[su2_meshfile]")):
+    #    vuetify.VIcon("mdi-download-box-outline")
+
+    # download button such that the .su2 file ends up in "downloads"
+    #with vuetify.VBtn(
+    #                  ".su2",
+    #                  click="utils.download('mesh.su2', trigger('download_file_su2'), 'text/plain')",
+    #                  ):
+    #    vuetify.VIcon("mdi-download-box-outline")
+
+    with vuetify.VBtn(".cfg", click=(save_json_cfg_file,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
         vuetify.VIcon("mdi-download")
 
-    with vuetify.VBtn(
-                      ".cfg",
-                      click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
-                      ):
-        vuetify.VIcon("mdi-download-box-outline")
+    # download button such that the .cfg file ends up in "downloads"
+    #with vuetify.VBtn(
+    #                  ".cfg",
+    #                  click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
+    #                  ):
+    #    vuetify.VIcon("mdi-download-box-outline")
 
-
-    # switch on/off edge visibility in the mesh
-    #vuetify.VCheckbox(
-    #    v_model=("vtkEdgeVisibility", True),
-    #    on_icon="mdi-grid",
-    #    off_icon="mdi-grid-off",
-    #    #true_value="gridOff",
-    #    #false_value="gridOn",
-    #    classes="mx-1",
-    #    hide_details=True,
-    #    dense=True,
-    #)
-
-    # reset the view
-    #with vuetify.VBtn(icon=True, click="$refs.view.resetCamera()"):
-    #    vuetify.VIcon("mdi-crop-free")
 
 # -----------------------------------------------------------------------------
 # Web App setup
@@ -1277,19 +1191,15 @@ def standard_buttons():
 
 state.trame__title = "File loading"
 
-
-#state.fields = []
-
 with SinglePageWithDrawerLayout(server) as layout:
 
     # text inside the toolbar
     layout.title.set_text(" ")
 
     # matplotlib monitor: read the initial history file
-    [state.x,state.ylist] = readHistory(state.history_filename)
+    [state.x,state.ylist] = readHistory(BASE / "user" / state.history_filename)
     print("x=",state.x)
     print("y=",state.ylist)
-
 
     with layout.toolbar:
 
@@ -1340,7 +1250,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             small_chips=True,
             truncate_length=25,
             v_model=("file_upload", None),
-
+            label="Load .SU2 Mesh File",
             dense=True,
             hide_details=True,
             style="max-width: 300px;",

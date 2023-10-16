@@ -115,7 +115,7 @@ def createjsonMarkers():
 # TODO: why do all the states get checked at startup?
 # TODO: when we click the save button, the icon color changes
 ########################################################################################
-def nijso_list_change(filename_json_export,filename_cfg_export):
+def save_json_cfg_file(filename_json_export,filename_cfg_export):
     print("exporting files")
     print("write config file ",filename_json_export),
     print("write config file ",filename_cfg_export),
@@ -130,14 +130,14 @@ def nijso_list_change(filename_json_export,filename_cfg_export):
     ########################################################################################
     # ##### save the json file
     ########################################################################################
-    with open(BASE / filename_json_export,'w') as jsonOutputFile:
+    with open(BASE / "user" / filename_json_export,'w') as jsonOutputFile:
         json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
     ########################################################################################
 
     ########################################################################################
     # ##### convert json file to cfg file and save
     ########################################################################################
-    with open(BASE / filename_cfg_export,'w') as f:
+    with open(BASE / "user" / filename_cfg_export,'w') as f:
       f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
       f.write("%                                                                              %\n")
       f.write("% SU2 configuration file                                                       %\n")
@@ -190,7 +190,7 @@ def nijso_list_change(filename_json_export,filename_cfg_export):
 # ##### export internal vtk multiblock mesh to an su2 file
 # ##### exports single block .su2 mesh with boundary conditions only
 ########################################################################################
-def export_files(multiblock,su2_export_filename):
+def save_su2mesh(multiblock,su2_export_filename):
     print(type(multiblock))
     print("export files:","clicked")
     # export an su2 file
@@ -256,7 +256,7 @@ def export_files(multiblock,su2_export_filename):
         #    print(p," ",data.GetPoint(p))
 
 
-    with open(su2_export_filename, 'w') as f:
+    with open(BASE / "user" / su2_export_filename, 'w') as f:
       # write dimensions
       s = "NDIME= " + str(NDIME) + "\n"
       f.write(s)

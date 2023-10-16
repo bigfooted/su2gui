@@ -313,7 +313,7 @@ def initialize_uniform():
   # note that we save the file in the solution file, and we always start from
   # the saved file
   solution_filename = state.jsonData['SOLUTION_FILENAME'] + ".csv"
-  with open(BASE / solution_filename,'w') as f:
+  with open(BASE / "user" / solution_filename,'w') as f:
     fields = ["PointID","x","y"]
     if (state.nDim==3):
         fields.append("z")

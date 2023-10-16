@@ -34,7 +34,7 @@
     ],
     "GAMMA_VALUE": 1.4,
     "GAS_CONSTANT": 287.058,
-    "HISTORY_WRT_FREQ_INNER": 10,
+    "HISTORY_WRT_FREQ_INNER": 1,
     "INC_DENSITY_INIT": 1.2886,
     "INC_DENSITY_MODEL": "VARIABLE",
     "INC_ENERGY_EQUATION": true,
@@ -48,7 +48,7 @@
         0.0,
         0.0
     ],
-    "ITER": 100,
+    "ITER": 500,
     "KIND_TRANS_MODEL": "NONE",
     "KIND_TURB_MODEL": "SA",
     "KT_POLYCOEFFS": [
@@ -60,12 +60,16 @@
     ],
     "LINEAR_SOLVER": "FGMRES",
     "LINEAR_SOLVER_ERROR": 1e-10,
-    "LINEAR_SOLVER_ITER": 5,
+    "LINEAR_SOLVER_ITER": 10,
     "LINEAR_SOLVER_PREC": "LU_SGS",
     "LM_OPTIONS": "MENTER_LANGTRY",
     "MARKER_ISOTHERMAL": [
         [
-            "inlet",
+            "gas_inlet",
+            300.0
+        ],
+        [
+            "air_axial_inlet",
             300.0
         ],
         [
@@ -73,32 +77,12 @@
             300.0
         ],
         [
-            "wall_2",
+            "axis",
             300.0
         ],
         [
-            "wall_bend",
+            "wall",
             300.0
-        ],
-        [
-            "wall_1",
-            300.0
-        ],
-        [
-            "symmetry_1",
-            300.0
-        ],
-        [
-            "symmetry_bend",
-            300.0
-        ],
-        [
-            "symmetry_2",
-            300.0
-        ],
-        [
-            "internal",
-            0.0
         ]
     ],
     "MESH_FILENAME": "mesh.su2",
@@ -121,8 +105,8 @@
         "PARAVIEW_MULTIBLOCK"
     ],
     "OUTPUT_WRT_FREQ": [
-        100,
-        100
+        10,
+        10
     ],
     "PRANDTL_LAM": 0.72,
     "PRANDTL_TURB": 0.9,
@@ -153,5 +137,5 @@
         "PRIMITIVE"
     ],
     "WRT_RESTART_OVERWRITE": true,
-    "WRT_VOLUME_OVERWRITE": false
+    "WRT_VOLUME_OVERWRITE": true
 }

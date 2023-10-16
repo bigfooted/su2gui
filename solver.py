@@ -10,13 +10,23 @@
 from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
+from su2_io import save_su2mesh, save_json_cfg_file
+
 import pandas as pd
 
-import sys, subprocess
+import sys, subprocess, io, time
 
 # real-time update, asynchronous io
 import asyncio
 from trame.app import get_server, asynchronous
+
+from trame.app.file_upload import ClientFile
+
+import vtk
+from vtkmodules.vtkCommonDataModel import vtkDataObject
+
+# import the grid from the mesh module
+from mesh import *
 
 
 # matplotlib
@@ -95,24 +105,34 @@ def dialog_card():
 
 
         # close dialog window button
-        #with vuetify.VCardText():
         # right-align the button
         with vuetify.VCol(classes="text-right"):
           vuetify.VBtn("Close", classes="mt-5",click=update_dialog)
 
 
-# real-time update
+# real-time update every xx seconds
 @asynchronous.task
-async def start_countdown():
+async def start_countdown(result):
 
     while state.keep_updating:
         with state:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(2.0)
             print("keep updating = ",state.keep_updating)
-            #global history_filename
-            readHistory(state.history_filename)
+            # update the history from file
+            readHistory(BASE / "user" / state.history_filename)
+            # update the restart from file
+            readRestart(BASE / "user" / state.restart_filename)
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
+            # check that the job is still running
+            print("poll = ",result.poll())
+            if result.poll() != None:
+              print("job has stopped")
+              # stop updating the graphs
+              state.keep_updating = False
+              # set the running state to false
+              state.solver_running = False
+              state.solver_icon="mdi-play-circle"
 
 
 ###############################################################
@@ -171,8 +191,18 @@ def update_material(convergence_val, **kwargs):
     # update config option value
     state.jsonData['CONV_RESIDUAL_MINVAL']= int(convergence_val)
 
+
+
+# start SU2 solver
 def su2_play():
     print("Start SU2 solver!"),
+
+    # save the cfg file
+    save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+    # save the mesh file
+    global root
+    save_su2mesh(root,state.jsonData['MESH_FILENAME'])
+
     # every time we press the button we switch the state
     state.solver_running = not state.solver_running
     if state.solver_running:
@@ -180,10 +210,10 @@ def su2_play():
         print("SU2 solver started!"),
 
         # run SU2_CFD with config.cfg
-        with open('su2.out', "w") as outfile:
-          with open('su2.err', "w") as errfile:
-            result = subprocess.Popen(['SU2_CFD', 'config_new.cfg'],
-                                cwd="user/nijso/",
+        with open(BASE / "user" / "su2.out", "w") as outfile:
+          with open(BASE / "user" / "su2.err", "w") as errfile:
+            result = subprocess.Popen(['SU2_CFD', state.filename_cfg_export],
+                                cwd="user/",
                                 text=True,
                                 stdout=outfile,
                                 stderr=errfile
@@ -191,11 +221,18 @@ def su2_play():
         # at this point we have started the simulation
         # we can now start updating the real-time plots
         state.keep_updating = True
-        start_countdown()
-        #result = subprocess.run([sys.executable, "-c", "print('ocean')"])
-        #result = subprocess.run(['SU2_CFD', 'config_new.cfg'])
+        print("start polling, poll = ",result.poll())
 
-        print(result)
+        # Wait until process terminates
+        #while result.poll() is None:
+        #  time.sleep(1.0)
+        print("result = ",result)
+        print("result poll= ",result.poll())
+
+        start_countdown(result)
+
+
+        print("result = ",result)
         # save mesh
         # save config
         # save restart file
@@ -203,9 +240,10 @@ def su2_play():
     else:
         state.solver_icon="mdi-play-circle"
         print("SU2 solver stopped!"),
+        # we need to terminate or kill the result process here if stop is pressed
 
 
-
+# matplotlib history
 def update_convergence_fields_visibility(index, visibility):
     print("index=",index)
     print("visible=",state.convergence_fields_visibility)
@@ -215,6 +253,7 @@ def update_convergence_fields_visibility(index, visibility):
     print(f"Toggle {index} to {visibility}")
 
 
+# matplotlib history
 # select which variables to use for convergence. Currently: only residual values of the solver
 def solver_dialog_card_convergence():
     with vuetify.VDialog(width=300,position='{X:10,Y:10}',transition="dialog-top-transition",v_model=("show_solver_dialog_card_convergence",False)):
@@ -248,6 +287,7 @@ def solver_dialog_card_convergence():
 
 
 
+###############################################################################
 def update_solver_dialog_card_convergence():
     print("changing state of solver_dialog_Card_convergence to:",state.show_solver_dialog_card_convergence)
     state.show_solver_dialog_card_convergence = not state.show_solver_dialog_card_convergence
@@ -300,8 +340,6 @@ def update_solver_dialog_card_convergence():
                print("field found")
                state.convergence_fields_visibility[i] = True
 
-
-
       print("convergence fields:",state.convergence_fields)
       state.dirty('convergence_fields')
       state.dirty('convergence_fields_range')
@@ -318,6 +356,7 @@ def update_solver_dialog_card_convergence():
 
 
 
+###############################################################################
 # matplotlib
 def update_dialog():
     state.show_dialog = not state.show_dialog
@@ -327,6 +366,7 @@ def update_dialog():
 
 
 
+###############################################################################
 # Read the history file
 # set the names and visibility
 def readHistory(filename):
@@ -351,23 +391,106 @@ def readHistory(filename):
        state.dirty('monitorLinesVisibility')
        state.dirty('monitorLinesRange')
 
-
     state.x = [i for i in range(len(dfrms.index))]
     print("x = ",state.x)
     state.ylist=[]
     for c in range(len(dfrms.columns)):
         state.ylist.append(dfrms.iloc[:,c].tolist())
 
-
     dialog_card()
     return [state.x,state.ylist]
 
 
+###############################################################################
+# # ##### upload ascii restart file #####
+@state.change("restartFile")
+def uploadRestart(restartFile, **kwargs):
 
+  print("loading restart file ",restartFile,type(restartFile) )
+  if restartFile is None:
+    return
+
+  # type(file) will always be bytes
+  file = ClientFile(restartFile)
+  filecontent = file.content.decode('utf-8')
+  f = filecontent.splitlines()
+  # put everything in df
+  #df = pd.read_csv(io.StringIO('\n'.join(f)))
+  readRestart(io.StringIO('\n'.join(f)))
+
+
+
+# read the restart file
+def readRestart(restartFile):
+
+  df = pd.read_csv(restartFile)
+
+  # check if the points and cells match
+  # <...>
+
+  # construct the dataset_arrays
+  datasetArrays = []
+  counter=0
+  for key in df.keys():
+    name = key
+    ArrayObject = vtk.vtkFloatArray()
+    ArrayObject.SetName(name)
+    # all components are scalars, no vectors for velocity
+    ArrayObject.SetNumberOfComponents(1)
+    # how many elements do we have?
+    nElems = len(df[name])
+    ArrayObject.SetNumberOfValues(nElems)
+    ArrayObject.SetNumberOfTuples(nElems)
+
+    # Nijso: TODO FIXME very slow!
+    for i in range(nElems):
+      ArrayObject.SetValue(i,df[name][i])
+
+    grid.GetPointData().AddArray(ArrayObject)
+
+    datasetArrays.append(
+            {
+                "text": name,
+                "value": counter,
+                "range": [df.min()[key],df.max()[key]],
+                "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
+            }
+    )
+    counter += 1
+
+  # we should now have the scalars available...
+  defaultArray = datasetArrays[0]
+  state.dataset_arrays = datasetArrays
+  print("dataset = ",datasetArrays)
+  print("dataset_0 = ",datasetArrays[0])
+  print("dataset_0 = ",datasetArrays[0].get('text'))
+
+  mesh_mapper.SetInputData(grid)
+  mesh_actor.SetMapper(mesh_mapper)
+  renderer.AddActor(mesh_actor)
+
+  mesh_mapper.SelectColorArray(defaultArray.get('text'))
+  mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
+  mesh_mapper.SetScalarVisibility(True)
+  mesh_mapper.SetUseLookupTableScalarRange(True)
+
+  # Mesh: Setup default representation to surface
+  mesh_actor.GetProperty().SetRepresentationToSurface()
+  mesh_actor.GetProperty().SetPointSize(1)
+  #do not show the edges
+  mesh_actor.GetProperty().EdgeVisibilityOff()
+
+  # We have loaded a mesh, so enable the exporting of files
+  state.export_disabled = False
+
+  renderer.ResetCamera()
+  ctrl.view_update()
+
+
+###############################################################################
 def figure_size():
     if state.figure_size is None:
         return {}
-
 
     dpi = state.figure_size.get("dpi")
     rect = state.figure_size.get("size")

@@ -1,0 +1,1205 @@
+
+-------------------------------------------------------------------------
+|    ___ _   _ ___                                                      |
+|   / __| | | |_  )   Release 7.5.1 "Blackbird"                         |
+|   \__ \ |_| |/ /                                                      |
+|   |___/\___//___|   Suite (Computational Fluid Dynamics Code)         |
+|                                                                       |
+-------------------------------------------------------------------------
+| SU2 Project Website: https://su2code.github.io                        |
+|                                                                       |
+| The SU2 Project is maintained by the SU2 Foundation                   |
+| (http://su2foundation.org)                                            |
+-------------------------------------------------------------------------
+| Copyright 2012-2023, SU2 Contributors                                 |
+|                                                                       |
+| SU2 is free software; you can redistribute it and/or                  |
+| modify it under the terms of the GNU Lesser General Public            |
+| License as published by the Free Software Foundation; either          |
+| version 2.1 of the License, or (at your option) any later version.    |
+|                                                                       |
+| SU2 is distributed in the hope that it will be useful,                |
+| but WITHOUT ANY WARRANTY; without even the implied warranty of        |
+| MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
+| Lesser General Public License for more details.                       |
+|                                                                       |
+| You should have received a copy of the GNU Lesser General Public      |
+| License along with SU2. If not, see <http://www.gnu.org/licenses/>.   |
+-------------------------------------------------------------------------
+
+Parsing config file for zone 0
+
+----------------- Physical Case Definition ( Zone 0 ) -------------------
+Incompressible RANS equations.
+Turbulence model: Negative-Spalart-Allmaras
+Hybrid RANS/LES: No Hybrid RANS/LES
+Reading and writing ASCII SU2 native restart files.
+Read flow solution from: solution.
+Dimensional simulation.
+The reference area is 1 m^2.
+The semi-span will be computed using the max y(3D) value.
+The reference length is 1 m.
+Input mesh file name: mesh.su2
+
+--------------- Space Numerical Integration ( Zone 0 ) ------------------
+Flux difference splitting (FDS) upwind scheme for the flow inviscid terms.
+Second order integration in space, with slope limiter.
+Venkatakrishnan slope-limiting method, with constant: 0.05.
+The reference element size is: 1. 
+Average of gradients with correction (viscous flow terms).
+Average of gradients with correction (viscous turbulence terms).
+Gradient for upwind reconstruction: Green-Gauss.
+Gradient for viscous and source terms: Green-Gauss.
+
+--------------- Time Numerical Integration  ( Zone 0 ) ------------------
+Local time stepping (steady state simulation).
+Euler implicit method for the flow equations.
+FGMRES is used for solving the linear system.
+Using a LU-SGS preconditioning.
+Convergence criteria of the linear solver: 1e-10.
+Max number of linear iterations: 10.
+No CFL adaptation.
+Courant-Friedrichs-Lewy number:        1
+Euler implicit time integration for the turbulence model.
+
+------------------ Convergence Criteria  ( Zone 0 ) ---------------------
+Maximum number of solver subiterations: 500.
+Begin convergence monitoring at iteration 10.
+Residual minimum value: 1e-12.
+Cauchy series min. value: 1e-10.
+Number of Cauchy elements: 100.
+Begin windowed time average at iteration 0.
+
+-------------------- Output Information ( Zone 0 ) ----------------------
+File writing frequency: 
++------------------------------------+
+|                     File| Frequency|
++------------------------------------+
+|            RESTART_ASCII|        10|
+|      PARAVIEW_MULTIBLOCK|        10|
++------------------------------------+
+Writing the convergence history file every 1 inner iterations.
+Writing the screen convergence history every 1 inner iterations.
+The tabular file format is CSV (.csv).
+Convergence history file name: history.
+Forces breakdown file name: forces_breakdown.dat.
+Surface file name: surface.
+Volume file name: flow.
+Restart file name: restart.
+
+------------- Config File Boundary Information ( Zone 0 ) ---------------
++-----------------------------------------------------------------------+
+|                        Marker Type|                        Marker Name|
++-----------------------------------------------------------------------+
+|                    Isothermal wall|                          gas_inlet|
+|                                   |                    air_axial_inlet|
+|                                   |                             outlet|
+|                                   |                               axis|
+|                                   |                               wall|
++-----------------------------------------------------------------------+
+
+-------------------- Output Preprocessing ( Zone 0 ) --------------------
+
+WARNING: SURFACE_PRESSURE_DROP can only be computed for at least 2 surfaces (outlet, inlet, ...)
+
+  Info: Ignoring the following screen output fields:
+  RMS_DENSITY
+Screen output fields: INNER_ITER, RMS_PRESSURE
+History output group(s): ITER, RMS_RES
+Convergence field(s): RMS_PRESSURE
+Warning: No (valid) fields chosen for time convergence monitoring. Time convergence monitoring inactive.
+Volume output fields: RESIDUAL, SOLUTION, PRIMITIVE, COORDINATES
+
+------------------- Geometry Preprocessing ( Zone 0 ) -------------------
+Two dimensional problem.
+3510 grid points.
+3364 volume elements.
+5 surface markers.
+29 boundary elements in index 0 (Marker = gas_inlet).
+29 boundary elements in index 1 (Marker = air_axial_inlet).
+29 boundary elements in index 2 (Marker = outlet).
+87 boundary elements in index 3 (Marker = axis).
+116 boundary elements in index 4 (Marker = wall).
+3364 quadrilaterals.
+Setting point connectivity.
+Renumbering points (Reverse Cuthill McKee Ordering).
+Recomputing point connectivity.
+Setting element connectivity.
+Checking the numerical grid orientation.
+There has been a re-orientation of 2523 QUADRILATERAL volume elements.
+There has been a re-orientation of 290 LINE surface elements.
+Identifying edges and vertices.
+Setting the control volume structure.
+Area of the computational grid: 0.002925.
+Searching for the closest normal neighbors to the surfaces.
+Storing a mapping from global to local point index.
+Compute the surface curvature.
+Max K: 5722.1. Mean K: 45.6971. Standard deviation K: 397.615.
+Checking for periodicity.
+Computing mesh quality statistics for the dual control volumes.
++--------------------------------------------------------------+
+|           Mesh Quality Metric|        Minimum|        Maximum|
++--------------------------------------------------------------+
+|    Orthogonality Angle (deg.)|             90|             90|
+|     CV Face Area Aspect Ratio|        1.00061|         217.83|
+|           CV Sub-Volume Ratio|              1|        4.90961|
++--------------------------------------------------------------+
+Finding max control volume width.
+Wetted area = 0 m.
+Area projection in the x-plane = 0 m, y-plane = 0 m.
+Max. coordinate in the x-direction = -1e+10 m, y-direction = -1e+10 m.
+Min. coordinate in the x-direction = 1e+10 m, y-direction = 1e+10 m.
+Computing wall distances.
+
+-------------------- Solver Preprocessing ( Zone 0 ) --------------------
+ Warning: There is no restart file (flow.meta).
+ Computation will continue without updating metadata parameters.
+Incompressible flow: rho_ref, vel_ref, temp_ref, p_ref
+are set to 1.0 in order to perform a dimensional calculation.
+Force coefficients computed using initial values.
+The reference area for force coeffs. is 1 m^2.
+The reference length for force coeffs. is 1 m.
+The pressure is decomposed into thermodynamic and dynamic components.
+The initial value of the dynamic pressure is 0.
+Mach number: 0, computed using fluid speed of sound.
+For external flows, the initial state is imposed at the far-field.
+Angle of attack (deg): 0, computed using the initial velocity.
+Side slip angle (deg): 0, computed using the initial velocity.
+Reynolds number per meter: 72017.1, computed using initial values.
+Reynolds number is a byproduct of inputs only (not used internally).
+SI units only. The grid should be dimensional (meters).
+Energy equation is active and coupled for variable density.
+
+-- Models:
++------------------------------------------------------------------------------+
+|          Viscosity Model|        Conductivity Model|              Fluid Model|
++------------------------------------------------------------------------------+
+|               SUTHERLAND|          CONSTANT_PRANDTL|            INC_IDEAL_GAS|
++------------------------------------------------------------------------------+
+-- Fluid properties:
++------------------------------------------------------------------------------+
+|                  Name|    Dim. value|    Ref. value|      Unit|Non-dim. value|
++------------------------------------------------------------------------------+
+|        Ref. Viscosity|     1.716e-05|             1|   N.s/m^2|     1.716e-05|
+|      Sutherland Temp.|        273.15|             1|         K|        273.15|
+|     Sutherland Const.|         110.4|             1|         K|         110.4|
++------------------------------------------------------------------------------+
+|        Prandtl (Lam.)|             -|             -|         -|          0.72|
+|       Prandtl (Turb.)|             -|             -|         -|           0.9|
++------------------------------------------------------------------------------+
+|       Spec. Heat (Cp)|          1001|             1|  N.m/kg.K|          1001|
+|      Molecular weight|          28.9|             1|     g/mol|          28.9|
+|          Gas Constant|       287.698|             1|  N.m/kg.K|       287.698|
+|       Therm. Pressure|        106825|             1|        Pa|        106825|
++------------------------------------------------------------------------------+
+-- Initial and free-stream conditions:
++------------------------------------------------------------------------------+
+|                  Name|    Dim. value|    Ref. value|      Unit|Non-dim. value|
++------------------------------------------------------------------------------+
+|      Dynamic Pressure|             0|             1|        Pa|             0|
+|        Total Pressure|        0.6443|             1|        Pa|        0.6443|
+|               Density|        1.2886|             1|    kg/m^3|        1.2886|
+|           Temperature|        288.15|             1|         K|        288.15|
+|            Velocity-X|             1|             1|       m/s|             1|
+|            Velocity-Y|             0|             1|       m/s|             0|
+|    Velocity Magnitude|             1|             1|       m/s|             1|
++------------------------------------------------------------------------------+
+|             Viscosity|    1.7893e-05|             1|   N.s/m^2|    1.7893e-05|
+|          Conductivity|             -|             1|   W/m^2.K|             -|
+|     Turb. Kin. Energy|       0.00375|             1|   m^2/s^2|       0.00375|
+|     Spec. Dissipation|       27.0064|             1|       1/s|       27.0064|
++------------------------------------------------------------------------------+
+|           Mach Number|             -|             -|         -|             0|
+|       Reynolds Number|             -|             -|         -|       72017.1|
++------------------------------------------------------------------------------+
+Initialize Jacobian structure (Navier-Stokes). MG level: 0.
+Initialize Jacobian structure (SA model).
+
+------------------- Numerics Preprocessing ( Zone 0 ) -------------------
+
+----------------- Integration Preprocessing ( Zone 0 ) ------------------
+
+------------------- Iteration Preprocessing ( Zone 0 ) ------------------
+Euler/Navier-Stokes/RANS fluid iteration.
+
+------------------------------ Begin Solver -----------------------------
+
+Simulation Run using the Single-zone Driver
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|           0|   -3.466027|
+|           1|   -3.573483|
+|           2|   -3.590147|
+|           3|   -3.602605|
+|           4|   -3.612364|
+|           5|   -3.620277|
+|           6|   -3.626883|
+|           7|   -3.632533|
+|           8|   -3.637464|
+|           9|   -3.641837|
+|          10|   -3.645769|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          11|   -3.649342|
+|          12|   -3.652620|
+|          13|   -3.655650|
+|          14|   -3.658467|
+|          15|   -3.661100|
+|          16|   -3.663572|
+|          17|   -3.665903|
+|          18|   -3.668107|
+|          19|   -3.670197|
+|          20|   -3.672184|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          21|   -3.674077|
+|          22|   -3.675885|
+|          23|   -3.677614|
+|          24|   -3.679271|
+|          25|   -3.680862|
+|          26|   -3.682391|
+|          27|   -3.683863|
+|          28|   -3.685281|
+|          29|   -3.686650|
+|          30|   -3.687973|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          31|   -3.689253|
+|          32|   -3.690491|
+|          33|   -3.691692|
+|          34|   -3.692857|
+|          35|   -3.693988|
+|          36|   -3.695087|
+|          37|   -3.696156|
+|          38|   -3.697197|
+|          39|   -3.698210|
+|          40|   -3.699198|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          41|   -3.700161|
+|          42|   -3.701101|
+|          43|   -3.702020|
+|          44|   -3.702917|
+|          45|   -3.703794|
+|          46|   -3.704652|
+|          47|   -3.705491|
+|          48|   -3.706313|
+|          49|   -3.707118|
+|          50|   -3.707907|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          51|   -3.708681|
+|          52|   -3.709440|
+|          53|   -3.710184|
+|          54|   -3.710915|
+|          55|   -3.711633|
+|          56|   -3.712340|
+|          57|   -3.713034|
+|          58|   -3.713716|
+|          59|   -3.714388|
+|          60|   -3.715048|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          61|   -3.715698|
+|          62|   -3.716338|
+|          63|   -3.716968|
+|          64|   -3.717589|
+|          65|   -3.718201|
+|          66|   -3.718804|
+|          67|   -3.719399|
+|          68|   -3.719985|
+|          69|   -3.720564|
+|          70|   -3.721135|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          71|   -3.721699|
+|          72|   -3.722256|
+|          73|   -3.722806|
+|          74|   -3.723350|
+|          75|   -3.723888|
+|          76|   -3.724419|
+|          77|   -3.724946|
+|          78|   -3.725466|
+|          79|   -3.725981|
+|          80|   -3.726491|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          81|   -3.726997|
+|          82|   -3.727499|
+|          83|   -3.727998|
+|          84|   -3.728494|
+|          85|   -3.728986|
+|          86|   -3.729474|
+|          87|   -3.729958|
+|          88|   -3.730437|
+|          89|   -3.730908|
+|          90|   -3.731374|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|          91|   -3.731835|
+|          92|   -3.732292|
+|          93|   -3.732743|
+|          94|   -3.733191|
+|          95|   -3.733634|
+|          96|   -3.734073|
+|          97|   -3.734507|
+|          98|   -3.734937|
+|          99|   -3.735364|
+|         100|   -3.735786|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         101|   -3.736205|
+|         102|   -3.736620|
+|         103|   -3.737032|
+|         104|   -3.737441|
+|         105|   -3.737847|
+|         106|   -3.738250|
+|         107|   -3.738652|
+|         108|   -3.739050|
+|         109|   -3.739447|
+|         110|   -3.739841|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         111|   -3.740233|
+|         112|   -3.740623|
+|         113|   -3.741011|
+|         114|   -3.741397|
+|         115|   -3.741782|
+|         116|   -3.742164|
+|         117|   -3.742544|
+|         118|   -3.742922|
+|         119|   -3.743299|
+|         120|   -3.743673|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         121|   -3.744045|
+|         122|   -3.744415|
+|         123|   -3.744783|
+|         124|   -3.745150|
+|         125|   -3.745514|
+|         126|   -3.745876|
+|         127|   -3.746234|
+|         128|   -3.746590|
+|         129|   -3.746944|
+|         130|   -3.747326|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         131|   -3.747721|
+|         132|   -3.748111|
+|         133|   -3.748498|
+|         134|   -3.748882|
+|         135|   -3.749264|
+|         136|   -3.749645|
+|         137|   -3.750025|
+|         138|   -3.750403|
+|         139|   -3.750781|
+|         140|   -3.751158|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         141|   -3.751535|
+|         142|   -3.751911|
+|         143|   -3.752286|
+|         144|   -3.752662|
+|         145|   -3.753037|
+|         146|   -3.753411|
+|         147|   -3.753786|
+|         148|   -3.754161|
+|         149|   -3.754536|
+|         150|   -3.754911|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         151|   -3.755286|
+|         152|   -3.755662|
+|         153|   -3.756037|
+|         154|   -3.756413|
+|         155|   -3.756789|
+|         156|   -3.757165|
+|         157|   -3.757542|
+|         158|   -3.757920|
+|         159|   -3.758298|
+|         160|   -3.758677|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         161|   -3.759056|
+|         162|   -3.759437|
+|         163|   -3.759818|
+|         164|   -3.760200|
+|         165|   -3.760584|
+|         166|   -3.760968|
+|         167|   -3.761354|
+|         168|   -3.761742|
+|         169|   -3.762131|
+|         170|   -3.762522|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         171|   -3.762914|
+|         172|   -3.763309|
+|         173|   -3.763707|
+|         174|   -3.764106|
+|         175|   -3.764508|
+|         176|   -3.764913|
+|         177|   -3.765321|
+|         178|   -3.765732|
+|         179|   -3.766146|
+|         180|   -3.766563|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         181|   -3.766983|
+|         182|   -3.767407|
+|         183|   -3.767834|
+|         184|   -3.768264|
+|         185|   -3.768697|
+|         186|   -3.769132|
+|         187|   -3.769568|
+|         188|   -3.770006|
+|         189|   -3.770443|
+|         190|   -3.770881|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         191|   -3.771319|
+|         192|   -3.771756|
+|         193|   -3.772192|
+|         194|   -3.772627|
+|         195|   -3.773062|
+|         196|   -3.773495|
+|         197|   -3.773927|
+|         198|   -3.774358|
+|         199|   -3.774790|
+|         200|   -3.775249|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         201|   -3.775705|
+|         202|   -3.776157|
+|         203|   -3.776604|
+|         204|   -3.777047|
+|         205|   -3.777483|
+|         206|   -3.777911|
+|         207|   -3.778330|
+|         208|   -3.778737|
+|         209|   -3.779131|
+|         210|   -3.779513|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         211|   -3.779882|
+|         212|   -3.780242|
+|         213|   -3.780596|
+|         214|   -3.780947|
+|         215|   -3.781300|
+|         216|   -3.781657|
+|         217|   -3.782020|
+|         218|   -3.782392|
+|         219|   -3.782771|
+|         220|   -3.783158|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         221|   -3.783552|
+|         222|   -3.783952|
+|         223|   -3.784356|
+|         224|   -3.784764|
+|         225|   -3.785175|
+|         226|   -3.785586|
+|         227|   -3.785998|
+|         228|   -3.786408|
+|         229|   -3.786817|
+|         230|   -3.787224|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         231|   -3.787631|
+|         232|   -3.788035|
+|         233|   -3.788438|
+|         234|   -3.788839|
+|         235|   -3.789238|
+|         236|   -3.789634|
+|         237|   -3.790027|
+|         238|   -3.790418|
+|         239|   -3.790807|
+|         240|   -3.791197|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         241|   -3.791586|
+|         242|   -3.791974|
+|         243|   -3.792365|
+|         244|   -3.792826|
+|         245|   -3.793305|
+|         246|   -3.793791|
+|         247|   -3.794285|
+|         248|   -3.794831|
+|         249|   -3.795561|
+|         250|   -3.796267|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         251|   -3.796953|
+|         252|   -3.797620|
+|         253|   -3.798260|
+|         254|   -3.798867|
+|         255|   -3.799431|
+|         256|   -3.799939|
+|         257|   -3.800381|
+|         258|   -3.800749|
+|         259|   -3.801038|
+|         260|   -3.801253|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         261|   -3.801408|
+|         262|   -3.801523|
+|         263|   -3.801622|
+|         264|   -3.801714|
+|         265|   -3.801800|
+|         266|   -3.801876|
+|         267|   -3.801945|
+|         268|   -3.802033|
+|         269|   -3.802191|
+|         270|   -3.802461|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         271|   -3.803148|
+|         272|   -3.804252|
+|         273|   -3.805733|
+|         274|   -3.806921|
+|         275|   -3.807867|
+|         276|   -3.808653|
+|         277|   -3.809344|
+|         278|   -3.809976|
+|         279|   -3.810571|
+|         280|   -3.811144|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         281|   -3.811697|
+|         282|   -3.812231|
+|         283|   -3.812752|
+|         284|   -3.813255|
+|         285|   -3.813738|
+|         286|   -3.814202|
+|         287|   -3.814644|
+|         288|   -3.815062|
+|         289|   -3.815455|
+|         290|   -3.815819|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         291|   -3.816145|
+|         292|   -3.816432|
+|         293|   -3.816675|
+|         294|   -3.816868|
+|         295|   -3.817001|
+|         296|   -3.817068|
+|         297|   -3.817060|
+|         298|   -3.816970|
+|         299|   -3.816788|
+|         300|   -3.816513|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         301|   -3.816148|
+|         302|   -3.815707|
+|         303|   -3.815223|
+|         304|   -3.814755|
+|         305|   -3.814341|
+|         306|   -3.814228|
+|         307|   -3.814554|
+|         308|   -3.814785|
+|         309|   -3.814939|
+|         310|   -3.815555|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         311|   -3.816353|
+|         312|   -3.816900|
+|         313|   -3.817290|
+|         314|   -3.817578|
+|         315|   -3.817784|
+|         316|   -3.817917|
+|         317|   -3.817983|
+|         318|   -3.817977|
+|         319|   -3.817897|
+|         320|   -3.817746|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         321|   -3.817524|
+|         322|   -3.817227|
+|         323|   -3.816847|
+|         324|   -3.816414|
+|         325|   -3.815926|
+|         326|   -3.815382|
+|         327|   -3.814784|
+|         328|   -3.814133|
+|         329|   -3.813440|
+|         330|   -3.812731|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         331|   -3.812047|
+|         332|   -3.811390|
+|         333|   -3.810964|
+|         334|   -3.810805|
+|         335|   -3.810568|
+|         336|   -3.810695|
+|         337|   -3.810822|
+|         338|   -3.811005|
+|         339|   -3.811195|
+|         340|   -3.811335|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         341|   -3.811432|
+|         342|   -3.811991|
+|         343|   -3.812508|
+|         344|   -3.812859|
+|         345|   -3.813104|
+|         346|   -3.813269|
+|         347|   -3.813365|
+|         348|   -3.813397|
+|         349|   -3.813368|
+|         350|   -3.813289|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         351|   -3.813223|
+|         352|   -3.813195|
+|         353|   -3.813440|
+|         354|   -3.813570|
+|         355|   -3.813592|
+|         356|   -3.813578|
+|         357|   -3.813515|
+|         358|   -3.813396|
+|         359|   -3.813208|
+|         360|   -3.812951|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         361|   -3.812631|
+|         362|   -3.812264|
+|         363|   -3.811884|
+|         364|   -3.811480|
+|         365|   -3.811509|
+|         366|   -3.811749|
+|         367|   -3.811906|
+|         368|   -3.811972|
+|         369|   -3.811981|
+|         370|   -3.811935|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         371|   -3.811844|
+|         372|   -3.811721|
+|         373|   -3.811549|
+|         374|   -3.811277|
+|         375|   -3.810912|
+|         376|   -3.810479|
+|         377|   -3.810123|
+|         378|   -3.809852|
+|         379|   -3.809545|
+|         380|   -3.809473|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         381|   -3.809328|
+|         382|   -3.809074|
+|         383|   -3.808754|
+|         384|   -3.808405|
+|         385|   -3.808044|
+|         386|   -3.807704|
+|         387|   -3.807644|
+|         388|   -3.808356|
+|         389|   -3.808988|
+|         390|   -3.809366|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         391|   -3.809593|
+|         392|   -3.809862|
+|         393|   -3.810244|
+|         394|   -3.810530|
+|         395|   -3.810694|
+|         396|   -3.810787|
+|         397|   -3.810834|
+|         398|   -3.810829|
+|         399|   -3.810754|
+|         400|   -3.810608|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         401|   -3.810482|
+|         402|   -3.810444|
+|         403|   -3.810369|
+|         404|   -3.810274|
+|         405|   -3.810373|
+|         406|   -3.810469|
+|         407|   -3.810500|
+|         408|   -3.810513|
+|         409|   -3.811050|
+|         410|   -3.811629|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         411|   -3.811984|
+|         412|   -3.812140|
+|         413|   -3.812166|
+|         414|   -3.812080|
+|         415|   -3.811902|
+|         416|   -3.811656|
+|         417|   -3.811491|
+|         418|   -3.811563|
+|         419|   -3.811859|
+|         420|   -3.812271|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         421|   -3.812673|
+|         422|   -3.813059|
+|         423|   -3.813429|
+|         424|   -3.813783|
+|         425|   -3.814125|
+|         426|   -3.814466|
+|         427|   -3.814804|
+|         428|   -3.815111|
+|         429|   -3.815374|
+|         430|   -3.815597|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         431|   -3.815796|
+|         432|   -3.815957|
+|         433|   -3.816070|
+|         434|   -3.816189|
+|         435|   -3.816329|
+|         436|   -3.816492|
+|         437|   -3.816762|
+|         438|   -3.817072|
+|         439|   -3.817382|
+|         440|   -3.817691|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         441|   -3.818009|
+|         442|   -3.818328|
+|         443|   -3.818682|
+|         444|   -3.819091|
+|         445|   -3.819487|
+|         446|   -3.819861|
+|         447|   -3.820213|
+|         448|   -3.820533|
+|         449|   -3.820823|
+|         450|   -3.821083|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         451|   -3.821265|
+|         452|   -3.821387|
+|         453|   -3.821451|
+|         454|   -3.821463|
+|         455|   -3.821436|
+|         456|   -3.821379|
+|         457|   -3.821292|
+|         458|   -3.821204|
+|         459|   -3.821190|
+|         460|   -3.821313|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         461|   -3.821556|
+|         462|   -3.821821|
+|         463|   -3.822363|
+|         464|   -3.823654|
+|         465|   -3.824628|
+|         466|   -3.825344|
+|         467|   -3.825976|
+|         468|   -3.826602|
+|         469|   -3.827202|
+|         470|   -3.827766|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         471|   -3.828300|
+|         472|   -3.828828|
+|         473|   -3.829369|
+|         474|   -3.829910|
+|         475|   -3.830437|
+|         476|   -3.830940|
+|         477|   -3.831423|
+|         478|   -3.831896|
+|         479|   -3.832404|
+|         480|   -3.832903|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         481|   -3.833390|
+|         482|   -3.833865|
+|         483|   -3.834323|
+|         484|   -3.834763|
+|         485|   -3.835191|
+|         486|   -3.835595|
+|         487|   -3.835986|
+|         488|   -3.836365|
+|         489|   -3.836750|
+|         490|   -3.837129|
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
++-------------------------+
+|  Inner_Iter|      rms[P]|
++-------------------------+
+|         491|   -3.837495|
+|         492|   -3.837853|
+|         493|   -3.838221|
+|         494|   -3.838594|
+|         495|   -3.838978|
+|         496|   -3.839361|
+|         497|   -3.839740|
+|         498|   -3.840106|
+|         499|   -3.840463|
+
+----------------------------- Solver Exit -------------------------------
+
+Maximum number of iterations reached (ITER = 500) before convergence.
++-----------------------------------------------------------------------+
+|      Convergence Field     |     Value    |   Criterion  |  Converged |
++-----------------------------------------------------------------------+
+|                      rms[P]|      -3.84046|         < -12|          No|
++-----------------------------------------------------------------------+
+-------------------------------------------------------------------------
++-----------------------------------------------------------------------+
+|        File Writing Summary       |              Filename             |
++-----------------------------------------------------------------------+
+|SU2 ASCII restart                  |restart.csv                        |
+|Paraview Multiblock                |flow.vtm                           |
++-----------------------------------------------------------------------+
+
+--------------------------- Finalizing Solver ---------------------------
+Deleted CNumerics container.
+Deleted CIntegration container.
+Deleted CSolver container.
+Deleted CIteration container.
+Deleted CInterface container.
+Deleted CGeometry container.
+Deleted CFreeFormDefBox class.
+Deleted CSurfaceMovement class.
+Deleted CVolumetricMovement class.
+Deleted CConfig container.
+Deleted nInst container.
+Deleted COutput class.
+-------------------------------------------------------------------------
+
+------------------------- Exit Success (SU2_CFD) ------------------------
+
