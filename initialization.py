@@ -259,9 +259,8 @@ def initialize_uniform():
 
     print("name = ",name, " , value = ",value )
 
-    # Nijso: TODO FIXME very slow!
+    # Nijso: TODO FIXME reported to be a slow process.
     for i in range(nPoints):
-      #ArrayObject.SetValue(i,df[name][i])
       ArrayObject.SetValue(i,float(value))
 
     grid.GetPointData().AddArray(ArrayObject)
@@ -271,7 +270,6 @@ def initialize_uniform():
             {
                 "text": name,
                 "value": counter,
-                #"range": [df.min()[key],df.max()[key]],
                 "range": [float(value),float(value)],
                 "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
             }

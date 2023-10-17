@@ -1328,6 +1328,7 @@ with SinglePageWithDrawerLayout(server) as layout:
         set_json_materials()
         set_json_initialization()
         set_json_fileio()
+        set_json_solver()
         #this necessary here?
         #state.dirty('jsonData')
 

@@ -1,0 +1,2 @@
+# ignore all fils in directory
+__pycache__/

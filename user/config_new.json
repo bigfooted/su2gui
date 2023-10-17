@@ -10,11 +10,12 @@
     "CFL_REDUCTION_TURB": 1.0,
     "CONDUCTIVITY_MODEL": "CONSTANT_PRANDTL",
     "CONV_FIELD": [
-        "RMS_PRESSURE"
+        "RMS_PRESSURE",
+        "RMS_VELOCITY-X"
     ],
     "CONV_FILENAME": "history",
     "CONV_NUM_METHOD_FLOW": "FDS",
-    "CONV_RESIDUAL_MINVAL": -12,
+    "CONV_RESIDUAL_MINVAL": -14,
     "CONV_STARTITER": 10,
     "CP_POLYCOEFFS": [
         0.0,
@@ -48,7 +49,7 @@
         0.0,
         0.0
     ],
-    "ITER": 500,
+    "ITER": 1234,
     "KIND_TRANS_MODEL": "NONE",
     "KIND_TURB_MODEL": "SA",
     "KT_POLYCOEFFS": [
@@ -137,5 +138,5 @@
         "PRIMITIVE"
     ],
     "WRT_RESTART_OVERWRITE": true,
-    "WRT_VOLUME_OVERWRITE": true
+    "WRT_VOLUME_OVERWRITE": false
 }

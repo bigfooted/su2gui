@@ -28,7 +28,6 @@ from vtkmodules.vtkCommonDataModel import vtkDataObject
 # import the grid from the mesh module
 from mesh import *
 
-
 # matplotlib
 import matplotlib
 matplotlib.use("agg")
@@ -54,6 +53,16 @@ state.convergence_fields_range=[]
 state.convergence_fields_visibility=[]
 
 
+# initialize from json file
+def set_json_solver():
+  state.iter_idx = state.jsonData['ITER']
+  state.dirty('iter_idx')
+  state.convergence_val = state.jsonData['CONV_RESIDUAL_MINVAL']
+  state.dirty('convergence_val')
+
+  #for field in state.jsonData['CONV_FIELD']:
+  state.convergence_fields = state.jsonData['CONV_FIELD']
+  print("state convergence fields = ",state.convergence_fields," ",type(state.convergence_fields))
 
 
 # matplotlib
@@ -120,8 +129,8 @@ async def start_countdown(result):
             print("keep updating = ",state.keep_updating)
             # update the history from file
             readHistory(BASE / "user" / state.history_filename)
-            # update the restart from file
-            readRestart(BASE / "user" / state.restart_filename)
+            # update the restart from file, do not reset the active scalar value
+            readRestart(BASE / "user" / state.restart_filename, False)
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
@@ -161,7 +170,7 @@ def solver_card():
 
             vuetify.VTextField(
                 # What to do when something is selected
-                v_model=("Iter_idx", 100),
+                v_model=("iter_idx", 100),
                 # the name of the list box
                 label="Iterations",
             )
@@ -174,22 +183,22 @@ def solver_card():
 ###############################################################
 # Solver - state changes
 ###############################################################
-@state.change("Iter_idx")
-def update_material(Iter_idx, **kwargs):
+@state.change("iter_idx")
+def update_material(iter_idx, **kwargs):
     #
-    print("ITER value: ",Iter_idx)
+    print("ITER value: ",state.iter_idx)
     #
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     #
     # update config option value
-    state.jsonData['ITER']= int(Iter_idx)
+    state.jsonData['ITER']= int(state.iter_idx)
 
 @state.change("convergence_val")
 def update_material(convergence_val, **kwargs):
     #
     # update config option value
-    state.jsonData['CONV_RESIDUAL_MINVAL']= int(convergence_val)
+    state.jsonData['CONV_RESIDUAL_MINVAL']= int(state.convergence_val)
 
 
 
@@ -392,7 +401,7 @@ def readHistory(filename):
        state.dirty('monitorLinesRange')
 
     state.x = [i for i in range(len(dfrms.index))]
-    print("x = ",state.x)
+    #print("x = ",state.x)
     state.ylist=[]
     for c in range(len(dfrms.columns)):
         state.ylist.append(dfrms.iloc[:,c].tolist())
@@ -416,12 +425,14 @@ def uploadRestart(restartFile, **kwargs):
   f = filecontent.splitlines()
   # put everything in df
   #df = pd.read_csv(io.StringIO('\n'.join(f)))
-  readRestart(io.StringIO('\n'.join(f)))
+  # we reset the active field because we read or upload the restart from file as a user action
+  readRestart(io.StringIO('\n'.join(f)), True)
 
 
 
 # read the restart file
-def readRestart(restartFile):
+# reset_active_field is used to show the active field
+def readRestart(restartFile,reset_active_field):
 
   df = pd.read_csv(restartFile)
 
@@ -458,8 +469,6 @@ def readRestart(restartFile):
     )
     counter += 1
 
-  # we should now have the scalars available...
-  defaultArray = datasetArrays[0]
   state.dataset_arrays = datasetArrays
   print("dataset = ",datasetArrays)
   print("dataset_0 = ",datasetArrays[0])
@@ -469,19 +478,25 @@ def readRestart(restartFile):
   mesh_actor.SetMapper(mesh_mapper)
   renderer.AddActor(mesh_actor)
 
-  mesh_mapper.SelectColorArray(defaultArray.get('text'))
-  mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
-  mesh_mapper.SetScalarVisibility(True)
-  mesh_mapper.SetUseLookupTableScalarRange(True)
+  # we should now have the scalars available. If we update the field from an active reun, do not reset the
+  # active scalar field
+  if reset_active_field==True:
+    defaultArray = datasetArrays[0]
 
-  # Mesh: Setup default representation to surface
-  mesh_actor.GetProperty().SetRepresentationToSurface()
-  mesh_actor.GetProperty().SetPointSize(1)
-  #do not show the edges
-  mesh_actor.GetProperty().EdgeVisibilityOff()
+    mesh_mapper.SelectColorArray(defaultArray.get('text'))
+    mesh_mapper.GetLookupTable().SetRange(defaultArray.get('range'))
+    mesh_mapper.SetScalarVisibility(True)
+    mesh_mapper.SetUseLookupTableScalarRange(True)
 
-  # We have loaded a mesh, so enable the exporting of files
-  state.export_disabled = False
+    # Mesh: Setup default representation to surface
+    mesh_actor.GetProperty().SetRepresentationToSurface()
+    mesh_actor.GetProperty().SetPointSize(1)
+    #do not show the edges
+    mesh_actor.GetProperty().EdgeVisibilityOff()
+
+    # We have loaded a mesh, so enable the exporting of files
+    state.export_disabled = False
+
 
   renderer.ResetCamera()
   ctrl.view_update()

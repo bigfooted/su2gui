@@ -201,7 +201,6 @@ def physics_card():
                     # activate or deactivate/disable the checkbox
                     # only active for incompressible flow
                     # else, default is on
-                    #disabled=("physics_comp_idx",0),
                     disabled=("physics_energy_always_on",0),
                     classes="mt-1 pt-1",
                     hide_details=True,
