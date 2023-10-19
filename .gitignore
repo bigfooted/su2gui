@@ -1,2 +1,9 @@
-# ignore all fils in directory
-__pycache__/
+# ignore all files in directory
+*.pex
+__pycache__/*
+*.pyc
+*.err 
+*.out
+*.su2
+*.vtu
+*.vtm

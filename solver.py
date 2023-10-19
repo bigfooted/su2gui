@@ -27,6 +27,7 @@ from vtkmodules.vtkCommonDataModel import vtkDataObject
 
 # import the grid from the mesh module
 from mesh import *
+from vtk_helper import *
 
 # matplotlib
 import matplotlib
@@ -44,6 +45,9 @@ state, ctrl = server.state, server.controller
 ############################################################################
 # Solver models - list options #
 ############################################################################
+
+# the main su2 solver process
+proc_SU2 = None
 
 # list of fields that we could check for convergence
 state.convergence_fields=[]
@@ -122,6 +126,7 @@ def dialog_card():
 # real-time update every xx seconds
 @asynchronous.task
 async def start_countdown(result):
+    global proc_SU2
 
     while state.keep_updating:
         with state:
@@ -134,8 +139,8 @@ async def start_countdown(result):
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
-            print("poll = ",result.poll())
-            if result.poll() != None:
+            print("poll = ",proc_SU2.poll())
+            if proc_SU2.poll() != None:
               print("job has stopped")
               # stop updating the graphs
               state.keep_updating = False
@@ -175,7 +180,6 @@ def solver_card():
                 label="Iterations",
             )
 
-        #with vuetify.VBtn(icon=True, click=su2_play, disabled=("export_disabled",False)):
         with vuetify.VBtn("Solve",click=su2_play):
             vuetify.VIcon("{{solver_icon}}",color="purple")
 
@@ -204,24 +208,26 @@ def update_material(convergence_val, **kwargs):
 
 # start SU2 solver
 def su2_play():
-    print("Start SU2 solver!"),
 
-    # save the cfg file
-    save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
-    # save the mesh file
-    global root
-    save_su2mesh(root,state.jsonData['MESH_FILENAME'])
+    global proc_SU2
 
     # every time we press the button we switch the state
     state.solver_running = not state.solver_running
     if state.solver_running:
+        print("### SU2 solver started!")
+        # change the solver button icon
         state.solver_icon="mdi-stop-circle"
-        print("SU2 solver started!"),
+
+        # save the cfg file
+        save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+        # save the mesh file
+        global root
+        save_su2mesh(root,state.jsonData['MESH_FILENAME'])
 
         # run SU2_CFD with config.cfg
         with open(BASE / "user" / "su2.out", "w") as outfile:
           with open(BASE / "user" / "su2.err", "w") as errfile:
-            result = subprocess.Popen(['SU2_CFD', state.filename_cfg_export],
+            proc_SU2 = subprocess.Popen(['SU2_CFD', state.filename_cfg_export],
                                 cwd="user/",
                                 text=True,
                                 stdout=outfile,
@@ -230,27 +236,29 @@ def su2_play():
         # at this point we have started the simulation
         # we can now start updating the real-time plots
         state.keep_updating = True
-        print("start polling, poll = ",result.poll())
+        print("start polling, poll = ",proc_SU2.poll())
 
         # Wait until process terminates
         #while result.poll() is None:
         #  time.sleep(1.0)
-        print("result = ",result)
-        print("result poll= ",result.poll())
+        print("result = ",proc_SU2)
+        print("result poll= ",proc_SU2.poll())
 
-        start_countdown(result)
+        # periodic update of the monitor and volume result
+        start_countdown(proc_SU2)
 
 
-        print("result = ",result)
+        print("result = ",proc_SU2)
         # save mesh
         # save config
         # save restart file
         # call su2_cfd
     else:
         state.solver_icon="mdi-play-circle"
-        print("SU2 solver stopped!"),
+        print("### SU2 solver stopped!"),
         # we need to terminate or kill the result process here if stop is pressed
-
+        print("process=",type(proc_SU2))
+        proc_SU2.terminate()
 
 # matplotlib history
 def update_convergence_fields_visibility(index, visibility):
@@ -415,7 +423,7 @@ def readHistory(filename):
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
 
-  print("loading restart file ",restartFile,type(restartFile) )
+  print("loading restart file ")
   if restartFile is None:
     return
 
@@ -470,15 +478,15 @@ def readRestart(restartFile,reset_active_field):
     counter += 1
 
   state.dataset_arrays = datasetArrays
-  print("dataset = ",datasetArrays)
-  print("dataset_0 = ",datasetArrays[0])
-  print("dataset_0 = ",datasetArrays[0].get('text'))
+  #print("dataset = ",datasetArrays)
+  #print("dataset_0 = ",datasetArrays[0])
+  #print("dataset_0 = ",datasetArrays[0].get('text'))
 
   mesh_mapper.SetInputData(grid)
   mesh_actor.SetMapper(mesh_mapper)
   renderer.AddActor(mesh_actor)
 
-  # we should now have the scalars available. If we update the field from an active reun, do not reset the
+  # we should now have the scalars available. If we update the field from an active run, do not reset the
   # active scalar field
   if reset_active_field==True:
     defaultArray = datasetArrays[0]

@@ -151,7 +151,7 @@ def boundaries_dialog_card_inlet():
               # checkbox for energy (can only be deselected for incompressible)
               vuetify.VCheckbox(
                   v_model=("boundary_inc_vel_usenormals_idx", False),
-                  label="velocity normal to inlet",
+                  label="velocity normal to inlet (global)",
                   # activate or deactivate/disable the checkbox
                   # only active for incompressible flow
                   # else, default is on

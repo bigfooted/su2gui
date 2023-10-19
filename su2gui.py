@@ -4,7 +4,6 @@ The SU2 Graphical User Interface.
 
 import os, copy, io
 
-
 import pandas as pd
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
@@ -17,12 +16,14 @@ from trame.widgets import trame
 
 #import itertools
 from datetime import date
+
 # Import json setup for writing the config file in json and cfg file format.
 from su2_json import *
 # Export su2 mesh file.
 from su2_io import save_su2mesh, save_json_cfg_file
-
-
+#
+from vtk_helper import *
+#
 # Definition of ui_card and the server.
 from uicard import ui_card, server
 
@@ -35,8 +36,8 @@ from vtkmodules.vtkCommonDataModel import vtkDataObject
 from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor
-from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget
+from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor, vtkScalarBarActor
+from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget, vtkScalarBarWidget
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkDataSetMapper,
@@ -44,7 +45,6 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindow,
     vtkRenderWindowInteractor,
 )
-
 
 from vtkmodules.vtkCommonDataModel import (
     VTK_HEXAHEDRON,
@@ -139,16 +139,6 @@ state.monitorLinesRange = []
 
 # -----------------------------------------------------------------------------
 
-
-renderWindow.AddRenderer(renderer)
-# offscreen rendering, no additional pop-up window
-renderWindow.SetOffScreenRendering(1)
-
-renderWindowInteractor = vtkRenderWindowInteractor()
-renderWindowInteractor.SetRenderWindow(renderWindow)
-renderWindowInteractor.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
-
-
 # keep updating the graph (real-time update with asynchronous io)
 state.keep_updating = True
 state.countdown = True
@@ -156,33 +146,11 @@ state.countdown = True
 # -----------------------------------------------------------------------------
 # SU2 setup
 # -----------------------------------------------------------------------------
-# names of fields for restart file
 
-# incompressible fields
-Fields_INC_0=["PointID","x","y"]
-Fields_INC_STATE="Pressure"
-Fields_INC_2D=["Velocity_x","Velocity_y"]
-Fields_INC_3D="Velocity_z"
-Fields_INC_TEMP="Temperature"
-
-# compressible fields
-Fields_0=["PointID","x","y"]
-Fields_STATE="Density"
-Fields_2D=["Momentum_x","Momentum_y"]
-Fields_3D="Momentum_z"
-Fields_ENERGY="Energy"
-
-# turbulence fields
-Fields_SA=["Nu_Tilde"]
-Fields_SST=["Turb_Kin_Energy","Omega"]
 
 state.initialize=-1
 # number of dimensions of the mesh (2 or 3)
 state.nDim = 2
-# initial state for the initialization gittree
-state.field_state_name = Fields_INC_STATE
-state.field_energy_name = Fields_INC_TEMP
-state.field_velocity_name = Fields_INC_2D
 
 # which boundary is selected?
 state.selectedBoundaryName="none"
@@ -296,55 +264,17 @@ mesh_mapper.SetScalarModeToUsePointFieldData()
 mesh_mapper.SetScalarVisibility(True)
 mesh_mapper.SetUseLookupTableScalarRange(True)
 
-
-print("start init cube axes")
-# Cube Axes
-cube_axes = vtkCubeAxesActor()
-cube_axes.SetObjectName("CubeAxes")
-print("start init cube axes")
+# cube axes (bounded with length scales)
+cube_axes = MakeCubeAxesActor()
 renderer.AddActor(cube_axes)
 
-print("start init cube axes")
-# Cube Axes: Boundaries, camera, and styling
-cube_axes.SetBounds(mesh_actor.GetBounds())
-print("axes bounds = ",mesh_actor.GetBounds())
-cube_axes.SetCamera(renderer.GetActiveCamera())
-cube_axes.SetXLabelFormat("%6.1f")
-cube_axes.SetYLabelFormat("%6.1f")
-cube_axes.SetZLabelFormat("%6.1f")
-cube_axes.SetFlyModeToStaticEdges()
-print("end init cube axes")
-
+# scalar bar
+scalar_bar = MakeScalarBarActor()
+scalar_bar_widget =MakeScalarBarWidget(scalar_bar)
 
 # coordinate axes
-#coord_axes = vtkAxesActor()
-#coord_axes.SetObjectName("CoordAxes")
-#transform = vtkTransform()
-#transform.Translate(1.0, 0.0, 0.0)
-#coord_axes.SetUserTransform(transform)
-#renderer.AddActor(coord_axes)
-
-
-def MakeAxesActor():
-    axes = vtkAxesActor()
-    axes.SetShaftTypeToCylinder()
-    axes.SetXAxisLabelText('X')
-    axes.SetYAxisLabelText('Y')
-    axes.SetZAxisLabelText('Z')
-    axes.SetTotalLength(1.0, 1.0, 1.0)
-    axes.SetCylinderRadius(0.5 * axes.GetCylinderRadius())
-    axes.SetConeRadius(1.025 * axes.GetConeRadius())
-    axes.SetSphereRadius(1.5 * axes.GetSphereRadius())
-    return axes
-
 axes1 = MakeAxesActor()
-coord_axes = vtkOrientationMarkerWidget()
-coord_axes.SetOrientationMarker(axes1)
-# Position lower left in the viewport.
-coord_axes.SetViewport(0, 0, 0.2, 0.2)
-coord_axes.SetInteractor(renderWindowInteractor)
-coord_axes.SetEnabled(True)
-coord_axes.InteractiveOn()
+coord_axes = MakeOrientationMarkerWidget(axes1)
 
 
 renderer.ResetCamera()
@@ -420,7 +350,6 @@ def actives_change(ids):
 
     state.active_id = _id
 
-
     #state.boundaryText=_id
     print("actives_change::active id = ",state.active_id)
     # get boundary name belonging to ID
@@ -443,7 +372,6 @@ def actives_change(ids):
        state.active_parent_ui = _headnode
        # so headnode is none
        state.active_head_ui = "none"
-
 
 
     # check if we need to show a submenu
@@ -737,15 +665,10 @@ state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 ###############################################################
 
 
-
-
-
-
-
 # load SU2 .su2 mesh file #
 # currently loads a 2D or 3D .su2 file
 @state.change("file_upload")
-def load_client_files(file_upload, **kwargs):
+def load_file_su2(file_upload, **kwargs):
 
     global pipeline
     # remove the added boundary conditions in the pipeline
@@ -768,6 +691,7 @@ def load_client_files(file_upload, **kwargs):
     renderer.RemoveAllViewProps()
 
     grid.Reset()
+
     # ### setup of the internal data structure ###
     branch_interior = vtkMultiBlockDataSet()
     branch_boundary = vtkMultiBlockDataSet()
@@ -1032,62 +956,21 @@ def load_client_files(file_upload, **kwargs):
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
-
+    # we have deleted all actors, so add the non-boundary actors again
+    #  TODO: only delete the mesh related actors
     global cube_axes
-
-    # Cube Axes
-    cube_axes = vtkCubeAxesActor()
-    cube_axes.SetObjectName("CubeAxes")
-
+    cube_axes = MakeCubeAxesActor()
     renderer.AddActor(cube_axes)
 
+    global scalar_bar
+    global scalar_bar_widget
+    scalar_bar = MakeScalarBarActor()
+    scalar_bar_widget =MakeScalarBarWidget(scalar_bar)
 
-    # Cube Axes: Boundaries, camera, and styling
-    cube_axes.SetBounds(mesh_actor.GetBounds())
-    cube_axes.SetCamera(renderer.GetActiveCamera())
-    cube_axes.SetXLabelFormat("%6.1f")
-    cube_axes.SetYLabelFormat("%6.1f")
-    cube_axes.SetZLabelFormat("%6.1f")
-    #cube_axes.SetFlyModeToOuterEdges()
-    #cube_axes.SetUseTextActor3D(1)
-    cube_axes.GetTitleTextProperty(0).SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetTitleTextProperty(1).SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetTitleTextProperty(2).SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetLabelTextProperty(0).SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetLabelTextProperty(1).SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetLabelTextProperty(2).SetColor(0.0, 0.0, 0.0)
-    cube_axes.DrawXGridlinesOn()
-    cube_axes.DrawYGridlinesOn()
-    cube_axes.DrawZGridlinesOn()
-    cube_axes.GetXAxesLinesProperty().SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetYAxesLinesProperty().SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetZAxesLinesProperty().SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetXAxesGridlinesProperty().SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetYAxesGridlinesProperty().SetColor(0.0, 0.0, 0.0)
-    cube_axes.GetZAxesGridlinesProperty().SetColor(0.0, 0.0, 0.0)
-    cube_axes.XAxisMinorTickVisibilityOff()
-    cube_axes.YAxisMinorTickVisibilityOff()
-    cube_axes.ZAxisMinorTickVisibilityOff()
-    cube_axes.SetVisibility(False)
-
-    #global coord_axes
-    ## coordinate axes
-    #coord_axes = vtkAxesActor()
-    #coord_axes.SetObjectName("CoordAxes")
-    #transform = vtkTransform()
-    #transform.Translate(1.0, 0.0, 0.0)
-    #coord_axes.SetUserTransform(transform)
-    #renderer.AddActor(coord_axes)
-
+    #coordinate axes to show orientation
     global coord_axes
     axes1 = MakeAxesActor()
-    coord_axes = vtkOrientationMarkerWidget()
-    coord_axes.SetOrientationMarker(axes1)
-    # Position lower left in the viewport.
-    coord_axes.SetViewport(0, 0, 0.2, 0.2)
-    coord_axes.SetInteractor(renderWindowInteractor)
-    coord_axes.SetEnabled(True)
-    coord_axes.InteractiveOn()
+    coord_axes = MakeOrientationMarkerWidget(axes1)
 
     renderer.ResetCamera()
     ctrl.view_update()
@@ -1160,6 +1043,13 @@ def update_coord_axes_visibility(coord_axes_visibility, **kwargs):
     coord_axes.SetEnabled(coord_axes_visibility)
     ctrl.view_update()
 
+# visibility if the color bar is on
+@state.change("color_bar_visibility")
+def update_color_bar_visibility(color_bar_visibility, **kwargs):
+    print("change color bar visibility")
+    scalar_bar_widget.SetEnabled(color_bar_visibility)
+    ctrl.view_update()
+
 # buttons in the top header
 def standard_buttons():
 
@@ -1189,7 +1079,7 @@ def standard_buttons():
 # Web App setup
 # -----------------------------------------------------------------------------
 
-state.trame__title = "File loading"
+state.trame__title = "SU2 GUI"
 
 with SinglePageWithDrawerLayout(server) as layout:
 
@@ -1387,11 +1277,21 @@ with SinglePageWithDrawerLayout(server) as layout:
                       dense=True,
                   )
                   with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
-                    # switch on/off the bounding box visualisation
+                    # switch on/off the coordinate axes visualisation
                     vuetify.VCheckbox(
                       v_model=("coord_axes_visibility", True),
                       on_icon="mdi-axis-arrow",
                       off_icon="mdi-square-outline",
+                      classes="mx-1",
+                      hide_details=True,
+                      dense=True,
+                  )
+                  with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
+                    # switch on/off the coordinate axes visualisation
+                    vuetify.VCheckbox(
+                      v_model=("color_bar_visibility", True),
+                      on_icon="mdi-water",
+                      off_icon="mdi-water-off",
                       classes="mx-1",
                       hide_details=True,
                       dense=True,

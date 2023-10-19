@@ -99,7 +99,6 @@ class PipelineManager:
 
         self._nodes[_id] = node
 
-
         self._update_hierarchy()
 
         return _id

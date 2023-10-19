@@ -54,8 +54,7 @@ grid.InsertNextCell(VTK_QUAD,4,pts[0])
 # Mesh
 mesh_mapper = vtkDataSetMapper()
 mesh_actor = vtkActor()
-renderer = vtkRenderer()
-renderWindow = vtkRenderWindow()
+
 
 ############################################################################
 # Mesh models - list options #

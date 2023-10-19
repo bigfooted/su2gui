@@ -36,6 +36,7 @@ state, ctrl = server.state, server.controller
 # CONV_RESIDUAL_MINVAL - negative integer
 # CONV_STARTITER - integer
 
+# ### READ CONFIG FILE ### #
 # set the state variables using the json data from the config file
 def set_json_fileio():
   state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
@@ -45,7 +46,7 @@ def set_json_fileio():
 
   state.fileio_volume_name = state.jsonData['VOLUME_FILENAME']
   state.fileio_volume_frequency = state.jsonData['OUTPUT_WRT_FREQ'][1]
-  state.fileio_volume_overwrite_idx = bool(state.jsonData['WRT_VOLUME_OVERWRITE'])
+  state.fileio_volume_overwrite = bool(state.jsonData['WRT_VOLUME_OVERWRITE'])
 
   state.fileio_history_name = state.jsonData['CONV_FILENAME']
   state.fileio_history_frequency = state.jsonData['HISTORY_WRT_FREQ_INNER']

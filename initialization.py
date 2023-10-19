@@ -13,6 +13,7 @@ from su2_json import *
 
 # import the grid from the mesh module
 from mesh import *
+from vtk_helper import *
 
 import vtk
 from vtkmodules.vtkCommonDataModel import vtkDataObject
@@ -129,8 +130,6 @@ def initialization_card():
     # update the initial option to recompute based on upstream changes
     # this makes sure that the incompressible vs compressible subui
     # is changed when comp/incomp is changed in the physics solver
-    #state.dirty('initial_option_idx')
-    #state.dirty('state.field_state_name')
 
 ###############################################################
 # Initialize - method
@@ -239,8 +238,6 @@ def initialize_uniform():
 
   print("fieldnames=",FieldNames)
 
-  #LIST=["Velocity", "Pressure"]
-
   nPoints = grid.GetPoints().GetNumberOfPoints()
   print("number of points = ",nPoints)
 
@@ -280,9 +277,9 @@ def initialize_uniform():
   # we should now have the scalars available...
   defaultArray = datasetArrays[0]
   state.dataset_arrays = datasetArrays
-  print("dataset = ",datasetArrays)
-  print("dataset_0 = ",datasetArrays[0])
-  print("dataset_0 = ",datasetArrays[0].get('text'))
+  #print("dataset = ",datasetArrays)
+  #print("dataset_0 = ",datasetArrays[0])
+  #print("dataset_0 = ",datasetArrays[0].get('text'))
 
   mesh_mapper.SetInputData(grid)
   mesh_actor.SetMapper(mesh_mapper)
@@ -298,7 +295,6 @@ def initialize_uniform():
   mesh_actor.GetProperty().SetPointSize(1)
   #do not show the edges
   mesh_actor.GetProperty().EdgeVisibilityOff()
-
 
   # We have loaded a mesh, so enable the exporting of files
   state.export_disabled = False
@@ -319,8 +315,8 @@ def initialize_uniform():
     # convert to string, including double quotes
     stringfields = ', '.join(f'"{name}"' for name in fields) +"\n"
     f.write(stringfields)
-    print(grid.GetPointData().GetNumberOfArrays())
-    print(grid.GetPointData().GetArrayName(i))
+    #print(grid.GetPointData().GetNumberOfArrays())
+    #print(grid.GetPointData().GetArrayName(i))
     # now loop over points and get the coordinates
 
     # loop over all points
@@ -335,7 +331,7 @@ def initialize_uniform():
             datalist = datalist + "," + str(datapoint)
         datalist = datalist+"\n"
         f.write(datalist)
-        print(p, " ",grid.GetPoint(p))
+        #print(p, " ",grid.GetPoint(p))
   f.close()
 
   print("options=",state.LInitializationOption)
@@ -487,7 +483,7 @@ def initialization_uniform_subcard():
       with vuetify.VContainer(fluid=True):
         # ####################################################### #
         with vuetify.VRow(classes="py-0 my-0"):
-          with vuetify.VCol(cols="12"):   #with vuetify.VBtn(icon=True, click=su2_play, disabled=("export_disabled",False)):
+          with vuetify.VCol(cols="12"):
             with vuetify.VBtn("Initialize",click=initialize_uniform):
               vuetify.VIcon("{{solver_icon}}",color="purple")
 
@@ -575,7 +571,7 @@ def initialization_uniform_subcard():
           with vuetify.VContainer(fluid=True):
             # ####################################################### #
             with vuetify.VRow(classes="py-0 my-0"):
-              with vuetify.VCol(cols="12"):   #with vuetify.VBtn(icon=True, click=su2_play, disabled=("export_disabled",False)):
+              with vuetify.VCol(cols="12"):
                 with vuetify.VBtn("Initialize",click=initialize_uniform):
                   vuetify.VIcon("{{solver_icon}}",color="purple")
 

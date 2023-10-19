@@ -360,7 +360,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     if (compressible==True):
       print("       selecting compressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidComp
-      state.field_state_name = "Density"
+      #state.field_state_name = "Density"
       state.LMaterialsViscosity = LMaterialsViscosityComp
       state.LMaterialsConductivity = LMaterialsConductivityComp
       print("       selecting compressible boundary type for inlet and outlet")
@@ -369,7 +369,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     else:
       print("       selecting incompressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidIncomp
-      state.field_state_name = "Pressure"
+      #state.field_state_name = "Pressure"
       state.LMaterialsViscosity = LMaterialsViscosityIncomp
       state.LMaterialsConductivity = LMaterialsConductivityIncomp
       print("       selecting incompressible boundary type for inlet and outlet")
@@ -379,7 +379,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     state.dirty('LMaterialsFluid')
     state.dirty('LMaterialsViscosity')
     state.dirty('LMaterialsConductivity')
-    state.dirty('field_state_name')
+    #state.dirty('field_state_name')
     state.dirty('bcinletsubtype')
     state.dirty('bcoutletsubtype')
 
