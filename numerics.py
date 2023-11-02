@@ -38,6 +38,14 @@ LNumericsGradRecon= [
   {"text": "Weighted Least Squares", "value": 1, "json": "WEIGHTED_LEAST_SQUARES"},
 ]
 
+# set the state variables using the json data from the config file
+def set_json_numerics():
+    state.CFL_idx = float(state.jsonData['CFL_NUMBER'])
+    state.numerics_grad_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD'],LNumericsGrad)
+    state.numerics_grad_recon_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD_RECON'],LNumericsGradRecon)
+    state.dirty('CFL_idx')
+    state.dirty('numerics_grad_idx')
+    state.dirty('numerics_grad_recon_idx')
 
 ###############################################################
 # PIPELINE CARD : Numerics

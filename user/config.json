@@ -6,7 +6,7 @@
         0.0,
         0.0
     ],
-    "CFL_NUMBER": 1.0,
+    "CFL_NUMBER": 200.0,
     "CFL_REDUCTION_TURB": 1.0,
     "CONDUCTIVITY_MODEL": "CONSTANT_CONDUCTIVITY",
     "CONV_FIELD": [
@@ -15,7 +15,7 @@
     ],
     "CONV_FILENAME": "history",
     "CONV_NUM_METHOD_FLOW": "FDS",
-    "CONV_RESIDUAL_MINVAL": -14,
+    "CONV_RESIDUAL_MINVAL": -12,
     "CONV_STARTITER": 10,
     "CP_POLYCOEFFS": [
         0.0,
@@ -26,7 +26,7 @@
     ],
     "FLUID_MODEL": "CONSTANT_DENSITY",
     "FREESTREAM_DENSITY": 1.2,
-    "FREESTREAM_PRESSURE": 101325.0,
+    "FREESTREAM_PRESSURE": 0.0,
     "FREESTREAM_TEMPERATURE": 300.0,
     "FREESTREAM_VELOCITY": [
         1.0,
@@ -56,7 +56,7 @@
         0.0,
         0.0
     ],
-    "ITER": 2000,
+    "ITER": 1000,
     "KIND_TRANS_MODEL": "NONE",
     "KIND_TURB_MODEL": "SA",
     "KT_POLYCOEFFS": [

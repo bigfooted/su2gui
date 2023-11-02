@@ -6,7 +6,7 @@
         0.0,
         0.0
     ],
-    "CFL_NUMBER": 1.0,
+    "CFL_NUMBER": 10.0,
     "CFL_REDUCTION_TURB": 1.0,
     "CONDUCTIVITY_MODEL": "CONSTANT_CONDUCTIVITY",
     "CONV_FIELD": [
@@ -15,7 +15,7 @@
     ],
     "CONV_FILENAME": "history",
     "CONV_NUM_METHOD_FLOW": "FDS",
-    "CONV_RESIDUAL_MINVAL": -14,
+    "CONV_RESIDUAL_MINVAL": -12,
     "CONV_STARTITER": 10,
     "CP_POLYCOEFFS": [
         0.0,
@@ -40,16 +40,23 @@
     "INC_DENSITY_MODEL": "CONSTANT",
     "INC_ENERGY_EQUATION": true,
     "INC_INLET_DAMPING": 0.1,
+    "INC_INLET_TYPE": [
+        "VELOCITY_INLET",
+        "VELOCITY_INLET"
+    ],
     "INC_INLET_USENORMAL": true,
     "INC_NONDIM": "DIMENSIONAL",
     "INC_OUTLET_DAMPING": 0.1,
+    "INC_OUTLET_TYPE": [
+        "PRESSURE_OUTLET"
+    ],
     "INC_TEMPERATURE_INIT": 288.15,
     "INC_VELOCITY_INIT": [
         1.0,
         0.0,
         0.0
     ],
-    "ITER": 2000,
+    "ITER": 1000,
     "KIND_TRANS_MODEL": "NONE",
     "KIND_TURB_MODEL": "SA",
     "KT_POLYCOEFFS": [
@@ -64,26 +71,39 @@
     "LINEAR_SOLVER_ITER": 10,
     "LINEAR_SOLVER_PREC": "LU_SGS",
     "LM_OPTIONS": "MENTER_LANGTRY",
-    "MARKER_ISOTHERMAL": [
+    "MARKER_INLET": [
         [
             "gas_inlet",
-            300.0
+            300.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0
         ],
         [
             "air_axial_inlet",
-            300.0
-        ],
-        [
-            "outlet",
-            300.0
-        ],
-        [
-            "axis",
-            300.0
-        ],
+            "400",
+            1.0,
+            1.0,
+            0.0,
+            0.0
+        ]
+    ],
+    "MARKER_ISOTHERMAL": [
         [
             "wall",
             300.0
+        ]
+    ],
+    "MARKER_OUTLET": [
+        [
+            "outlet",
+            0.0
+        ]
+    ],
+    "MARKER_SYM": [
+        [
+            "axis"
         ]
     ],
     "MESH_FILENAME": "mesh.su2",
@@ -120,7 +140,7 @@
         "RMS_DENSITY",
         "RMS_PRESSURE"
     ],
-    "SOLUTION_FILENAME": "solution",
+    "SOLUTION_FILENAME": "restart",
     "SOLVER": "INC_RANS",
     "SPECIFIC_HEAT_CP": 1001.0,
     "SST_OPTIONS": "V1994m",

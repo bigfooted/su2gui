@@ -178,7 +178,7 @@ def update_material(fileio_restart_name, **kwargs):
 # note that we currently support exactly 2 entries in OUTPUT_FILES, restart and paraview
 @state.change("fileio_restart_frequency")
 def update_material(fileio_restart_frequency, **kwargs):
-    state.jsonData['OUTPUT_WRT_FREQ'][0]= fileio_restart_frequency
+    state.jsonData['OUTPUT_WRT_FREQ'][0]= int(fileio_restart_frequency)
     state.dirty('jsonData')
 
 # if binary, change the file type
@@ -203,7 +203,7 @@ def update_material(fileio_volume_name, **kwargs):
 
 @state.change("fileio_volume_frequency")
 def update_material(fileio_volume_frequency, **kwargs):
-    state.jsonData['OUTPUT_WRT_FREQ'][1]= fileio_volume_frequency
+    state.jsonData['OUTPUT_WRT_FREQ'][1]= int(fileio_volume_frequency)
     state.dirty('jsonData')
 
 @state.change("fileio_volume_overwrite")
@@ -228,6 +228,6 @@ def update_material(fileio_history_name, **kwargs):
 
 @state.change("fileio_history_frequency")
 def update_material(fileio_history_frequency, **kwargs):
-    state.jsonData['HISTORY_WRT_FREQ_INNER']= fileio_history_frequency
+    state.jsonData['HISTORY_WRT_FREQ_INNER']= int(fileio_history_frequency)
     state.dirty('jsonData')
 

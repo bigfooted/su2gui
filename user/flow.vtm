@@ -5,10 +5,10 @@
 <DataSet name="Internal" file="flow/zone_0/Internal.vtu"/>
 </Block>
 <Block name="Boundary">
+<DataSet name="axis" file="flow/zone_0/axis.vtu"/>
 <DataSet name="gas_inlet" file="flow/zone_0/gas_inlet.vtu"/>
 <DataSet name="air_axial_inlet" file="flow/zone_0/air_axial_inlet.vtu"/>
 <DataSet name="outlet" file="flow/zone_0/outlet.vtu"/>
-<DataSet name="axis" file="flow/zone_0/axis.vtu"/>
 <DataSet name="wall" file="flow/zone_0/wall.vtu"/>
 </Block>
 </Block>

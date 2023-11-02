@@ -5,6 +5,7 @@ from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
 from materials import *
+#from vtk_helper import *
 
 import vtk
 
@@ -30,6 +31,7 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindow,
     vtkRenderWindowInteractor,
 )
+from vtkmodules.vtkCommonCore import vtkLookupTable
 
 state, ctrl = server.state, server.controller
 
@@ -45,6 +47,9 @@ for i in range(0, len(x)):
 
 # We need this global structure
 grid = vtkUnstructuredGrid()
+
+# all the markers
+markergrid = []
 root = vtkMultiBlockDataSet()
 
 # initial mesh
@@ -53,6 +58,13 @@ grid.InsertNextCell(VTK_QUAD,4,pts[0])
 
 # Mesh
 mesh_mapper = vtkDataSetMapper()
+
+mesh_mapper.SetScalarVisibility(True)
+mesh_mapper.SetUseLookupTableScalarRange(True)
+lut = vtkLookupTable()
+lut.Build()
+mesh_mapper.SetLookupTable(lut)
+
 mesh_actor = vtkActor()
 
 

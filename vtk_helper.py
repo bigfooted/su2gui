@@ -10,6 +10,7 @@ from vtkmodules.vtkCommonDataModel import vtkDataObject
 from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkCommonColor import vtkNamedColors
+from vtkmodules.vtkCommonCore import vtkLookupTable
 from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor, vtkScalarBarActor
 from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget, vtkScalarBarWidget
 from vtkmodules.vtkRenderingCore import (
@@ -18,6 +19,7 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderer,
     vtkRenderWindow,
     vtkRenderWindowInteractor,
+    vtkColorTransferFunction,
 )
 
 
@@ -89,6 +91,7 @@ def MakeCubeAxesActor():
     cubeaxes = vtkCubeAxesActor()
     cubeaxes.SetObjectName("CubeAxes")
     # Cube Axes: Boundaries, camera, and styling
+    # nijso TODO BUG? Which actor is used here???
     cubeaxes.SetBounds(mesh_actor.GetBounds())
     cubeaxes.SetCamera(renderer.GetActiveCamera())
     cubeaxes.SetXLabelFormat("%6.1f")
@@ -119,17 +122,77 @@ def MakeCubeAxesActor():
 
     return cubeaxes
 
+
+
+def get_diverging_lut():
+    """
+    See: [Diverging Color Maps for Scientific Visualization](https://www.kennethmoreland.com/color-maps/)
+                       start point         midPoint            end point
+     cool to warm:     0.230, 0.299, 0.754 0.865, 0.865, 0.865 0.706, 0.016, 0.150
+     purple to orange: 0.436, 0.308, 0.631 0.865, 0.865, 0.865 0.759, 0.334, 0.046
+     green to purple:  0.085, 0.532, 0.201 0.865, 0.865, 0.865 0.436, 0.308, 0.631
+     blue to brown:    0.217, 0.525, 0.910 0.865, 0.865, 0.865 0.677, 0.492, 0.093
+     green to red:     0.085, 0.532, 0.201 0.865, 0.865, 0.865 0.758, 0.214, 0.233
+
+    :return:
+    """
+    ctf = vtkColorTransferFunction()
+    ctf.SetColorSpaceToDiverging()
+    # Cool to warm.
+    ctf.AddRGBPoint(0.0, 0.230, 0.299, 0.754)
+    ctf.AddRGBPoint(0.5, 0.865, 0.865, 0.865)
+    ctf.AddRGBPoint(1.0, 0.706, 0.016, 0.150)
+
+    table_size = 16
+    lut = vtkLookupTable()
+    lut.SetNumberOfTableValues(table_size)
+    lut.Build()
+
+    for i in range(0, table_size):
+        rgba = list(ctf.GetColor(float(i) / table_size))
+        rgba.append(1)
+        lut.SetTableValue(i, rgba)
+
+    return lut
+
+
+def get_diverging_lut1():
+    colors = vtkNamedColors()
+    # Colour transfer function.
+    ctf = vtkColorTransferFunction()
+    ctf.SetColorSpaceToDiverging()
+    p1 = [0.0] + list(colors.GetColor3d('MidnightBlue'))
+    p2 = [0.5] + list(colors.GetColor3d('Gainsboro'))
+    p3 = [1.0] + list(colors.GetColor3d('DarkOrange'))
+    ctf.AddRGBPoint(*p1)
+    ctf.AddRGBPoint(*p2)
+    ctf.AddRGBPoint(*p3)
+
+    table_size = 256
+    lut = vtkLookupTable()
+    lut.SetNumberOfTableValues(table_size)
+    lut.Build()
+
+    for i in range(0, table_size):
+        rgba = list(ctf.GetColor(float(i) / table_size))
+        rgba.append(1)
+        lut.SetTableValue(i, rgba)
+
+    return lut
+
 def MakeScalarBarActor():
     # Create a scalar bar
     scalarbar = vtkScalarBarActor()
     scalarbar.SetObjectName("ScalarAxes")
+
     scalarbar.SetLookupTable(mesh_mapper.GetLookupTable())
+    print("scalar_range = ",mesh_mapper.GetLookupTable().GetTableRange()[0])
     #scalar_bar.SetTitle('scalar bar')
     scalarbar.UnconstrainedFontSizeOn()
     scalarbar.SetBarRatio(0.2)
     #scalar_bar.SetNumberOfLabels(5)
-    scalarbar.SetMaximumWidthInPixels(60)
-    scalarbar.SetMaximumHeightInPixels(300)
+    scalarbar.SetMaximumWidthInPixels(100)
+    scalarbar.SetMaximumHeightInPixels(600)
     return scalarbar
 
 def MakeScalarBarWidget(scalarbar):

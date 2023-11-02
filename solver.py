@@ -12,6 +12,9 @@ from trame.widgets import vuetify
 from su2_json import *
 from su2_io import save_su2mesh, save_json_cfg_file
 
+# check if a file is opened by another process
+#import psutil
+
 import pandas as pd
 
 import sys, subprocess, io, time
@@ -56,6 +59,8 @@ state.convergence_fields_range=[]
 # included in the convergence criteria
 state.convergence_fields_visibility=[]
 
+# global iteration number while running a case
+state.global_iter = -1
 
 # initialize from json file
 def set_json_solver():
@@ -131,11 +136,17 @@ async def start_countdown(result):
     while state.keep_updating:
         with state:
             await asyncio.sleep(2.0)
+            print("iteration = ",state.global_iter, type(state.global_iter))
+            wrt_freq = state.jsonData['OUTPUT_WRT_FREQ'][1]
+            print("wrt_freq = ",wrt_freq, type(wrt_freq))
+            print("iteration save = ",state.global_iter % wrt_freq)
             print("keep updating = ",state.keep_updating)
             # update the history from file
             readHistory(BASE / "user" / state.history_filename)
             # update the restart from file, do not reset the active scalar value
+            # do not update when we are about to write to the file
             readRestart(BASE / "user" / state.restart_filename, False)
+
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
@@ -409,6 +420,9 @@ def readHistory(filename):
        state.dirty('monitorLinesRange')
 
     state.x = [i for i in range(len(dfrms.index))]
+    # number of global iterations, assuming we start from 0 and every line is an iteration.
+    # actually, we should look at Inner_Iter
+    state.global_iter = len(dfrms.index)
     #print("x = ",state.x)
     state.ylist=[]
     for c in range(len(dfrms.columns)):
@@ -431,27 +445,54 @@ def uploadRestart(restartFile, **kwargs):
   file = ClientFile(restartFile)
   filecontent = file.content.decode('utf-8')
   f = filecontent.splitlines()
-  # put everything in df
-  #df = pd.read_csv(io.StringIO('\n'.join(f)))
   # we reset the active field because we read or upload the restart from file as a user action
   readRestart(io.StringIO('\n'.join(f)), True)
 
 
+# check if a file has a handle on it
+#def has_handle(fpath):
+#    for proc in psutil.process_iter():
+#        try:
+#            for item in proc.open_files():
+#                print("item=",item)
+#                if fpath == item.path:
+#                    return True
+#        except Exception:
+#            pass
+#
+#    return False
 
 # read the restart file
 # reset_active_field is used to show the active field
 def readRestart(restartFile,reset_active_field):
 
-  df = pd.read_csv(restartFile)
+  # move the file to prevent that the file is overwritten while reading
+  # the file can still be overwritten while renaming, but the time window is smaller
+  # we also try to prevent this by not calling readRestart when we are about to write a file
+  # (based on current iteration number)
+  if isinstance(restartFile,str):
+    os.rename(restartFile, restartFile + ".lock")
+    df = pd.read_csv(restartFile+'.lock')
+  else:
+    df = pd.read_csv(restartFile)
 
-  # check if the points and cells match
-  # <...>
+  # check if the points and cells match, if not then we probably were writing to the file
+  # while reading it and we just skip this update
+  print("number of points read = ",len(df))
+  print("number of points expected = ",grid.GetPoints().GetNumberOfPoints())
+  if len(df) != grid.GetPoints().GetNumberOfPoints():
+    return
 
   # construct the dataset_arrays
   datasetArrays = []
   counter=0
   for key in df.keys():
     name = key
+    print("reading restart, field name = ",name)
+    # let's skip these 
+    if (name in ['PointID','x','y']):
+      continue
+
     ArrayObject = vtk.vtkFloatArray()
     ArrayObject.SetName(name)
     # all components are scalars, no vectors for velocity

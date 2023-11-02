@@ -147,6 +147,8 @@ state.countdown = True
 # SU2 setup
 # -----------------------------------------------------------------------------
 
+# global iteration number while running a case
+#state.global_iter = -1
 
 state.initialize=-1
 # number of dimensions of the mesh (2 or 3)
@@ -165,7 +167,7 @@ state.BCDictList = [{"bcName": "main_wall",
                      "json":"MARKER_ISOTHERMAL",
                      "bc_velocity_magnitude":0.0,
                      "bc_temperature":300.0,
-                     "bc_pressure":101325,
+                     "bc_pressure":0,
                      "bc_density":0.0,
                      "bc_massflow":1.0,
                      "bc_velocity_normal":[1,0,0],
@@ -186,13 +188,11 @@ state.solver_running = False
 
 # the imported mesh block and boundary blocks
 # must be state or else it cannot be an argument to click
-#state.multiblockb1 = vtkMultiBlockDataSet()
 state.su2_meshfile="mesh_out.su2"
-
 
 # list of all the mesh actors (boundaries)
 state.selectedBoundary = 0
-mesh_actor_list = [{"id":0,"name":"None","mesh":0}]
+mesh_actor_list = [{"id":0,"name":"internal","mesh":mesh_actor}]
 
 # vtk named colors
 colors = vtkNamedColors()
@@ -234,11 +234,15 @@ ArrayObject.SetNumberOfComponents(1)
 # how many elements do we have?
 nElems = 1
 ArrayObject.SetNumberOfValues(nElems)
+nPoints = 4
 ArrayObject.SetNumberOfTuples(4)
 
 
 # Nijso: TODO FIXME very slow!
-for i in range(nElems):
+# this is the color of the initial square
+#for i in range(nElems):
+for i in range(nPoints):
+  #ArrayObject.SetValue(i,1.0)
   ArrayObject.SetValue(i,1.0)
 
 grid.GetPointData().AddArray(ArrayObject)
@@ -530,25 +534,54 @@ def download_file_cfg():
 # Color By Callbacks
 def color_by_array(actor, array):
     print("change color by array")
+
     _min, _max = array.get("range")
-    mapper = actor.GetMapper()
-    mapper.SelectColorArray(array.get("text"))
-    mapper.GetLookupTable().SetRange(_min, _max)
+    mesh_mapper = actor.GetMapper()
+    mesh_mapper.SelectColorArray(array.get("text"))
+    mesh_mapper.GetLookupTable().SetRange(_min, _max)
 
     if array.get("type") == vtkDataObject.FIELD_ASSOCIATION_POINTS:
         mesh_mapper.SetScalarModeToUsePointFieldData()
     else:
         mesh_mapper.SetScalarModeToUseCellFieldData()
-    mapper.SetScalarVisibility(True)
-    mapper.SetUseLookupTableScalarRange(True)
+    mesh_mapper.SetScalarVisibility(True)
+    mesh_mapper.SetUseLookupTableScalarRange(True)
 
+    lut = get_diverging_lut()
+    lut.SetTableRange(_min,_max)
+    mesh_mapper.SetLookupTable(lut)
+    mesh_mapper.GetLookupTable().SetRange(_min, _max)
+    actor.SetMapper(mesh_mapper)
+
+    global scalar_bar
+    global scalar_bar_widget
+    scalar_bar = MakeScalarBarActor()
+    scalar_bar_widget =MakeScalarBarWidget(scalar_bar)
+    print("scalarbarwidget=",scalar_bar_widget)
 
 @state.change("mesh_color_array_idx")
 def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     print("change mesh color by array")
     array = state.dataset_arrays[mesh_color_array_idx]
     print("array = ",array)
-    color_by_array(mesh_actor, array)
+    print("mesh actor=",mesh_actor)
+    print("mesh actor list=",mesh_actor_list)
+    if state.nDim == 2:
+      # color the internal
+      #color_by_array(mesh_actor, array)
+      actor = get_entry_from_name('internal','name',mesh_actor_list)
+      print("start::actor=",actor['mesh'])
+      color_by_array(actor['mesh'], array)
+      print("end::actor=",actor['mesh'])
+    else:
+      # color all boundaries (all mesh actors that are not internal)
+      for actor in mesh_actor_list:
+        print("3D actor=",actor)
+        print("3D actor=",actor['mesh'])
+        if actor['name'] != 'internal':
+          print("passing actor")
+          color_by_array(actor['mesh'], array)
+
     ctrl.view_update()
 
 # every time we change the main gittree ("ui"), we end up here
@@ -692,6 +725,7 @@ def load_file_su2(file_upload, **kwargs):
 
     grid.Reset()
 
+
     # ### setup of the internal data structure ###
     branch_interior = vtkMultiBlockDataSet()
     branch_boundary = vtkMultiBlockDataSet()
@@ -785,13 +819,16 @@ def load_file_su2(file_upload, **kwargs):
     index = [idx for idx, s in enumerate(f) if 'NMARK' in s][0]
     numMarkers = int(f[index].split('=')[1])
 
+    global markergrid
+    markergrid = [vtkUnstructuredGrid() for i in range(numMarkers)]
+
     # now loop over the markers
     counter=0
     for iMarker in range(numMarkers):
           # grid for the marker
-          markergrid = vtkUnstructuredGrid()
+          #markergrid = vtkUnstructuredGrid()
           # copy all the points into the markergrid (inefficient)
-          markergrid.SetPoints(pts)
+          markergrid[iMarker].SetPoints(pts)
           # next line: marker tag, marker_elem
           counter += 1
           # this is the name (string) of the boundary
@@ -820,26 +857,26 @@ def load_file_su2(file_upload, **kwargs):
             # line
             if(CellType==3):
               linedata = [int(data[1]),int(data[2])]
-              markergrid.InsertNextCell(VTK_LINE,2,linedata)
+              markergrid[iMarker].InsertNextCell(VTK_LINE,2,linedata)
             # triangles
             elif(CellType==5):
               tridata = [int(data[1]),int(data[2]),int(data[3])]
-              markergrid.InsertNextCell(VTK_TRIANGLE,3,tridata)
+              markergrid[iMarker].InsertNextCell(VTK_TRIANGLE,3,tridata)
             # quadrilaterals
             elif(CellType==9):
               quaddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
-              markergrid.InsertNextCell(VTK_QUAD,4,quaddata)
+              markergrid[iMarker].InsertNextCell(VTK_QUAD,4,quaddata)
             else:
               print("ERROR: marker cell type not suppported")
           # put boundary in multiblock structure
-          branch_boundary.SetBlock(iMarker, markergrid)
+          branch_boundary.SetBlock(iMarker, markergrid[iMarker])
           branch_boundary.GetMetaData(iMarker).Set(vtk.vtkCompositeDataSet.NAME(), markertag)
 
 
     # end loop over lines
 
-    del markergrid
-    del pts
+    #del markergrid
+    #del pts
 
     # boundary meshes as unstructured grids
     ds_b = []
@@ -852,6 +889,10 @@ def load_file_su2(file_upload, **kwargs):
         arrayName = array.get("text")
         print("removing array ",arrayName)
         grid.GetPointData().RemoveArray(arrayName)
+        # nijso TODO BUG does not contain data yet
+        #for iMarker in range(numMarkers):
+        #  markergrid[iMarker].GetPointData().RemoveArray(arrayName)
+       
     # and we only use the default array
     state.dataset_arrays = []
 
@@ -928,7 +969,7 @@ def load_file_su2(file_upload, **kwargs):
                                  "json":"MARKER_ISOTHERMAL",
                                  "bc_velocity_magnitude":1.0,
                                  "bc_temperature":300.0,
-                                 "bc_pressure":101325.0,
+                                 "bc_pressure":0.0,
                                  "bc_density":1.2,
                                  "bc_massflow":0.0,
                                  "bc_velocity_normal":[1.0, 0.0, 0.0],
@@ -1218,6 +1259,7 @@ with SinglePageWithDrawerLayout(server) as layout:
         set_json_materials()
         set_json_initialization()
         set_json_fileio()
+        set_json_numerics()
         set_json_solver()
         #this necessary here?
         #state.dirty('jsonData')
