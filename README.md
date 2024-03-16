@@ -1,5 +1,8 @@
 # su2gui
 su2gui is a Graphical User Interface (GUI) for SU2.
+![overview_su2gui](https://github.com/bigfooted/su2gui/assets/7050568/c4c8e171-dfeb-4b68-8950-8b4064cafe2e)
+
+The idea of SU2GUI is that it will run from a browser, at an external location, and no user installation is needed. IF you want to try and run it on your local machine, you need a number of packages and creat a conda environment to run it.
 
 # pip libraries
 
