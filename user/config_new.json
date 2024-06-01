@@ -6,7 +6,7 @@
         0.0,
         0.0
     ],
-    "CFL_NUMBER": 10.0,
+    "CFL_NUMBER": 200.0,
     "CFL_REDUCTION_TURB": 1.0,
     "CONDUCTIVITY_MODEL": "CONSTANT_CONDUCTIVITY",
     "CONV_FIELD": [
@@ -41,7 +41,6 @@
     "INC_ENERGY_EQUATION": true,
     "INC_INLET_DAMPING": 0.1,
     "INC_INLET_TYPE": [
-        "VELOCITY_INLET",
         "VELOCITY_INLET"
     ],
     "INC_INLET_USENORMAL": true,
@@ -73,16 +72,8 @@
     "LM_OPTIONS": "MENTER_LANGTRY",
     "MARKER_INLET": [
         [
-            "gas_inlet",
+            "inlet",
             300.0,
-            1.0,
-            1.0,
-            0.0,
-            0.0
-        ],
-        [
-            "air_axial_inlet",
-            "400",
             1.0,
             1.0,
             0.0,
@@ -103,7 +94,7 @@
     ],
     "MARKER_SYM": [
         [
-            "axis"
+            "symmetry"
         ]
     ],
     "MESH_FILENAME": "mesh.su2",

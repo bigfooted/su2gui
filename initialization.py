@@ -383,10 +383,11 @@ def initialization_file_subcard():
             small_chips=True,
             truncate_length=25,
             v_model=("restartFile", None),
+            label="Load Restart File",
             dense=True,
             hide_details=True,
             style="max-width: 300px;",
-            accept=".dat",
+            accept=".dat, .csv",
             __properties=["accept"],
           )
 

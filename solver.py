@@ -16,6 +16,7 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #import psutil
 
 import pandas as pd
+import chardet
 
 import sys, subprocess, io, time
 
@@ -437,12 +438,28 @@ def readHistory(filename):
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
 
-  print("loading restart file ")
   if restartFile is None:
     return
 
   # type(file) will always be bytes
   file = ClientFile(restartFile)
+  # encoding = chardet.detect(file.content)
+  # print(encoding, type(file))
+  # print(restartFile)
+  # x = input("enter")
+
+  # For .dat
+  # with open(BASE / "user" / state.restart_filename,'wb') as restartFile:
+  #    restartFile.write(file.content)
+
+  # state.jsonData["RESTART_FILENAME"] = state.restart_filename
+  # state.jsonData["RESTART_SOL"] = "YES"
+  
+  # print("Restart loaded ")
+
+
+  # for .csv
+  
   filecontent = file.content.decode('utf-8')
   f = filecontent.splitlines()
   # we reset the active field because we read or upload the restart from file as a user action

@@ -517,7 +517,7 @@ def download_file_su2():
     su2_filename = state.jsonData['MESH_FILENAME']
     global root
     save_su2mesh(root,su2_filename)
-    with open(su2_filename, 'r') as f:
+    with open(BASE / "user" / su2_filename, 'r') as f:
       #su2_content = f.readlines()
       su2_content = f.read()
     return su2_content
@@ -525,7 +525,7 @@ def download_file_su2():
 @ctrl.trigger("download_file_cfg")
 def download_file_cfg():
     print("********** download .cfg **********\n")
-    with open(state.filename_cfg_export, 'r') as f:
+    with open(BASE / "user" / state.filename_cfg_export, 'r') as f:
       #cfg_content = f.readlines()
       cfg_content = f.read()
     return cfg_content
@@ -569,7 +569,10 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     if state.nDim == 2:
       # color the internal
       #color_by_array(mesh_actor, array)
-      actor = get_entry_from_name('internal','name',mesh_actor_list)
+      if(len(mesh_actor_list)> 0 ):
+        actor = get_entry_from_name('internal','name',mesh_actor_list)
+      else:
+        actor = get_entry_from_name('internal','name',[{"id":0,"name":"internal","mesh":mesh_actor}])
       print("start::actor=",actor['mesh'])
       color_by_array(actor['mesh'], array)
       print("end::actor=",actor['mesh'])
@@ -697,11 +700,36 @@ state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 # FILES
 ###############################################################
 
+# load cofiguration .cfg file
+@state.change("cfg_file_upload")
+def load_cfg_file(cfg_file_upload, **kwargs):
+    print("got the file")
+    file = ClientFile(cfg_file_upload)
+
+    if cfg_file_upload is None:
+        return
+
+    # reading each line of configuration file
+    filecontent = file.content.decode('utf-8')
+    f = filecontent.splitlines()
+    cfglist = []
+    f = [element for element in f if not (element.strip().startswith("%")) and len(element.strip())]
+    for item in f:
+       item = item.strip()
+       if(item[0] == "%" or len(item)<1):
+          continue   
+       if(len(cfglist) and cfglist[-1][-1]=='\\'):
+          cfglist[-1] = cfglist[-1][:-1]
+          cfglist[-1] += item
+       else:
+          cfglist.append(item)
+    print(cfglist)
+
 
 # load SU2 .su2 mesh file #
 # currently loads a 2D or 3D .su2 file
-@state.change("file_upload")
-def load_file_su2(file_upload, **kwargs):
+@state.change("su2_file_upload")
+def load_file_su2(su2_file_upload, **kwargs):
 
     global pipeline
     # remove the added boundary conditions in the pipeline
@@ -709,16 +737,16 @@ def load_file_su2(file_upload, **kwargs):
 
     del mesh_actor_list[:]
 
-    #file = file_upload
-    file = ClientFile(file_upload)
+    #file = su2_file_upload
+    file = ClientFile(su2_file_upload)
 
-    if file_upload is None:
+    if su2_file_upload is None:
         return
 
-    print("name = ",file_upload.get("name"))
-    print("last modified = ",file_upload.get("lastModified"))
-    print("size = ",file_upload.get("size"))
-    print("type = ",file_upload.get("type"))
+    print("name = ",su2_file_upload.get("name"))
+    print("last modified = ",su2_file_upload.get("lastModified"))
+    print("size = ",su2_file_upload.get("size"))
+    print("type = ",su2_file_upload.get("type"))
 
     # remove all actors
     renderer.RemoveAllViewProps()
@@ -1094,26 +1122,27 @@ def update_color_bar_visibility(color_bar_visibility, **kwargs):
 # buttons in the top header
 def standard_buttons():
 
+    su2path = BASE / "user" / state.filename_json_export
     # Save the .su2 file
-    #with vuetify.VBtn(".su2",click=(save_file_su2,"[su2_meshfile]")):
-    #    vuetify.VIcon("mdi-download-box-outline")
+    with vuetify.VBtn(".su2",click=(save_file_su2,"[su2_meshfile]")):
+       vuetify.VIcon("mdi-download-box-outline")
 
     # download button such that the .su2 file ends up in "downloads"
-    #with vuetify.VBtn(
-    #                  ".su2",
-    #                  click="utils.download('mesh.su2', trigger('download_file_su2'), 'text/plain')",
-    #                  ):
-    #    vuetify.VIcon("mdi-download-box-outline")
+    with vuetify.VBtn(
+                     ".su2",
+                     click=f"utils.download('{su2path}', trigger('download_file_su2'), 'text/plain')",
+                     ):
+       vuetify.VIcon("mdi-download-box-outline")
 
     with vuetify.VBtn(".cfg", click=(save_json_cfg_file,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
         vuetify.VIcon("mdi-download")
 
     # download button such that the .cfg file ends up in "downloads"
-    #with vuetify.VBtn(
-    #                  ".cfg",
-    #                  click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
-    #                  ):
-    #    vuetify.VIcon("mdi-download-box-outline")
+    with vuetify.VBtn(
+                     ".cfg",
+                     click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
+                     ):
+       vuetify.VIcon("mdi-download-box-outline")
 
 
 # -----------------------------------------------------------------------------
@@ -1171,6 +1200,7 @@ with SinglePageWithDrawerLayout(server) as layout:
         ######################################################
 
         # file input inside the top toolbar
+        # input .su2 file
         vuetify.VFileInput(
             # read more than one file
             multiple=False,
@@ -1180,7 +1210,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             show_size=True,
             small_chips=True,
             truncate_length=25,
-            v_model=("file_upload", None),
+            v_model=("su2_file_upload", None),
             label="Load .SU2 Mesh File",
             dense=True,
             hide_details=True,
@@ -1189,6 +1219,26 @@ with SinglePageWithDrawerLayout(server) as layout:
             accept=".su2",
             __properties=["accept"],
         )
+
+        # input .cfg file
+        vuetify.VFileInput(
+            # read more than one file
+            multiple=False,
+            background_color="white",
+            # the icon in front of the file input
+            prepend_icon="mdi-file",
+            show_size=True,
+            small_chips=True,
+            truncate_length=25,
+            v_model=("cfg_file_upload", None),
+            label="Load .CFG File (optional)",
+            dense=True,
+            hide_details=True,
+            style="max-width: 300px;",
+            accept=".cfg",
+            __properties=["accept"],
+        )
+
 
         # progress inside the toolbar
         vuetify.VProgressLinear(
