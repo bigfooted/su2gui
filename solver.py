@@ -452,8 +452,10 @@ def uploadRestart(restartFile, **kwargs):
   # with open(BASE / "user" / state.restart_filename,'wb') as restartFile:
   #    restartFile.write(file.content)
 
-  # state.jsonData["RESTART_FILENAME"] = state.restart_filename
-  # state.jsonData["RESTART_SOL"] = "YES"
+  state.jsonData["RESTART_FILENAME"] = state.restart_filename
+  state.jsonData["RESTART_SOL"] = "YES"
+  state.jsonData["READ_BINARY_RESTART"] = "NO"
+
   
   # print("Restart loaded ")
 

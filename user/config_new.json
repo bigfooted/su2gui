@@ -122,9 +122,9 @@
     ],
     "PRANDTL_LAM": 0.72,
     "PRANDTL_TURB": 0.9,
-    "READ_BINARY_RESTART": false,
-    "RESTART_FILENAME": "restart",
-    "RESTART_SOL": true,
+    "READ_BINARY_RESTART": "NO",
+    "RESTART_FILENAME": "restart.csv",
+    "RESTART_SOL": "YES",
     "SA_OPTIONS": "WITHFT2 NEGATIVE EXPERIMENTAL ",
     "SCREEN_OUTPUT": [
         "INNER_ITER",
