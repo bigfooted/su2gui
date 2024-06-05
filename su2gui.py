@@ -5,6 +5,8 @@ The SU2 Graphical User Interface.
 import os, copy, io
 
 import pandas as pd
+import json
+
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
 from trame.widgets import markdown
@@ -23,6 +25,8 @@ from su2_json import *
 from su2_io import save_su2mesh, save_json_cfg_file
 #
 from vtk_helper import *
+# 
+from output_files import update_download_dialog_card, download_diagol_card
 #
 # Definition of ui_card and the server.
 from uicard import ui_card, server
@@ -708,6 +712,17 @@ def load_cfg_file(cfg_file_upload, **kwargs):
 
     if cfg_file_upload is None:
         return
+      
+    # # Read the .cfg file
+    # config = configparser.ConfigParser()
+    # print(cfg_file_upload)
+    # config.read(cfg_file_upload)
+    
+    # # Convert ConfigParser object to dictionary
+    # cfg_dict = {section: dict(config.items(section)) for section in config.sections()}
+    # print(cfg_dict)
+    
+        
 
     # reading each line of configuration file
     filecontent = file.content.decode('utf-8')
@@ -723,7 +738,46 @@ def load_cfg_file(cfg_file_upload, **kwargs):
           cfglist[-1] += item
        else:
           cfglist.append(item)
-    print(cfglist)
+    
+    cfg_dict = {}
+    for item in cfglist:
+        key, value = item.split('=', 1)
+        key = key.strip()
+        value = value.strip()
+        
+        # Convert value to appropriate type
+        if value.startswith('(') and value.endswith(')'):
+            # Remove parentheses and split by comma
+            value = value[1:-1].split(',')
+            # Convert each item to an appropriate type
+            value = [v.strip() for v in value]
+            value = [int(v) if v.isdigit() else v for v in value]
+        elif value.isdigit():
+            value = int(value)
+        else:
+            try:
+                value = float(value)
+            except ValueError:
+                pass # Keep as string if it cannot be converted to int or float
+        
+        cfg_dict[key] = value
+
+
+    # checking if the valie of state.jsonData['OUTPUT_WRT_FREQ'] is int
+    # if yes set it to a list of 2 elements with same value for proper working
+    if isinstance(cfg_dict['OUTPUT_WRT_FREQ'], int):
+      cfg_dict['OUTPUT_WRT_FREQ']= [cfg_dict['OUTPUT_WRT_FREQ']] * 2
+    
+    # Write the dictionary to a JSON file
+    # with open(BASE / "user" / state.filename_json_export, 'w') as f:
+    #     json.dump(cfg_dict, f, indent=4)
+    
+    # assigning new values to jsonData
+    state.jsonData = cfg_dict
+      
+      
+    state.dirty('jsonData')
+    print(type(state.jsonData))
 
 
 # load SU2 .su2 mesh file #
@@ -1122,27 +1176,28 @@ def update_color_bar_visibility(color_bar_visibility, **kwargs):
 # buttons in the top header
 def standard_buttons():
 
-    su2path = BASE / "user" / state.filename_json_export
+    # su2path = BASE / "user" / state.filename_json_export
     # Save the .su2 file
-    with vuetify.VBtn(".su2",click=(save_file_su2,"[su2_meshfile]")):
+    with vuetify.VBtn("Outputs",click=(update_download_dialog_card)):
        vuetify.VIcon("mdi-download-box-outline")
 
-    # download button such that the .su2 file ends up in "downloads"
-    with vuetify.VBtn(
-                     ".su2",
-                     click=f"utils.download('{su2path}', trigger('download_file_su2'), 'text/plain')",
-                     ):
-       vuetify.VIcon("mdi-download-box-outline")
+    # # download button such that the .su2 file ends up in "downloads"
+    # with vuetify.VBtn(
+    #                  ".su2",
+    #                  click=f"utils.download('{su2path}', trigger('download_file_su2'))",
+    #                  ):
+    #    vuetify.VIcon("mdi-download-box-outline")
 
-    with vuetify.VBtn(".cfg", click=(save_json_cfg_file,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
-        vuetify.VIcon("mdi-download")
+    # with vuetify.VBtn(".cfg", click=(save_json_cfg_file,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
+    #     vuetify.VIcon("mdi-download")
 
-    # download button such that the .cfg file ends up in "downloads"
-    with vuetify.VBtn(
-                     ".cfg",
-                     click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
-                     ):
-       vuetify.VIcon("mdi-download-box-outline")
+    # # download button such that the .cfg file ends up in "downloads"
+    # with vuetify.VBtn(
+    #                  ".cfg",
+    #                  click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
+    #                  ):
+    #    vuetify.VIcon("mdi-download-box-outline")
+
 
 
 # -----------------------------------------------------------------------------
@@ -1291,6 +1346,8 @@ with SinglePageWithDrawerLayout(server) as layout:
         #
 
         # dialog cards - these are predefined 'popup windows'
+        # Output dialog
+        download_diagol_card()
         # material dialogs
         materials_dialog_card_fluid()
         materials_dialog_card_viscosity()

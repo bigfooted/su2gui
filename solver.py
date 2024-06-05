@@ -437,8 +437,10 @@ def readHistory(filename):
 # # ##### upload ascii restart file #####
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
-
+  print("Updating restart.csv file")
   if restartFile is None:
+    state.jsonData["RESTART_SOL"] = "NO"
+    print("removed file")
     return
 
   # type(file) will always be bytes
@@ -448,11 +450,15 @@ def uploadRestart(restartFile, **kwargs):
   # print(restartFile)
   # x = input("enter")
 
-  # For .dat
-  # with open(BASE / "user" / state.restart_filename,'wb') as restartFile:
-  #    restartFile.write(file.content)
+  # for .csv
+  
+  filecontent = file.content.decode('utf-8')
+  f = filecontent.splitlines()
 
-  state.jsonData["RESTART_FILENAME"] = state.restart_filename
+  with open(BASE / "user" / "restart.csv",'w') as restartFile:
+     restartFile.write(filecontent)
+
+  state.jsonData["RESTART_FILENAME"] = "restart.csv"
   state.jsonData["RESTART_SOL"] = "YES"
   state.jsonData["READ_BINARY_RESTART"] = "NO"
 
@@ -460,10 +466,6 @@ def uploadRestart(restartFile, **kwargs):
   # print("Restart loaded ")
 
 
-  # for .csv
-  
-  filecontent = file.content.decode('utf-8')
-  f = filecontent.splitlines()
   # we reset the active field because we read or upload the restart from file as a user action
   readRestart(io.StringIO('\n'.join(f)), True)
 
@@ -483,7 +485,7 @@ def uploadRestart(restartFile, **kwargs):
 
 # read the restart file
 # reset_active_field is used to show the active field
-def readRestart(restartFile,reset_active_field):
+def readRestart(restartFile, reset_active_field):
 
   # move the file to prevent that the file is overwritten while reading
   # the file can still be overwritten while renaming, but the time window is smaller
