@@ -5,19 +5,6 @@ Please note that SU2GUI is currently under development. We welcome any feedback 
 
 
 
-## Installation
-
-You can install SU2GUI via pip:
-
-```sh
-pip install su2guitest
-```
-## Usage
-To launch the GUI, run the following command in your terminal:
-```sh
-su2gui
-```
-
 ## Overview
 Here is an overview of how SU2GUI works:
 ![overview_su2gui](https://github.com/bigfooted/su2gui/assets/7050568/c4c8e171-dfeb-4b68-8950-8b4064cafe2e)
@@ -36,6 +23,19 @@ Here is an overview of how SU2GUI works:
 5. Visualize Results: View and analyze the simulation results using the integrated visualization tools.
 
 
+
+## Installation
+
+You can install SU2GUI via pip:
+
+```sh
+pip install su2guitest
+```
+### Usage
+To launch the GUI, run the following command in your terminal:
+```sh
+su2gui
+```
 
 #### More Information
 For more details about SU2, please visit the official SU2 documentation [here](https://su2code.github.io/docs_v7/home/).
