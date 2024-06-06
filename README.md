@@ -1,61 +1,41 @@
-# su2gui
-su2gui is a Graphical User Interface (GUI) for SU2.
+# SU2GUI
+
+**SU2GUI** is a Graphical User Interface (GUI) for the SU2 open-source CFD software. It facilitates easier execution of SU2 tasks and provides visualization capabilities for the results.
+Please note that SU2GUI is currently under development. We welcome any feedback and contributions to improve the tool.
+
+
+
+## Installation
+
+You can install SU2GUI via pip:
+
+```sh
+pip install su2guitest
+```
+## Usage
+To launch the GUI, run the following command in your terminal:
+```sh
+su2gui
+```
+
+## Overview
+Here is an overview of how SU2GUI works:
 ![overview_su2gui](https://github.com/bigfooted/su2gui/assets/7050568/c4c8e171-dfeb-4b68-8950-8b4064cafe2e)
 
-The idea of SU2GUI is that it will run from a browser, at an external location, and no user installation is needed. IF you want to try and run it on your local machine, you need a number of packages and creat a conda environment to run it.
+### Getting Started
+#### Prerequisites
+- Python 3.10 or higher
+- SU2 installed on your system. Follow the installation instructions [here](https://su2code.github.io/download.html).
 
-# pip libraries
+#### Quick Start
 
-The su2gui package needs some libraries that can be installed inside a virtual environment. I am using python 3.11. You can create a virtual environment using 
-*conda create --name my-trame-env311 python=3.11* 
-and then start the virtual environment using 
-*conda activate my-trame-env311*
+1. Install SU2GUI: Follow the installation instructions above.
+2. Launch SU2GUI: Use the command su2gui to open the application.
+3. Load Your Case: Use the interface to load your SU2 mesh files.
+4. Run Simulation: Set up and run your simulation through the GUI.
+5. Visualize Results: View and analyze the simulation results using the integrated visualization tools.
 
-The packages inside my virtual environment (installed using *pip install*) are:
 
-aiohttp==3.8.5
-aiosignal==1.3.1
-async-timeout==4.0.3
-attrs==23.1.0
-charset-normalizer==3.3.0
-contourpy==1.1.1
-cycler==0.12.0
-fonttools==4.43.0
-frozenlist==1.4.0
-idna==3.4
-Jinja2==3.1.2
-jsonschema==4.19.1
-jsonschema-specifications==2023.7.1
-kiwisolver==1.4.5
-Markdown==3.4.4
-MarkupSafe==2.1.3
-matplotlib==3.8.0
-mpld3==0.5.9
-multidict==6.0.4
-numpy==1.26.0
-packaging==23.2
-pandas==2.1.1
-pex==2.1.148
-Pillow==10.0.1
-pyparsing==3.1.1
-PyQt5==5.15.9
-PyQt5-Qt5==5.15.2
-PyQt5-sip==12.12.2
-python-dateutil==2.8.2
-pytz==2023.3.post1
-QtPy==2.4.0
-referencing==0.30.2
-rpds-py==0.10.3
-six==1.16.0
-trame==3.2.7
-trame-client==2.12.0
-trame-components==2.2.1
-trame-markdown==3.0.0
-trame-matplotlib==2.0.2
-trame-server==2.12.0
-trame-vtk==2.5.8
-trame-vuetify==2.3.1
-tzdata==2023.3
-vtk==9.2.6
-wslink==1.12.2
-yarl==1.9.2
+
+#### More Information
+For more details about SU2, please visit the official SU2 documentation [here](https://su2code.github.io/docs_v7/home/).
