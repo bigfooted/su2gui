@@ -566,9 +566,15 @@ def color_by_array(actor, array):
 @state.change("mesh_color_array_idx")
 def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     print("change mesh color by array")
-    array =  {'text': 'Solid', 'value': 0, 'range': [1.0, 1.0], 'type': 0}
-    if mesh_color_array_idx in state.dataset_arrays:
-        array = state.dataset_arrays[mesh_color_array_idx]  
+
+    # this is stopping the read restart process
+    # array =  {'text': 'Solid', 'value': 0, 'range': [1.0, 1.0], 'type': 0}
+    # if mesh_color_array_idx in state.dataset_arrays:
+    #     array = state.dataset_arrays[mesh_color_array_idx]  
+
+    # This does not works with --mesh
+    array = state.dataset_arrays[mesh_color_array_idx]  
+
     print("array = ",array)
     print("mesh actor=",mesh_actor)
     print("mesh actor list=",mesh_actor_list)
