@@ -16,7 +16,6 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #import psutil
 
 import pandas as pd
-import chardet
 
 import sys, subprocess, io, time
 
@@ -443,16 +442,15 @@ def uploadRestart(restartFile, **kwargs):
     print("removed file")
     return
 
-  # type(file) will always be bytes
-  file = ClientFile(restartFile)
-  # encoding = chardet.detect(file.content)
-  # print(encoding, type(file))
-  # print(restartFile)
-  # x = input("enter")
-
   # for .csv
-  
-  filecontent = file.content.decode('utf-8')
+  # assigning filecontent for args
+  filecontent = restartFile
+
+  # checking if the file is sent by GUI
+  if "args" not in kwargs:
+      file = ClientFile(restartFile)
+      filecontent = file.content.decode('utf-8')
+
   f = filecontent.splitlines()
 
   with open(BASE / "user" / "restart.csv",'w') as restartFile:
@@ -468,6 +466,8 @@ def uploadRestart(restartFile, **kwargs):
 
   # we reset the active field because we read or upload the restart from file as a user action
   readRestart(io.StringIO('\n'.join(f)), True)
+  
+  # readRestart(BASE / "user" / state.restart_filename, False)
 
 
 # check if a file has a handle on it

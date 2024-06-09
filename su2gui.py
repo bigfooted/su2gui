@@ -5,7 +5,7 @@ The SU2 Graphical User Interface.
 import os, copy, io
 
 import pandas as pd
-import json
+import argparse
 
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
@@ -566,7 +566,9 @@ def color_by_array(actor, array):
 @state.change("mesh_color_array_idx")
 def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     print("change mesh color by array")
-    array = state.dataset_arrays[mesh_color_array_idx]
+    array =  {'text': 'Solid', 'value': 0, 'range': [1.0, 1.0], 'type': 0}
+    if mesh_color_array_idx in state.dataset_arrays:
+        array = state.dataset_arrays[mesh_color_array_idx]  
     print("array = ",array)
     print("mesh actor=",mesh_actor)
     print("mesh actor list=",mesh_actor_list)
@@ -707,25 +709,19 @@ state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 # load cofiguration .cfg file
 @state.change("cfg_file_upload")
 def load_cfg_file(cfg_file_upload, **kwargs):
-    print("got the file")
-    file = ClientFile(cfg_file_upload)
 
     if cfg_file_upload is None:
         return
-      
-    # # Read the .cfg file
-    # config = configparser.ConfigParser()
-    # print(cfg_file_upload)
-    # config.read(cfg_file_upload)
-    
-    # # Convert ConfigParser object to dictionary
-    # cfg_dict = {section: dict(config.items(section)) for section in config.sections()}
-    # print(cfg_dict)
-    
-        
+
+    # assigning filecontent for args
+    filecontent = cfg_file_upload
+
+    # checking if the file is sent by GUI
+    if "args" not in kwargs:
+        file = ClientFile(cfg_file_upload)
+        filecontent = file.content.decode('utf-8')
 
     # reading each line of configuration file
-    filecontent = file.content.decode('utf-8')
     f = filecontent.splitlines()
     cfglist = []
     f = [element for element in f if not (element.strip().startswith("%")) and len(element.strip())]
@@ -763,21 +759,26 @@ def load_cfg_file(cfg_file_upload, **kwargs):
         cfg_dict[key] = value
 
 
-    # checking if the valie of state.jsonData['OUTPUT_WRT_FREQ'] is int
+    # checking if the value of state.jsonData['OUTPUT_WRT_FREQ'] is int
     # if yes set it to a list of 2 elements with same value for proper working
     if isinstance(cfg_dict['OUTPUT_WRT_FREQ'], int):
       cfg_dict['OUTPUT_WRT_FREQ']= [cfg_dict['OUTPUT_WRT_FREQ']] * 2
-    
+      
+    # checking if the value of state.jsonData['OUTPUT_WRT_FREQ'] is str
+    # if yes set it to a list of elements with same value for proper working
+    if isinstance(cfg_dict['OUTPUT_WRT_FREQ'], str):
+      cfg_dict['OUTPUT_WRT_FREQ']= [int(x) for x in cfg_dict['OUTPUT_WRT_FREQ'].split(",")]
+
     # Write the dictionary to a JSON file
     # with open(BASE / "user" / state.filename_json_export, 'w') as f:
     #     json.dump(cfg_dict, f, indent=4)
     
     # assigning new values to jsonData
     state.jsonData = cfg_dict
-      
-      
     state.dirty('jsonData')
-    print(type(state.jsonData))
+      
+    # save the cfg file
+    save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
 
 
 # load SU2 .su2 mesh file #
@@ -791,16 +792,13 @@ def load_file_su2(su2_file_upload, **kwargs):
 
     del mesh_actor_list[:]
 
-    #file = su2_file_upload
-    file = ClientFile(su2_file_upload)
-
     if su2_file_upload is None:
         return
 
-    print("name = ",su2_file_upload.get("name"))
-    print("last modified = ",su2_file_upload.get("lastModified"))
-    print("size = ",su2_file_upload.get("size"))
-    print("type = ",su2_file_upload.get("type"))
+    # print("name = ",su2_file_upload.get("name"))
+    # print("last modified = ",su2_file_upload.get("lastModified"))
+    # print("size = ",su2_file_upload.get("size"))
+    # print("type = ",su2_file_upload.get("type"))
 
     # remove all actors
     renderer.RemoveAllViewProps()
@@ -820,9 +818,16 @@ def load_file_su2(su2_file_upload, **kwargs):
     pts = vtk.vtkPoints()
     # ### ### #
 
-
     # mesh file format specific
-    filecontent = file.content.decode('utf-8')
+
+    # assigning filecontent for args
+    filecontent = su2_file_upload
+
+    # checking if the file is sent by GUI
+    if "args" not in kwargs:
+        file = ClientFile(su2_file_upload)
+        filecontent = file.content.decode('utf-8')
+
     f = filecontent.splitlines()
 
     index = [idx for idx, s in enumerate(f) if 'NDIME' in s][0]
@@ -1473,7 +1478,59 @@ with SinglePageWithDrawerLayout(server) as layout:
 # CLI
 # -----------------------------------------------------------------------------
 
-if __name__ == "__main__":
+def main():
+    
+    # Defining arguments while calling su2gui
+    # for starting it with different files 
+    parser = argparse.ArgumentParser(description='Start the SU2 GUI application.')
+    parser.add_argument('--mesh', type=str, help='Path to the SU2 mesh file in .su2 format.')
+    parser.add_argument('--config', type=str, help='Path to the configuration file.')
+    parser.add_argument('--restart', type=str, help='Path to the restart file in .csv format.')
+    
+    args = parser.parse_args()
+    
+    mesh_path = args.mesh
+    config_path = args.config
+    restart_path = args.restart
+
+    if mesh_path and not os.path.exists(mesh_path):
+        print(f"Error: The SU2 mesh file {mesh_path} does not exist.")
+        exit(1)
+
+    if mesh_path:
+        print(f"Using SU2 mesh file {mesh_path}")
+        with open(mesh_path, 'r') as f:
+           content = f.read()
+           load_file_su2(su2_file_upload=  content, args= True)
+           
+
+    if config_path and not os.path.exists(config_path):
+        print(f"Error: The configuration file {config_path} does not exist.")
+        exit(1)
+
+    if config_path:
+        print(f"Using configuration file {config_path}")
+        with open(config_path, 'r') as f:
+           content = f.read()
+           load_cfg_file(cfg_file_upload=  content, args= True)
+
+    if restart_path and not os.path.exists(restart_path):
+        print(f"Error: The restart file {restart_path} does not exist.")
+        exit(1)
+
+    if restart_path:
+        if not mesh_path:
+           print("Error: Can not load restart file without SU2 mesh file ")
+           exit(1)
+        print(f"Using restart file {restart_path}")
+        with open(restart_path, 'r') as f:
+           content = f.read()
+           uploadRestart(restartFile=  content, args= True)
+
 
     server.start()
     print("su2gui server ended...")
+
+
+if __name__=="__main__":
+    main()
