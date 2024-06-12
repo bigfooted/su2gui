@@ -748,7 +748,7 @@ def load_cfg_file(cfg_file_upload, **kwargs):
         value = value.strip()
         
         # Convert value to appropriate type
-        if value.startswith('(') and value.endswith(')'):
+        if (value.startswith('(') and value.endswith(')')) or ',' in value :
             # Remove parentheses and split by comma
             value = value[1:-1].split(',')
             # Convert each item to an appropriate type
@@ -756,6 +756,10 @@ def load_cfg_file(cfg_file_upload, **kwargs):
             value = [int(v) if v.isdigit() else v for v in value]
         elif value.isdigit():
             value = int(value)
+        elif value.upper() == 'YES' or value.upper() == 'TRUE':
+            value = True
+        elif value.upper() == 'NO' or value.upper() == 'FALSE':
+            value = False   
         else:
             try:
                 value = float(value)
@@ -780,11 +784,20 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     #     json.dump(cfg_dict, f, indent=4)
     
     # assigning new values to jsonData
-    state.jsonData = cfg_dict
+    state.jsonData.update(cfg_dict) 
     state.dirty('jsonData')
       
     # save the cfg file
     save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+
+    # set all physics states from the json file
+    # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
+    set_json_physics()
+    set_json_initialization()
+    set_json_numerics()
+    set_json_solver()
+    set_json_fileio()
+    set_json_materials()
 
 
 # load SU2 .su2 mesh file #
@@ -1389,6 +1402,7 @@ with SinglePageWithDrawerLayout(server) as layout:
       with vuetify.VTabs(v_model=("active_tab", 0), right=True):
         vuetify.VTab("Geometry")
         vuetify.VTab("History")
+        vuetify.VTab("Logs")
 
       with vuetify.VContainer(
             fluid=True,

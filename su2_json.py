@@ -43,12 +43,17 @@ def GetJsonName(value,List):
   print("list=",List)
   entry = [item for item in List if item["value"] == value]
   print("entry=",entry)
-  return(entry[0]["json"])
+  if entry:  # Check if entry is not empty
+    return entry[0]["json"]
+  else:
+      return None  # Or a default value if no match
 
 # get the "value" from the dictionary
-def GetJsonIndex(value,List):
-  entry = [item for item in List if item["json"] == value]
-  return(int(entry[0]["value"]))
+def GetJsonIndex(value, List):
+    try:
+        return int(next(item["value"] for item in List if item["json"] == value))
+    except StopIteration:
+        return None
 
 def GetBCName(value,List):
   entry = [item for item in List if item["bcName"] == value]
