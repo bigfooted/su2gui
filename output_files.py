@@ -1,5 +1,6 @@
 from uicard import server
 import zipfile, os
+from io import BytesIO
 from trame.widgets import vuetify
 from trame.assets.remote import HttpFile
 
@@ -162,7 +163,7 @@ def download_diagol_card():
                 with vuetify.VCol():
                     # Add a button to trigger the done action
                     vuetify.VBtn("Done", 
-                                 click=f"utils.download('output.zip', trigger('download_output_files'), 'application/zip' )"
+                                 click=f"utils.download('output.zip', trigger('download_output_files'))"
                     )
 
 
@@ -218,8 +219,19 @@ def download_outputs():
                 else:
                     print(f"Warning: {file_path} does not exist and will not be included in the zip file.")
         update_download_dialog_card()
-        print(f"Zip file {zip_path} created successfully.")
-    return zipf
+    
+    zip_buffer = BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w') as zip_ref:
+        with zipfile.ZipFile(zip_path, 'r') as source_zip:
+            for file_name in source_zip.namelist():
+                with source_zip.open(file_name) as file:
+                    zip_ref.writestr(file_name, file.read())
+    
+    zip_buffer.seek(0)  # Reset buffer position to the beginning
+    print(f"Zip file {zip_path} created and downloaded successfully.")
+    return zip_buffer.getvalue()
+
     
 # server.js_call(
 #     method="utils.download",
