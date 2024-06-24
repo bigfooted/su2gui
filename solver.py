@@ -443,13 +443,12 @@ def uploadRestart(restartFile, **kwargs):
     return
 
   # for .csv
-  # assigning filecontent for args
-  filecontent = restartFile
 
-  # checking if the file is sent by GUI
-  if "args" not in kwargs:
-      file = ClientFile(restartFile)
+  file = ClientFile(restartFile)
+  try:
       filecontent = file.content.decode('utf-8')
+  except:
+      filecontent = file.content
 
   f = filecontent.splitlines()
 

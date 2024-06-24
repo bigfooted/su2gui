@@ -31,6 +31,9 @@ from output_files import update_download_dialog_card, download_diagol_card
 # Definition of ui_card and the server.
 from uicard import ui_card, server
 
+# Logging funtions
+from logs import log
+
 import vtk
 # vtm reader
 #from paraview.vtk.vtkIOXML import vtkXMLMultiBlockDataReader
@@ -102,15 +105,20 @@ from fileio import *
 # -----------------------------------------------------------------------------
 state, ctrl = server.state, server.controller
 
+state.md_content = ""
+
 from pipeline import PipelineManager
 from pathlib import Path
 BASE = Path(__file__).parent
 
 from trame.assets.local import LocalFileManager
 
-print("****************************************")
-print("* Base path = ", BASE                    )
-print("****************************************")
+log("info" , f"""
+****************************************
+Base path = {BASE}    
+****************************************
+"""
+    )
 
 state.filename_cfg_export = "config_new.cfg"
 state.filename_json_export = "config_new.json"
@@ -121,13 +129,17 @@ local_file_manager.url("collapsed", BASE / "icons/chevron-up.svg")
 local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
 local_file_manager.url("su2logo", BASE / "img/logoSU2small.png")
 
-print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-print("local_file_manager=",local_file_manager)
-print("local_file_manager=",type(local_file_manager))
-print("local_file_manager=",type(local_file_manager.assets))
-print("local_file_manager=",dir(local_file_manager.assets.items()))
-print("local_file_manager=",local_file_manager.assets.keys())
-print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+log("info", f"""
+****************************************
+local_file_manager = {local_file_manager}  
+local_file_manager = {type(local_file_manager)}  
+local_file_manager = {type(local_file_manager.assets)}  
+local_file_manager = {dir(local_file_manager.assets.items())}  
+local_file_manager = {local_file_manager.assets.keys()}  
+****************************************
+"""
+    
+    )
 
 
 # matplotlib history
@@ -263,7 +275,7 @@ datasetArrays.append(
 default_array = datasetArrays[0]
 default_min, default_max = default_array.get("range")
 state.dataset_arrays= datasetArrays
-print("dataset_arrays = ",state.dataset_arrays)
+log("info", f"dataset_arrays = {state.dataset_arrays}")
 
 mesh_mapper.SetInputData(grid)
 mesh_mapper.SelectColorArray(default_array.get("text"))
@@ -353,30 +365,30 @@ state.counter = 0
 
 
 def actives_change(ids):
-    print("actives_change::ids = ",ids)
+    log("info", f"actives_change::ids =  = {ids}")
     _id = ids[0]
 
     state.active_id = _id
 
     #state.boundaryText=_id
-    print("actives_change::active id = ",state.active_id)
+    log("info", f"actives_change::active id =  = {state.active_id}")
     # get boundary name belonging to ID
     _name = pipeline.get_node(_id)
     # get the headnode of this node
     _headnode = _name['headnode']
-    print("headnode=",_headnode)
-    print("active name =",_name['name'])
+    log("info", f"headnode= = {_headnode}")
+    log("info", f"active name = = {_name['name']}")
 
 
     # if the headnode = active_name, then we have selected the head node
     # if active_name != headnode, then we are a child of the headnode.
     if _headnode == _name['name']:
-       print("   headnode =", _headnode)
+       log("info", f"   headnode = = {_headnode}")
        # we are at a headnode, so we do not have a parent id
        state.active_parent_ui = "none"
        state.active_head_ui = _headnode
     else:
-       print("   we are at child node")
+       log("info", "   we are at child node")
        state.active_parent_ui = _headnode
        # so headnode is none
        state.active_head_ui = "none"
@@ -386,14 +398,14 @@ def actives_change(ids):
     _subui = _name['subui']
     # whatever the value, we update the pipeline with it
     state.active_sub_ui = _subui
-    print("subnode=",_subui)
+    log("info", f"subnode= = {_subui}")
 
-    print("children:",pipeline._children_map)
+    log("info", f"children: = {pipeline._children_map}")
 
     _name = _name['name']
-    print("active name =",_name)
+    log("info", f"active name = = {_name}")
     selectedBoundary = next((item for item in mesh_actor_list if item["name"] == _name), None)
-    print("mesh_actor_list = ",mesh_actor_list)
+    log("info", f"mesh_actor_list =  = {mesh_actor_list}")
     if not selectedBoundary==None:
       state.selectedBoundaryName = selectedBoundary["name"]
     else:
@@ -403,7 +415,7 @@ def actives_change(ids):
       else:
         state.selectedBoundaryName = "None"
 
-    print("selected boundary name = ",state.selectedBoundaryName)
+    log("info", f"selected boundary name =  = {state.selectedBoundaryName}")
 
     state.dirty('selectedBoundaryName')
 
@@ -417,10 +429,10 @@ def actives_change(ids):
 
     # only if we have selected a boundary
     if _headnode!="Boundaries":
-      print("************* headnode is not a boundary")
+      log("info", "************* headnode is not a boundary")
       for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
-        print("actor name=",actor.GetObjectName())
+        log("info", f"actor name= = {actor.GetObjectName}")
 
         # ignore everything that is not a boundary, so CoordAxes and CubeAxes
         if ("Axes" in actor.GetObjectName()):
@@ -441,14 +453,14 @@ def actives_change(ids):
 
       internal=False
       if state.selectedBoundaryName=="internal":
-        print("internal selected")
+        log("info", "internal selected")
         internal=True
 
       # ##### show/highlight the actor based on selection ##### #
       # we loop over all actors and switch it on or off
       for a in range(0, actorlist.GetNumberOfItems()):
         actor = actorlist.GetNextActor()
-        print("actor name=",actor.GetObjectName())
+        log("info", f"actor name= = {actor.GetObjectName}")
 
         if ("Axes" in actor.GetObjectName()):
            continue
@@ -458,11 +470,11 @@ def actives_change(ids):
         actor.GetProperty().SetAmbient(0.5)
         actor.GetProperty().SetSpecular(0.1)
         actor.GetProperty().SetSpecularPower(10)
-        #print("getnextactor: name =",actor.GetObjectName())
-        #print("ambient=",actor.GetProperty().GetAmbient())
-        #print("diffuse=",actor.GetProperty().GetDiffuse())
-        #print("specular=",actor.GetProperty().GetSpecular())
-        #print("roughness=",actor.GetProperty().GetRoughness())
+        #log("info", f"getnextactor: name = = {actor.GetObjectName(}"))
+        #log("info", f"ambient= = {actor.GetProperty(}").GetAmbient())
+        #log("info", f"diffuse= = {actor.GetProperty(}").GetDiffuse())
+        #log("info", f"specular= = {actor.GetProperty(}").GetSpecular())
+        #log("info", f"roughness= = {actor.GetProperty(}").GetRoughness())
 
 
         if (state.nDim==3 and actor.GetObjectName()=="internal"):
@@ -488,7 +500,7 @@ def actives_change(ids):
 
     ctrl.view_update()
 
-    print("state=",_id)
+    log("info", f"state= = {_id}")
 
     # active ui is the head node of the gittree
     state.active_ui = _headnode
@@ -509,35 +521,15 @@ state.meshText="meshtext"
 
 # export su2 file (save on the server)
 def save_file_su2(su2_filename):
-    print("********** save .su2 **********\n")
+    log("info", "********** save .su2 **********\n")
       # add the filename to the json database
     state.jsonData['MESH_FILENAME'] = su2_filename
     global root
     save_su2mesh(root,su2_filename)
 
-@ctrl.trigger("download_file_su2")
-def download_file_su2():
-    print("********** download .su2 **********\n")
-    su2_filename = state.jsonData['MESH_FILENAME']
-    global root
-    save_su2mesh(root,su2_filename)
-    with open(BASE / "user" / su2_filename, 'r') as f:
-      #su2_content = f.readlines()
-      su2_content = f.read()
-    return su2_content
-
-@ctrl.trigger("download_file_cfg")
-def download_file_cfg():
-    print("********** download .cfg **********\n")
-    with open(BASE / "user" / state.filename_cfg_export, 'r') as f:
-      #cfg_content = f.readlines()
-      cfg_content = f.read()
-    return cfg_content
-
-
 # Color By Callbacks
 def color_by_array(actor, array):
-    print("change color by array")
+    log("info", "change color by array")
 
     _min, _max = array.get("range")
     mesh_mapper = actor.GetMapper()
@@ -561,23 +553,20 @@ def color_by_array(actor, array):
     global scalar_bar_widget
     scalar_bar = MakeScalarBarActor()
     scalar_bar_widget =MakeScalarBarWidget(scalar_bar)
-    print("scalarbarwidget=",scalar_bar_widget)
+    log("info", f"scalarbarwidget= = {scalar_bar_widget}")
 
 @state.change("mesh_color_array_idx")
 def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
-    print("change mesh color by array")
+    log("info", "change mesh color by array")
 
-    # this is stopping the read restart process
-    # array =  {'text': 'Solid', 'value': 0, 'range': [1.0, 1.0], 'type': 0}
-    # if mesh_color_array_idx in state.dataset_arrays:
-    #     array = state.dataset_arrays[mesh_color_array_idx]  
+    if mesh_color_array_idx < len(state.dataset_arrays):
+        array = state.dataset_arrays[mesh_color_array_idx]  
+    else:
+        array =  {'text': 'Solid', 'value': 0, 'range': [1.0, 1.0], 'type': 0}
 
-    # This does not works with --mesh
-    array = state.dataset_arrays[mesh_color_array_idx]  
-
-    print("array = ",array)
-    print("mesh actor=",mesh_actor)
-    print("mesh actor list=",mesh_actor_list)
+    log("info", f"array =  = {array}")
+    log("info", f"mesh actor= = {mesh_actor}")
+    log("info", f"mesh actor list= = {mesh_actor_list}")
     if state.nDim == 2:
       # color the internal
       #color_by_array(mesh_actor, array)
@@ -585,16 +574,16 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
         actor = get_entry_from_name('internal','name',mesh_actor_list)
       else:
         actor = get_entry_from_name('internal','name',[{"id":0,"name":"internal","mesh":mesh_actor}])
-      print("start::actor=",actor['mesh'])
+      log("info", f"start::actor= = {actor['mesh']}")
       color_by_array(actor['mesh'], array)
-      print("end::actor=",actor['mesh'])
+      log("info", f"end::actor= = {actor['mesh']}")
     else:
       # color all boundaries (all mesh actors that are not internal)
       for actor in mesh_actor_list:
-        print("3D actor=",actor)
-        print("3D actor=",actor['mesh'])
+        log("info", f"3D actor= = {actor}")
+        log("info", f"3D actor= = {actor['mesh']}")
         if actor['name'] != 'internal':
-          print("passing actor")
+          log("info", "passing actor")
           color_by_array(actor['mesh'], array)
 
     ctrl.view_update()
@@ -605,18 +594,18 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
 #
 @state.change("active_ui")
 def update_active_ui(active_ui, **kwargs):
-    print("update_active_ui:: ",active_ui)
+    log("info", f"update_active_ui::  = {active_ui}")
 
     if not(state.active_id == 0):
       # get boundary name belonging to ID
       _name = pipeline.get_node(state.active_id)['name']
-      print("update_active_ui::name=",_name)
+      log("info", f"update_active_ui::name= = {_name}")
 
       if (_name=="Physics"):
-        print("update node physics")
+        log("info", "update node physics")
         #pipeline.update_node_value("Physics","subui",active_ui)
       elif (_name=="Initialization"):
-        print("update node Initialization")
+        log("info", "update node Initialization")
         # force update of initial_option_idx so we get the submenu
         state.dirty('initial_option_idx')
         #pipeline.update_node_value("Initialization","subui",active_ui)
@@ -627,16 +616,16 @@ def update_active_ui(active_ui, **kwargs):
 
 @state.change("active_parent_ui")
 def update_active_ui(active_ui, **kwargs):
-    print("update_active_ui:: ",active_ui)
+    log("info", f"update_active_ui::  = {active_ui}")
     if not(state.active_id == 0):
       # get boundary name belonging to ID
       #_name = pipeline.get_node(state.active_id)['name']
-      #print("update_active_ui::name=",_name)
+      #log("info", f"update_active_ui::name= = {_name}")
 
       #if (_name=="Physics"):
-      #  print("update node physics")
+      #  log("info", "update node physics")
       #elif (_name=="Initialization"):
-      #  print("update node Initialization")
+      #  log("info", "update node Initialization")
       #  # update because it might be changed elsewhere
       #  initialization_card()
 
@@ -644,20 +633,20 @@ def update_active_ui(active_ui, **kwargs):
 
 @state.change("active_head_ui")
 def update_active_ui(active_ui, **kwargs):
-    print("update_active_ui:: ",active_ui)
+    log("info", f"update_active_ui::  = {active_ui}")
     if not(state.active_id == 0):
       # get boundary name belonging to ID
       _name = pipeline.get_node(state.active_id)['name']
-      #print("update_active_ui::name=",_name)
+      #log("info", f"update_active_ui::name= = {_name}")
 
       if (_name=="Physics"):
-        print("*********** update ui: physics ************************")
+        log("info", "*********** update ui: physics ************************")
         # call to update physics submenu visibility
         # this is important when setting all options from the config file
         state.dirty('physics_turb_idx')
 
       #elif (_name=="Initialization"):
-      #  print("update node Initialization")
+      #  log("info", "update node Initialization")
       #  # update because it might be changed elsewhere
       #  initialization_card()
 
@@ -669,24 +658,24 @@ def update_active_ui(active_ui, **kwargs):
 # we have to set the correct "subui" again from the last visit.
 @state.change("active_sub_ui")
 def update_active_sub_ui(active_sub_ui, **kwargs):
-    print("update_active_sub_ui:: ",active_sub_ui)
+    log("info", f"update_active_sub_ui::  = {active_sub_ui}")
 
     if not(state.active_id == 0):
       _name = pipeline.get_node(state.active_id)['name']
-      print("update_active_sub_ui::parent name=",_name)
+      log("info", f"update_active_sub_ui::parent name= = {_name}")
 
-    print("choice = ",state.initial_option_idx)
+    log("info", f"choice =  = {state.initial_option_idx}")
 
     if not(state.active_id == 0):
       # get boundary name belonging to ID
       _name = pipeline.get_node(state.active_id)['name']
-      print("update_active_sub_ui::name=",_name)
+      log("info", f"update_active_sub_ui::name= = {_name}")
       if (_name=="Physics"):
-        print("update node physics")
+        log("info", "update node physics")
         pipeline.update_node_value("Physics","subui",active_sub_ui)
 
       elif (_name=="Initialization"):
-        print("update node Initialization")
+        log("info", "update node Initialization")
         pipeline.update_node_value("Initialization","subui",active_sub_ui)
         # necessary?
         #initialization_subcard()
@@ -719,13 +708,11 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     if cfg_file_upload is None:
         return
 
-    # assigning filecontent for args
-    filecontent = cfg_file_upload
-
-    # checking if the file is sent by GUI
-    if "args" not in kwargs:
-        file = ClientFile(cfg_file_upload)
+    file = ClientFile(cfg_file_upload)
+    try:
         filecontent = file.content.decode('utf-8')
+    except:
+        filecontent = file.content
 
     # reading each line of configuration file
     f = filecontent.splitlines()
@@ -814,14 +801,13 @@ def load_file_su2(su2_file_upload, **kwargs):
     if su2_file_upload is None:
         return
 
-    # print("name = ",su2_file_upload.get("name"))
-    # print("last modified = ",su2_file_upload.get("lastModified"))
-    # print("size = ",su2_file_upload.get("size"))
-    # print("type = ",su2_file_upload.get("type"))
+    # log("info", f"name =  = {su2_file_upload.get("name"}"))
+    # log("info", f"last modified =  = {su2_file_upload.get("lastModified"}"))
+    # log("info", f"size =  = {su2_file_upload.get("size"}"))
+    # log("info", f"type =  = {su2_file_upload.get("type"}"))
 
     # remove all actors
     renderer.RemoveAllViewProps()
-
     grid.Reset()
 
 
@@ -838,14 +824,11 @@ def load_file_su2(su2_file_upload, **kwargs):
     # ### ### #
 
     # mesh file format specific
-
-    # assigning filecontent for args
-    filecontent = su2_file_upload
-
-    # checking if the file is sent by GUI
-    if "args" not in kwargs:
-        file = ClientFile(su2_file_upload)
+    file = ClientFile(su2_file_upload)
+    try:
         filecontent = file.content.decode('utf-8')
+    except:
+        filecontent = file.content
 
     f = filecontent.splitlines()
 
@@ -911,7 +894,7 @@ def load_file_su2(su2_file_upload, **kwargs):
               pyramiddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])]
               grid.InsertNextCell(VTK_PYRAMID,5,pyramiddata)
             else:
-              print("ERROR: cell type not suppported")
+              log("Error", f"cell type not suppported")
 
 
     branch_interior.SetBlock(0, grid)
@@ -952,13 +935,13 @@ def load_file_su2(su2_file_upload, **kwargs):
           counter+=1
           line = f[index+counter].split("=")
           numCells = int(line[1])
-          #print("number of cells = ",numCells)
+          #log("info", f"number of cells =  = {numCells}")
 
           # loop over all cells
           for cell in range(numCells):
             counter+=1
             data = f[index+counter].split(" ")
-            #print("data = ",data)
+            #log("info", f"data =  = {data}")
             CellType = int(data[0])
             # line
             if(CellType==3):
@@ -973,7 +956,7 @@ def load_file_su2(su2_file_upload, **kwargs):
               quaddata = [int(data[1]),int(data[2]),int(data[3]),int(data[4])]
               markergrid[iMarker].InsertNextCell(VTK_QUAD,4,quaddata)
             else:
-              print("ERROR: marker cell type not suppported")
+              log("Error", f"marker cell type not suppported")
           # put boundary in multiblock structure
           branch_boundary.SetBlock(iMarker, markergrid[iMarker])
           branch_boundary.GetMetaData(iMarker).Set(vtk.vtkCompositeDataSet.NAME(), markertag)
@@ -993,7 +976,7 @@ def load_file_su2(su2_file_upload, **kwargs):
     # we also clear the arrays, if any
     for array in state.dataset_arrays:
         arrayName = array.get("text")
-        print("removing array ",arrayName)
+        log("info", f"removing array  = {arrayName}")
         grid.GetPointData().RemoveArray(arrayName)
         # nijso TODO BUG does not contain data yet
         #for iMarker in range(numMarkers):
@@ -1021,9 +1004,9 @@ def load_file_su2(su2_file_upload, **kwargs):
     # boundary actors
     boundary_id = 101
     i = 0
-    print("length of ds_b=",len(ds_b))
+    log("info", f"length of ds_b= = {len(ds_b)}")
     for bcName in boundaryNames:
-        print("bc name=",bcName)
+        log("info", f"bc name= = {bcName}")
         mesh_mapper_b1 = vtkDataSetMapper()
         mesh_mapper_b1.ScalarVisibilityOff()
         mesh_actor_b1 = vtkActor()
@@ -1059,14 +1042,14 @@ def load_file_su2(su2_file_upload, **kwargs):
 
     # now construct the actual boundary list for the GUI
     for bcName in boundaryNames:
-       print("boundary name=",bcName.get("text"))
+       log("info", f"boundary name= = {bcName.get("text")}")
        # add the boundaries to the right tree and not the left tree
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
 
     state.BCDictList = []
     # fill the boundary conditions with initial boundary condition type
     for bcName in boundaryNames:
-      print("*************** BCNAME **********",bcName)
+      log("info", f"*************** BCNAME ********** = {bcName}")
       # do not add internal boundaries to bcdictlist
       if bcName.get("text") != "internal":
         state.BCDictList.append({"bcName":bcName.get("text"),
@@ -1128,14 +1111,14 @@ def load_file_su2(su2_file_upload, **kwargs):
 
 # collapse or expand the gittree
 def on_action(event):
-    #print("on_action", event)
+    #log("info", f"on_action = {event}")
     _id = event.get("id")
     _action = event.get("action")
     if _action.startswith("collap"):
-        print(pipeline.toggle_collapsed(_id))
+        log("info", pipeline.toggle_collapsed(_id))
 
 def on_event(event):
-    print(event)
+    log("info", event)
 
 
 
@@ -1160,7 +1143,7 @@ def pipeline_widget():
 @state.change("vtkEdgeVisibility")
 def changevtkEdgeVisibility(vtkEdgeVisibility, **kwargs):
 
-    print("edge: ",vtkEdgeVisibility)
+    log("info", f"edge:  = {vtkEdgeVisibility}")
     # can only be activated/deactivated for incompressible
     #state.energy = bool(state.physics_energy_idx)
     # get list of all actors, loop and color the selected actor
@@ -1179,49 +1162,29 @@ def changevtkEdgeVisibility(vtkEdgeVisibility, **kwargs):
 # visibility if the cube axes (bounding box) is on
 @state.change("cube_axes_visibility")
 def update_cube_axes_visibility(cube_axes_visibility, **kwargs):
-    print("change axes visibility")
+    log("info", "change axes visibility")
     cube_axes.SetVisibility(cube_axes_visibility)
     ctrl.view_update()
 
 # visibility if the coordinate axes is on
 @state.change("coord_axes_visibility")
 def update_coord_axes_visibility(coord_axes_visibility, **kwargs):
-    print("change coord axes visibility")
+    log("info", "change coord axes visibility")
     coord_axes.SetEnabled(coord_axes_visibility)
     ctrl.view_update()
 
 # visibility if the color bar is on
 @state.change("color_bar_visibility")
 def update_color_bar_visibility(color_bar_visibility, **kwargs):
-    print("change color bar visibility")
+    log("info", "change color bar visibility")
     scalar_bar_widget.SetEnabled(color_bar_visibility)
     ctrl.view_update()
 
 # buttons in the top header
 def standard_buttons():
-
-    # su2path = BASE / "user" / state.filename_json_export
-    # Save the .su2 file
+    # button for opening dialog box for downloading the output files
     with vuetify.VBtn("Outputs",click=(update_download_dialog_card)):
        vuetify.VIcon("mdi-download-box-outline")
-
-    # # download button such that the .su2 file ends up in "downloads"
-    # with vuetify.VBtn(
-    #                  ".su2",
-    #                  click=f"utils.download('{su2path}', trigger('download_file_su2'))",
-    #                  ):
-    #    vuetify.VIcon("mdi-download-box-outline")
-
-    # with vuetify.VBtn(".cfg", click=(save_json_cfg_file,"[filename_json_export,filename_cfg_export]"), disabled=("export_disabled",True)):
-    #     vuetify.VIcon("mdi-download")
-
-    # # download button such that the .cfg file ends up in "downloads"
-    # with vuetify.VBtn(
-    #                  ".cfg",
-    #                  click="utils.download(filename_cfg_export, trigger('download_file_cfg'), 'text/plain')",
-    #                  ):
-    #    vuetify.VIcon("mdi-download-box-outline")
-
 
 
 # -----------------------------------------------------------------------------
@@ -1237,8 +1200,8 @@ with SinglePageWithDrawerLayout(server) as layout:
 
     # matplotlib monitor: read the initial history file
     [state.x,state.ylist] = readHistory(BASE / "user" / state.history_filename)
-    print("x=",state.x)
-    print("y=",state.ylist)
+    log("info", f"x= = {state.x}")
+    log("info", f"y= = {state.ylist}")
 
     with layout.toolbar:
 
@@ -1334,38 +1297,38 @@ with SinglePageWithDrawerLayout(server) as layout:
         # simple divider
         vuetify.VDivider(classes="mb-2")
         #
-        print("initialize boundary card")
+        log("info", "initialize boundary card")
         # main head/parent node
         boundaries_card_parent()
         # children nodes (the actual boundaries)
         boundaries_card_children()
         #
-        print("initialize physics card")
+        log("info", "initialize physics card")
         physics_card()
         physics_subcard()
         #
-        print("initialize materials card")
+        log("info", "initialize materials card")
         materials_card()
         #materials_subcard()
         #
-        print("initialize numerics card")
+        log("info", "initialize numerics card")
         numerics_card()
         #
-        print("initialize initialization card")
+        log("info", "initialize initialization card")
         initialization_card()
         initialization_patch_subcard()
         initialization_file_subcard()
         initialization_uniform_subcard()
         #
-        print("initialize mesh card")
+        log("info", "initialize mesh card")
         mesh_card()
         mesh_subcard()
         #
-        print("initialize fileio card")
+        log("info", "initialize fileio card")
         fileio_card()
         #
 
-        print("initialize solver card")
+        log("info", "initialize solver card")
         solver_card()
         #
 
@@ -1395,7 +1358,7 @@ with SinglePageWithDrawerLayout(server) as layout:
         #this necessary here?
         #state.dirty('jsonData')
 
-    print("setting up layout content")
+    log("info", "setting up layout content")
     with layout.content:
 
       # create the tabs
@@ -1492,7 +1455,18 @@ with SinglePageWithDrawerLayout(server) as layout:
                     html_figure = tramematplotlib.Figure(style="position: absolute")
                     ctrl.update_figure = html_figure.update
 
-    print("finalizing drawer layout")
+            # Third Tab
+            with vuetify.VTabItem(
+               value=(2,), style="width: 100%; height: 100%;"
+            ):
+
+                markdown.Markdown(
+                  content = ('md_content', state.md_content), 
+                  style = "padding-left: 3rem; color: black; background-color: white"
+                )
+
+
+    log("info", "finalizing drawer layout")
 
 # -----------------------------------------------------------------------------
 # CLI
@@ -1514,42 +1488,69 @@ def main():
     restart_path = args.restart
 
     if mesh_path and not os.path.exists(mesh_path):
-        print(f"Error: The SU2 mesh file {mesh_path} does not exist.")
+        log("error", f"The SU2 mesh file {mesh_path} does not exist.")
         exit(1)
 
     if mesh_path:
-        print(f"Using SU2 mesh file {mesh_path}")
+        log("info", f"Using SU2 mesh file {mesh_path}")
         with open(mesh_path, 'r') as f:
            content = f.read()
-           load_file_su2(su2_file_upload=  content, args= True)
-           
+          #  not showing mesh file
+          #  load_file_su2(
+          #     {
+          #     "name": os.path.basename(mesh_path),
+          #     "size" : os.stat(mesh_path).st_size,
+          #     "content": content,
+          #     "type": "text/plain",
+          #  }
+          #  )
+
+          #  not loading restart file
+           state.su2_file_upload = {
+              "name": os.path.basename(mesh_path),
+              "size" : os.stat(mesh_path).st_size,
+              "content": content,
+              "type": "text/plain",
+           }
 
     if config_path and not os.path.exists(config_path):
-        print(f"Error: The configuration file {config_path} does not exist.")
+        log("Error", f"The configuration file {config_path} does not exist.")
         exit(1)
 
     if config_path:
-        print(f"Using configuration file {config_path}")
+        log("info", f"Using configuration file {config_path}")
         with open(config_path, 'r') as f:
            content = f.read()
-           load_cfg_file(cfg_file_upload=  content, args= True)
+           state.cfg_file_upload = {
+              "name": os.path.basename(config_path),
+              "size" : os.stat(config_path).st_size,
+              "content": content,
+              "type": "text/plain",
+           }
+           
 
     if restart_path and not os.path.exists(restart_path):
-        print(f"Error: The restart file {restart_path} does not exist.")
+        log("Error", f"The restart file {restart_path} does not exist.")
         exit(1)
 
     if restart_path:
         if not mesh_path:
-           print("Error: Can not load restart file without SU2 mesh file ")
+           log("Error", f"Can not load restart file without SU2 mesh file ")
            exit(1)
-        print(f"Using restart file {restart_path}")
+        log("info", f"Using restart file {restart_path}")
         with open(restart_path, 'r') as f:
            content = f.read()
-           uploadRestart(restartFile=  content, args= True)
+           state.restartFile = {
+              "name": os.path.basename(restart_path),
+              "size" : os.stat(restart_path).st_size,
+              "content": content,
+              "type": "text/plain",
+           }
 
 
+    log("info", "Application Started - Initializing SU2GUI Server")
     server.start()
-    print("su2gui server ended...")
+    log("info", "SU2GUI Server Ended...")
 
 
 if __name__=="__main__":
