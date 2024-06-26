@@ -46,6 +46,8 @@ import vtkmodules.vtkRenderingOpenGL2  # noqa
 # mesh_mapper
 from mesh import *
 
+# Logging function
+from logger import log
 
 # default visibility of the actors
 state.cube_axes_visibility = True
@@ -186,7 +188,7 @@ def MakeScalarBarActor():
     scalarbar.SetObjectName("ScalarAxes")
 
     scalarbar.SetLookupTable(mesh_mapper.GetLookupTable())
-    print("scalar_range = ",mesh_mapper.GetLookupTable().GetTableRange()[0])
+    log("info", f"scalar_range = {mesh_mapper.GetLookupTable().GetTableRange()[0]}")
     #scalar_bar.SetTitle('scalar bar')
     scalarbar.UnconstrainedFontSizeOn()
     scalarbar.SetBarRatio(0.2)

@@ -2,6 +2,9 @@
 # ##################################### JSON ##############################
 from uicard import ui_card, ui_subcard, server
 
+# Logging function
+from logger import log
+
 import json,jsonschema
 from jsonschema import validate, ValidationError, SchemaError
 
@@ -24,7 +27,7 @@ state, ctrl = server.state, server.controller
 # ##################################### JSON ##############################
 # Opening JSON file, which is a python dictionary
 def read_json_data(filenam):
-  print("jsondata::opening json file and reading data")
+  log("info", "jsondata::opening json file and reading data")
   with open(filenam,"r") as jsonFile:
     state.jsonData = json.load(jsonFile)
   return state.jsonData
@@ -39,10 +42,10 @@ state.jsonData = read_json_data(BASE / "user" / "config.json")
 
 # get the "json" name from the dictionary
 def GetJsonName(value,List):
-  print("value=",value)
-  print("list=",List)
+  log("info", f"value= = {value}")
+  log("info", f"list= = {List}")
   entry = [item for item in List if item["value"] == value]
-  print("entry=",entry)
+  log("info", f"entry= = {entry}")
   if entry:  # Check if entry is not empty
     return entry[0]["json"]
   else:
@@ -61,4 +64,4 @@ def GetBCName(value,List):
 
 
 def SetGUIStateWithJson():
-  print("setting GUI state with Json variable")
+  log("info", f"setting GUI state with Json variable")

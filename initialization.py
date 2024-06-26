@@ -71,11 +71,11 @@ LInitializationPatch= [
 def set_json_initialization():
   state.initial_option_idx = 0
   if state.jsonData['RESTART_SOL']==True:
-    print("restarting solution from file")
+    log("info", "restarting solution from file")
     state.initial_option_idx = 1
   else:
     # note that we always restart from file, but in this case we create the file from uniform conditions
-    print("restarting from uniform initial conditions")
+    log("info", "restarting from uniform initial conditions")
     state.initial_option_idx = 0
   state.dirty('initial_option_idx')
 
@@ -104,7 +104,7 @@ def set_json_initialization():
 ###############################################################
 def initialization_card():
     with ui_card(title="Initialization", ui_name="Initialization"):
-      print("def initialization_card ")
+      log("info", "def initialization_card ")
       with vuetify.VContainer(fluid=True):
 
          # 1 row of option lists
@@ -136,31 +136,31 @@ def initialization_card():
 ###############################################################
 @state.change("initialization_state_idx")
 def update_initial_option(initialization_state_idx, **kwargs):
-    print("initialization state selection: ",state.initialization_state_idx)
+    log("info", f"initialization state selection:  = {state.initialization_state_idx}")
     # but for compressible or incompressible?
 
 
 @state.change("initial_option_idx")
 def update_initial_option(initial_option_idx, **kwargs):
-    print("initialization selection: ",state.initial_option_idx)
-    print("restart_sol= ",bool (state.initial_option_idx))
+    log("info", f"initialization selection:  = {state.initial_option_idx}")
+    log("info", f"restart_sol= {bool (state.initial_option_idx)}")
 
     # option=0 : uniform values
     # option=1 : restart from file
     # option=2 : patch
     if (state.initial_option_idx==0):
       # uniform (constant) initialization
-      print("state.jsonData solve = ",state.jsonData["SOLVER"])
+      log("info", f"state.jsonData solve =  = {state.jsonData["SOLVER"]}")
       if "INC" in (state.jsonData["SOLVER"]):
-        print("initialization for incompressible")
+        log("info", "initialization for incompressible")
         if state.active_ui=="Initialization":
           state.active_sub_ui = "subinitialization_inc"
       else:
-        print("initialization for compressible")
+        log("info", "initialization for compressible")
         if state.active_ui=="Initialization":
           state.active_sub_ui = "subinitialization_comp"
     elif (state.initial_option_idx==1):
-      print("initialization from file")
+      log("info", "initialization from file")
       if state.active_ui=="Initialization":
         state.active_sub_ui = "subinitialization_file"
     else:
@@ -171,14 +171,14 @@ def update_initial_option(initial_option_idx, **kwargs):
 
 @state.change("initial_patch_idx")
 def update_initial_patch(initial_patch_idx, **kwargs):
-    print("patch selection: ",initial_patch_idx)
+    log("info", f"patch selection:  = {initial_patch_idx}")
 
 
 
 #@state.change("initialize")
 def initialize_uniform():
 
-  print("initialize solution")
+  log("info", "initialize solution")
 
   # construct the dataset_arrays
   datasetArrays = []
@@ -198,7 +198,7 @@ def initialize_uniform():
        energy = True
 
   if (compressible==True):
-    print("compressible")
+    log("info", "compressible")
     FieldNames.extend(["Density","Momentum_x","Momentum_y"])
     FieldValues.extend([state.init_density,state.init_momx,state.init_momy])
     if state.nDim==3:
@@ -207,9 +207,9 @@ def initialize_uniform():
     FieldNames.append("Energy")
     FieldValues.append(state.init_energy)
   else:
-    print("incompressible")
-    print("pressure:",state.init_pressure)
-    print("velocity:",state.init_velx," ",state.init_vely)
+    log("info", "incompressible")
+    log("info", f"pressure: = {state.init_pressure}")
+    log("info", f"velocity: = {state.init_velx," ",state.init_vely}")
     FieldNames.extend(["Pressure","Velocity_x","Velocity_y"])
     FieldValues.extend([state.init_pressure,state.init_velx,state.init_vely])
     if state.nDim==3:
@@ -236,10 +236,10 @@ def initialize_uniform():
     FieldNames.extend(["Tke","Dissipation"])
     FieldValues.extend([state.init_tke,state.init_dissipation])
 
-  print("fieldnames=",FieldNames)
+  log("info", f"fieldnames= = {FieldNames}")
 
   nPoints = grid.GetPoints().GetNumberOfPoints()
-  print("number of points = ",nPoints)
+  log("info", f"number of points =  = {nPoints}")
 
 
   for i in range(len(FieldNames)):
@@ -254,7 +254,7 @@ def initialize_uniform():
     ArrayObject.SetNumberOfValues(nPoints)
     ArrayObject.SetNumberOfTuples(nPoints)
 
-    print("name = ",name, " , value = ",value )
+    log("info", f"name =  = {name, " , value = ",value }")
 
     # Nijso: TODO FIXME reported to be a slow process.
     for i in range(nPoints):
@@ -277,9 +277,9 @@ def initialize_uniform():
   # we should now have the scalars available...
   defaultArray = datasetArrays[0]
   state.dataset_arrays = datasetArrays
-  #print("dataset = ",datasetArrays)
-  #print("dataset_0 = ",datasetArrays[0])
-  #print("dataset_0 = ",datasetArrays[0].get('text'))
+  #log("info", f"dataset =  = {datasetArrays}")
+  #log("info", f"dataset_0 =  = {datasetArrays[0]}")
+  #log("info", f"dataset_0 =  = {datasetArrays[0].get('text'}"))
 
   mesh_mapper.SetInputData(grid)
   mesh_actor.SetMapper(mesh_mapper)
@@ -315,8 +315,8 @@ def initialize_uniform():
     # convert to string, including double quotes
     stringfields = ', '.join(f'"{name}"' for name in fields) +"\n"
     f.write(stringfields)
-    #print(grid.GetPointData().GetNumberOfArrays())
-    #print(grid.GetPointData().GetArrayName(i))
+    #log("info", grid.GetPointData().GetNumberOfArrays())
+    #log("info", grid.GetPointData().GetArrayName(i))
     # now loop over points and get the coordinates
 
     # loop over all points
@@ -331,20 +331,20 @@ def initialize_uniform():
             datalist = datalist + "," + str(datapoint)
         datalist = datalist+"\n"
         f.write(datalist)
-        #print(p, " ",grid.GetPoint(p))
+        #log("info", p, " ",grid.GetPoint(p))
   f.close()
 
-  print("options=",state.LInitializationOption)
+  log("info", f"options= = {state.LInitializationOption}")
   # switch patch option on
   state.LInitializationOption[2]= {"text": "Patch", "value": 2, "disabled": False}
-  print("options=",state.LInitializationOption)
+  log("info", f"options= = {state.LInitializationOption}")
   state.dirty('LInitializationOption')
 
 
 
 
 def initialization_patch_subcard():
-  print("initialization_file_subcard:: set the ui_subcard")
+  log("info", "initialization_file_subcard:: set the ui_subcard")
   with ui_subcard(title="initialization from file", sub_ui_name="subinitialization_patch"):
     with vuetify.VContainer(fluid=True):
       # ####################################################### #
@@ -366,7 +366,7 @@ def initialization_patch_subcard():
 
 
 def initialization_file_subcard():
-  print("initialization_file_subcard:: set the ui_subcard")
+  log("info", "initialization_file_subcard:: set the ui_subcard")
   with ui_subcard(title="initialization from file", sub_ui_name="subinitialization_file"):
     with vuetify.VContainer(fluid=True):
       # ####################################################### #
@@ -398,11 +398,11 @@ def initialization_file_subcard():
 # secondary card
 def initialization_uniform_subcard():
 
-    print("initialization_uniform_subcard:: set the ui_subcard")
+    log("info", "initialization_uniform_subcard:: set the ui_subcard")
     #with vuetify.VContainer(fluid=True):
     # 1 row of option lists
     energy = bool(state.jsonData['INC_ENERGY_EQUATION'])
-    print("energy equation=",energy)
+    log("info", f"energy equation= = {energy}")
     # for the card to be visible, we have to set state.active_sub_ui = subinitialization_inc
     with ui_subcard(title="initialization (incompressible)", sub_ui_name="subinitialization_inc"):
       with vuetify.VContainer(fluid=True):

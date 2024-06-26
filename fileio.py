@@ -69,7 +69,7 @@ def set_json_fileio():
 ###############################################################
 def fileio_card():
     with ui_card(title="File I/O", ui_name="File I/O"):
-        print("     ## File I/O Selection ##")
+        log("info", "     ## File I/O Selection ##")
 
         with vuetify.VContainer(fluid=True, classes="pa-1 ma-1"):
           # ####################################################### #

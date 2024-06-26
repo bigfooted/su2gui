@@ -71,7 +71,7 @@ def set_json_solver():
 
   #for field in state.jsonData['CONV_FIELD']:
   state.convergence_fields = state.jsonData['CONV_FIELD']
-  print("state convergence fields = ",state.convergence_fields," ",type(state.convergence_fields))
+  log("info", f"state convergence fields =  = {state.convergence_fields," ",type(state.convergence_fields)}")
 
 
 # matplotlib
@@ -79,22 +79,22 @@ state.active_figure="mpl_plot_history"
 state.graph_update=True
 @state.change("active_figure", "figure_size", "countdown","monitorLinesVisibility")
 def update_chart(active_figure, **kwargs):
-    print("updating figure 1")
+    log("info", "updating figure 1")
     ctrl.update_figure(globals()[active_figure]())
     #ctrl.update_figure2(globals()[active_figure]())
 
 #matplotlib
 def update_visibility(index, visibility):
-    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    log("info", f"monitorLinesVisibility =  = {state.monitorLinesVisibility}")
     state.monitorLinesVisibility[index] = visibility
-    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    log("info", f"monitorLinesVisibility =  = {state.monitorLinesVisibility}")
     state.dirty("monitorLinesVisibility")
-    print(f"Toggle {index} to {visibility}")
-    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    log("info", f"Toggle {index} to {visibility}")
+    log("info", f"monitorLinesVisibility =  = {state.monitorLinesVisibility}")
 
 #matplotlib
 def dialog_card():
-    print("dialog card, lines=",state.monitorLinesNames)
+    log("info", f"dialog card, lines= = {state.monitorLinesNames}")
     # show_dialog2 determines if the entire dialog is shown or not
     with vuetify.VDialog(width=200,position='{X:10,Y:10}',transition="dialog-top-transition",v_model=("show_dialog",False)):
       #with vuetify.VCard(color="light-gray"):
@@ -136,11 +136,11 @@ async def start_countdown(result):
     while state.keep_updating:
         with state:
             await asyncio.sleep(2.0)
-            print("iteration = ",state.global_iter, type(state.global_iter))
+            log("info", f"iteration =  = {state.global_iter, type(state.global_iter)}")
             wrt_freq = state.jsonData['OUTPUT_WRT_FREQ'][1]
-            print("wrt_freq = ",wrt_freq, type(wrt_freq))
-            print("iteration save = ",state.global_iter % wrt_freq)
-            print("keep updating = ",state.keep_updating)
+            log("info", f"wrt_freq =  = {wrt_freq, type(wrt_freq)}")
+            log("info", f"iteration save =  = {state.global_iter % wrt_freq}")
+            log("info", f"keep updating =  = {state.keep_updating}")
             # update the history from file
             readHistory(BASE / "user" / state.history_filename)
             # update the restart from file, do not reset the active scalar value
@@ -150,9 +150,9 @@ async def start_countdown(result):
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
-            print("poll = ",proc_SU2.poll())
+            log("info", f"poll =  = {proc_SU2.poll()}")
             if proc_SU2.poll() != None:
-              print("job has stopped")
+              log("info", "job has stopped")
               # stop updating the graphs
               state.keep_updating = False
               # set the running state to false
@@ -165,7 +165,7 @@ async def start_countdown(result):
 ###############################################################
 def solver_card():
     with ui_card(title="Solver", ui_name="Solver"):
-        print("## Solver Selection ##")
+        log("info", "## Solver Selection ##")
       # 1 row of option lists
         with vuetify.VRow(classes="pt-2"):
           with vuetify.VCol(cols="8"):
@@ -201,7 +201,7 @@ def solver_card():
 @state.change("iter_idx")
 def update_material(iter_idx, **kwargs):
     #
-    print("ITER value: ",state.iter_idx)
+    log("info", f"ITER value:  = {state.iter_idx}")
     #
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
@@ -225,7 +225,7 @@ def su2_play():
     # every time we press the button we switch the state
     state.solver_running = not state.solver_running
     if state.solver_running:
-        print("### SU2 solver started!")
+        log("info", "### SU2 solver started!")
         # change the solver button icon
         state.solver_icon="mdi-stop-circle"
 
@@ -247,38 +247,38 @@ def su2_play():
         # at this point we have started the simulation
         # we can now start updating the real-time plots
         state.keep_updating = True
-        print("start polling, poll = ",proc_SU2.poll())
+        log("info", f"start polling, poll =  = {proc_SU2.poll()}")
 
         # Wait until process terminates
         #while result.poll() is None:
         #  time.sleep(1.0)
-        print("result = ",proc_SU2)
-        print("result poll= ",proc_SU2.poll())
+        log("info", f"result =  = {proc_SU2}")
+        log("info", f"result poll=  = {proc_SU2.poll()}")
 
         # periodic update of the monitor and volume result
         start_countdown(proc_SU2)
 
 
-        print("result = ",proc_SU2)
+        log("info", f"result =  = {proc_SU2}")
         # save mesh
         # save config
         # save restart file
         # call su2_cfd
     else:
         state.solver_icon="mdi-play-circle"
-        print("### SU2 solver stopped!"),
+        log("info", "### SU2 solver stopped!"),
         # we need to terminate or kill the result process here if stop is pressed
-        print("process=",type(proc_SU2))
+        log("info", f"process= = {type(proc_SU2)}")
         proc_SU2.terminate()
 
 # matplotlib history
 def update_convergence_fields_visibility(index, visibility):
-    print("index=",index)
-    print("visible=",state.convergence_fields_visibility)
+    log("info", f"index= = {index}")
+    log("info", f"visible= = {state.convergence_fields_visibility}")
     state.convergence_fields_visibility[index] = visibility
-    print("visible=",state.convergence_fields_visibility)
+    log("info", f"visible= = {state.convergence_fields_visibility}")
     state.dirty("convergence_fields_visibility")
-    print(f"Toggle {index} to {visibility}")
+    log("info", f"Toggle {index} to {visibility}")
 
 
 # matplotlib history
@@ -317,15 +317,15 @@ def solver_dialog_card_convergence():
 
 ###############################################################################
 def update_solver_dialog_card_convergence():
-    print("changing state of solver_dialog_Card_convergence to:",state.show_solver_dialog_card_convergence)
+    log("info", f"changing state of solver_dialog_Card_convergence to: = {state.show_solver_dialog_card_convergence}")
     state.show_solver_dialog_card_convergence = not state.show_solver_dialog_card_convergence
 
     # if we show the card, then also update the fields that we need to show
     if state.show_solver_dialog_card_convergence==True:
-      print("updating list of fields")
+      log("info", "updating list of fields")
       # note that Euler and inc_euler can be treated as compressible / incompressible as well
-      print(state.jsonData['SOLVER'])
-      print(state.jsonData['INC_ENERGY_EQUATION'])
+      log("info", state.jsonData['SOLVER'])
+      log("info", state.jsonData['INC_ENERGY_EQUATION'])
 
       if ("INC" in str(state.jsonData['SOLVER'])):
         compressible = False
@@ -361,14 +361,14 @@ def update_solver_dialog_card_convergence():
       # get the checkbox states from the jsondata
       state.convergence_fields_visibility = [False for i in state.convergence_fields]
       for field in state.jsonData['CONV_FIELD']:
-         print("field=",field)
+         log("info", f"field= = {field}")
          for i in range(len(state.convergence_fields)):
-            print("i=",i," ",state.convergence_fields[i])
+            log("info", f"i= = {i," ",state.convergence_fields[i]}")
             if (field==state.convergence_fields[i]):
-               print("field found")
+               log("info", "field found")
                state.convergence_fields_visibility[i] = True
 
-      print("convergence fields:",state.convergence_fields)
+      log("info", f"convergence fields: = {state.convergence_fields}")
       state.dirty('convergence_fields')
       state.dirty('convergence_fields_range')
     else:
@@ -398,7 +398,7 @@ def update_dialog():
 # Read the history file
 # set the names and visibility
 def readHistory(filename):
-    print("read_history, filename=",filename)
+    log("info", f"read_history, filename= = {filename}")
     skipNrRows=[]
     # read the history file
     dataframe = pd.read_csv(filename,skiprows=skipNrRows)
@@ -423,7 +423,7 @@ def readHistory(filename):
     # number of global iterations, assuming we start from 0 and every line is an iteration.
     # actually, we should look at Inner_Iter
     state.global_iter = len(dfrms.index)
-    #print("x = ",state.x)
+    #log("info", f"x =  = {state.x}")
     state.ylist=[]
     for c in range(len(dfrms.columns)):
         state.ylist.append(dfrms.iloc[:,c].tolist())
@@ -436,10 +436,10 @@ def readHistory(filename):
 # # ##### upload ascii restart file #####
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
-  print("Updating restart.csv file")
+  log("info", "Updating restart.csv file")
   if restartFile is None:
     state.jsonData["RESTART_SOL"] = "NO"
-    print("removed file")
+    log("info", "removed file")
     return
 
   # for .csv
@@ -460,7 +460,7 @@ def uploadRestart(restartFile, **kwargs):
   state.jsonData["READ_BINARY_RESTART"] = "NO"
 
   
-  # print("Restart loaded ")
+  # log("info", ("Restart loaded ")
 
 
   # we reset the active field because we read or upload the restart from file as a user action
@@ -474,7 +474,7 @@ def uploadRestart(restartFile, **kwargs):
 #    for proc in psutil.process_iter():
 #        try:
 #            for item in proc.open_files():
-#                print("item=",item)
+#                log("info", f"item= = {item}")
 #                if fpath == item.path:
 #                    return True
 #        except Exception:
@@ -498,8 +498,8 @@ def readRestart(restartFile, reset_active_field):
 
   # check if the points and cells match, if not then we probably were writing to the file
   # while reading it and we just skip this update
-  print("number of points read = ",len(df))
-  print("number of points expected = ",grid.GetPoints().GetNumberOfPoints())
+  log("info", f"number of points read =  = {len(df)}")
+  log("info", f"number of points expected =  = {grid.GetPoints().GetNumberOfPoints()}")
   if len(df) != grid.GetPoints().GetNumberOfPoints():
     return
 
@@ -508,7 +508,7 @@ def readRestart(restartFile, reset_active_field):
   counter=0
   for key in df.keys():
     name = key
-    print("reading restart, field name = ",name)
+    log("info", f"reading restart, field name =  = {name}")
     # let's skip these 
     if (name in ['PointID','x','y']):
       continue
@@ -539,9 +539,9 @@ def readRestart(restartFile, reset_active_field):
     counter += 1
 
   state.dataset_arrays = datasetArrays
-  #print("dataset = ",datasetArrays)
-  #print("dataset_0 = ",datasetArrays[0])
-  #print("dataset_0 = ",datasetArrays[0].get('text'))
+  #log("info", f"dataset =  = {datasetArrays}")
+  #log("info", f"dataset_0 =  = {datasetArrays[0]}")
+  #log("info", f"dataset_0 =  = {datasetArrays[0].get('text'}"))
 
   mesh_mapper.SetInputData(grid)
   mesh_actor.SetMapper(mesh_mapper)
@@ -623,11 +623,11 @@ def mpl_plot_history():
 
     # loop over the list and plot
     for idx in state.monitorLinesRange:
-      #print("line= ",idx,", name= ",state.monitorLinesNames[idx]," visible:",state.monitorLinesVisibility[idx])
-      #print("__ range x = ", min(state.x), " ",max(state.x))
+      #log("info", f"line=  = {idx,", name= ",state.monitorLinesNames[idx]," visible:",state.monitorLinesVisibility[idx]}")
+      #log("info", f"__ range x =  = {min(state.x}"), " ",max(state.x))
       # only plot if the visibility is True
       if state.monitorLinesVisibility[idx]:
-        #print("printing line ",idx)
+        #log("info", f"log("info", ing line  = {idx}")
         ax.plot( state.x,state.ylist[idx], label=state.monitorLinesNames[idx],linewidth=5, markersize=20, markeredgewidth=10,color=mplColorList[idx])
 
     ax.set_xlabel('iterations',labelpad=10)

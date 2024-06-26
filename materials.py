@@ -587,7 +587,7 @@ def update_materials_dialog_card_conductivity():
 ###############################################################
 def materials_card():
     with ui_card(title="Materials", ui_name="Materials"):
-        print("## Materials Selection ##")
+        log("info", "## Materials Selection ##")
 
         # 1 row of option lists
 
@@ -687,8 +687,8 @@ def materials_card():
 ###############################################################
 @state.change("materials_fluid_idx")
 def update_material(materials_fluid_idx, **kwargs):
-    print("fluid model selection: ",materials_fluid_idx)
-    print("parent ui = ",state.active_ui)
+    log("info", f"fluid model selection:  = {materials_fluid_idx}")
+    log("info", f"parent ui =  = {state.active_ui}")
 
     # note that fluid model determines Cp
     # Cp is constant, except when fluid model is CIncIdealGasPoly
@@ -705,7 +705,7 @@ def update_material(materials_fluid_idx, **kwargs):
     else:
       state.jsonData['INC_DENSITY_MODEL']= 'VARIABLE'
 
-    print("FLUID_MODEL=",state.jsonData['FLUID_MODEL'])
+    log("info", f"FLUID_MODEL= = {state.jsonData['FLUID_MODEL']}")
 
     state.dirty('jsonData')
 
@@ -713,7 +713,7 @@ def update_material(materials_fluid_idx, **kwargs):
 
 @state.change("materials_heatcapacity_idx")
 def update_material(materials_heatcapacity_idx, **kwargs):
-    print("fluid heat capacity model selection: ",materials_heatcapacity_idx)
+    log("info", f"fluid heat capacity model selection:  = {materials_heatcapacity_idx}")
     # only set it if the parent is Materials
 
     # update config option value
@@ -723,24 +723,24 @@ def update_material(materials_heatcapacity_idx, **kwargs):
 
 @state.change("materials_viscosity_idx")
 def update_material(materials_viscosity_idx, **kwargs):
-    print("fluid viscosity model selection: ",materials_viscosity_idx)
+    log("info", f"fluid viscosity model selection:  = {materials_viscosity_idx}")
     # only set it if the parent is Materials
     #if state.active_ui=="Materials":
     #  state.active_sub_ui = "submaterials_viscosity"
 
     # update config option value
     state.jsonData['VISCOSITY_MODEL']= GetJsonName(materials_viscosity_idx,state.LMaterialsViscosity)
-    print("state.jsonData=",state.jsonData['VISCOSITY_MODEL'])
+    log("info", f"state.jsonData= = {state.jsonData['VISCOSITY_MODEL']}")
     state.dirty('jsonData')
 
 
 @state.change("materials_conductivity_idx")
 def update_material(materials_conductivity_idx, **kwargs):
-    print("fluid conductivity model selection: ",materials_conductivity_idx)
+    log("info", f"fluid conductivity model selection:  = {materials_conductivity_idx}")
     # only set it if the parent is Materials
     #if state.active_ui=="Materials":
     #  state.active_sub_ui = "submaterials_conductivity"
-    print("energy = ",state.jsonData['INC_ENERGY_EQUATION'])
+    log("info", f"energy =  = {state.jsonData['INC_ENERGY_EQUATION']}")
 
     # update config option value
     state.jsonData['CONDUCTIVITY_MODEL']= GetJsonName(materials_conductivity_idx,state.LMaterialsConductivity)
@@ -767,8 +767,8 @@ def computePressure():
 # cp = cv = SPECIFIC_HEAT_CP
 @state.change("materials_inc_density_init_idx")
 def update_material(materials_inc_density_init_idx, **kwargs):
-    print("fluid density model selection: ",materials_inc_density_init_idx)
-    print("parent ui = ",state.active_ui)
+    log("info", f"fluid density model selection:  = {materials_inc_density_init_idx}")
+    log("info", f"parent ui =  = {state.active_ui}")
     # only set it if the parent is Materials
     #if state.active_ui=="Materials":
     #  state.active_sub_ui = "submaterials_fluid"
@@ -782,8 +782,8 @@ def update_material(materials_inc_density_init_idx, **kwargs):
 
 @state.change("materials_inc_temperature_init_idx")
 def update_material(materials_inc_temperature_init_idx, **kwargs):
-    print("fluid density model selection: ",materials_inc_temperature_init_idx)
-    print("parent ui = ",state.active_ui)
+    log("info", f"fluid density model selection:  = {materials_inc_temperature_init_idx}")
+    log("info", f"parent ui =  = {state.active_ui}")
     # only set it if the parent is Materials
     #if state.active_ui=="Materials":
     #  state.active_sub_ui = "submaterials_fluid"
@@ -797,8 +797,8 @@ def update_material(materials_inc_temperature_init_idx, **kwargs):
 
 @state.change("materials_molecular_weight_idx")
 def update_material(materials_molecular_weight_idx, **kwargs):
-    print("fluid density model selection: ",materials_molecular_weight_idx)
-    print("parent ui = ",state.active_ui)
+    log("info", f"fluid density model selection:  = {materials_molecular_weight_idx}")
+    log("info", f"parent ui =  = {state.active_ui}")
     # only set it if the parent is Materials
 
     # update config option value
@@ -811,84 +811,84 @@ def update_material(materials_molecular_weight_idx, **kwargs):
 # constant viscosity model
 @state.change("materials_constant_viscosity_idx")
 def update_material(materials_constant_viscosity_idx, **kwargs):
-    print("constant viscosity value: ",materials_constant_viscosity_idx)
+    log("info", f"constant viscosity value:  = {materials_constant_viscosity_idx}")
     # update config option value
     state.jsonData['MU_CONSTANT']= materials_constant_viscosity_idx
 
 # constant cp
 @state.change("materials_constant_cp_idx")
 def update_material(materials_constant_cp_idx, **kwargs):
-    print("constant cp value: ",materials_constant_cp_idx)
+    log("info", f"constant cp value:  = {materials_constant_cp_idx}")
     # update config option value
     state.jsonData['SPECIFIC_HEAT_CP']= materials_constant_cp_idx
 
 # constant conductivity model
 @state.change("materials_constant_conductivity_idx")
 def update_material(materials_constant_conductivity_idx, **kwargs):
-    print("constant conductivity value: ",materials_constant_conductivity_idx)
+    log("info", f"constant conductivity value:  = {materials_constant_conductivity_idx}")
     # update config option value
     state.jsonData['THERMAL_CONDUCTIVITY_CONSTANT']= materials_constant_conductivity_idx
 
 # Constant Prandtl conductivity model
 @state.change("materials_constant_prandtl_idx")
 def update_material(materials_constant_prandtl_idx, **kwargs):
-    print("constant prandtl value: ",materials_constant_prandtl_idx)
+    log("info", f"constant prandtl value:  = {materials_constant_prandtl_idx}")
     # update config option value
     state.jsonData['PRANDTL_LAM']= materials_constant_prandtl_idx
 
 # Sutherland viscosity model
 @state.change("materials_sutherland_muref_idx")
 def update_material(materials_sutherland_muref_idx, **kwargs):
-    print("Sutherland viscosity mu_ref value: ",materials_sutherland_muref_idx)
+    log("info", f"Sutherland viscosity mu_ref value:  = {materials_sutherland_muref_idx}")
     # update config option value
     state.jsonData['MU_REF']= materials_sutherland_muref_idx
 
 # Sutherland viscosity model
 @state.change("materials_sutherland_muTref_idx")
 def update_material(materials_sutherland_muTref_idx, **kwargs):
-    print("Sutherland viscosity mu_T_ref value: ",materials_sutherland_muTref_idx)
+    log("info", f"Sutherland viscosity mu_T_ref value:  = {materials_sutherland_muTref_idx}")
     # update config option value
     state.jsonData['MU_T_REF']= materials_sutherland_muTref_idx
 
 # Sutherland viscosity model
 @state.change("materials_sutherland_S_idx")
 def update_material(materials_sutherland_S_idx, **kwargs):
-    print("Sutherland viscosity S value: ",materials_sutherland_S_idx)
+    log("info", f"Sutherland viscosity S value:  = {materials_sutherland_S_idx}")
     # update config option value
     state.jsonData['SUTHERLAND_CONSTANT']= materials_sutherland_S_idx
 
 # Polynomial viscosity model
 @state.change("materials_polynomial_viscosity_a0_idx")
 def update_material(materials_polynomial_viscosity_a0_idx, **kwargs):
-    print("Polynomial viscosity a0 value: ",materials_polynomial_viscosity_a0_idx)
+    log("info", f"Polynomial viscosity a0 value:  = {materials_polynomial_viscosity_a0_idx}")
     # update config option value
     state.jsonData['MU_POLYCOEFFS'][0]= materials_polynomial_viscosity_a0_idx
 
 # Polynomial viscosity model
 @state.change("materials_polynomial_viscosity_a1_idx")
 def update_material(materials_polynomial_viscosity_a1_idx, **kwargs):
-    print("Polynomial viscosity a1 value: ",materials_polynomial_viscosity_a1_idx)
+    log("info", f"Polynomial viscosity a1 value:  = {materials_polynomial_viscosity_a1_idx}")
     # update config option value
     state.jsonData['MU_POLYCOEFFS'][1]= materials_polynomial_viscosity_a1_idx
 
 # Polynomial viscosity model
 @state.change("materials_polynomial_viscosity_a2_idx")
 def update_material(materials_polynomial_viscosity_a2_idx, **kwargs):
-    print("Polynomial viscosity a2 value: ",materials_polynomial_viscosity_a2_idx)
+    log("info", f"Polynomial viscosity a2 value:  = {materials_polynomial_viscosity_a2_idx}")
     # update config option value
     state.jsonData['MU_POLYCOEFFS'][2]= materials_polynomial_viscosity_a2_idx
 
 # Polynomial viscosity model
 @state.change("materials_polynomial_viscosity_a3_idx")
 def update_material(materials_polynomial_viscosity_a3_idx, **kwargs):
-    print("Polynomial viscosity a3 value: ",materials_polynomial_viscosity_a3_idx)
+    log("info", f"Polynomial viscosity a3 value:  = {materials_polynomial_viscosity_a3_idx}")
     # update config option value
     state.jsonData['MU_POLYCOEFFS'][3]= materials_polynomial_viscosity_a3_idx
 
 # Polynomial viscosity model
 @state.change("materials_polynomial_viscosity_a4_idx")
 def update_material(materials_polynomial_viscosity_a4_idx, **kwargs):
-    print("Polynomial viscosity a4 value: ",materials_polynomial_viscosity_a4_idx)
+    log("info", f"Polynomial viscosity a4 value:  = {materials_polynomial_viscosity_a4_idx}")
     # update config option value
     state.jsonData['MU_POLYCOEFFS'][4]= materials_polynomial_viscosity_a4_idx
 
@@ -896,35 +896,35 @@ def update_material(materials_polynomial_viscosity_a4_idx, **kwargs):
 # Polynomial cp model
 @state.change("materials_polynomial_cp_a0_idx")
 def update_material(materials_polynomial_cp_a0_idx, **kwargs):
-    print("Polynomial cp a0 value: ",materials_polynomial_cp_a0_idx)
+    log("info", f"Polynomial cp a0 value:  = {materials_polynomial_cp_a0_idx}")
     # update config option value
     state.jsonData['CP_POLYCOEFFS'][0]= materials_polynomial_cp_a0_idx
 
 # Polynomial cp model
 @state.change("materials_polynomial_cp_a1_idx")
 def update_material(materials_polynomial_cp_a1_idx, **kwargs):
-    print("Polynomial cp a1 value: ",materials_polynomial_cp_a1_idx)
+    log("info", f"Polynomial cp a1 value:  = {materials_polynomial_cp_a1_idx}")
     # update config option value
     state.jsonData['CP_POLYCOEFFS'][1]= materials_polynomial_cp_a1_idx
 
 # Polynomial cp model
 @state.change("materials_polynomial_cp_a2_idx")
 def update_material(materials_polynomial_cp_a2_idx, **kwargs):
-    print("Polynomial cp a2 value: ",materials_polynomial_cp_a2_idx)
+    log("info", f"Polynomial cp a2 value:  = {materials_polynomial_cp_a2_idx}")
     # update config option value
     state.jsonData['CP_POLYCOEFFS'][2]= materials_polynomial_cp_a2_idx
 
 # Polynomial cp model
 @state.change("materials_polynomial_cp_a3_idx")
 def update_material(materials_polynomial_cp_a3_idx, **kwargs):
-    print("Polynomial cp a3 value: ",materials_polynomial_cp_a3_idx)
+    log("info", f"Polynomial cp a3 value:  = {materials_polynomial_cp_a3_idx}")
     # update config option value
     state.jsonData['CP_POLYCOEFFS'][3]= materials_polynomial_cp_a3_idx
 
 # Polynomial cp model
 @state.change("materials_polynomial_cp_a4_idx")
 def update_material(materials_polynomial_cp_a4_idx, **kwargs):
-    print("Polynomial cp a4 value: ",materials_polynomial_cp_a4_idx)
+    log("info", f"Polynomial cp a4 value:  = {materials_polynomial_cp_a4_idx}")
     # update config option value
     state.jsonData['CP_POLYCOEFFS'][4]= materials_polynomial_cp_a4_idx
 
@@ -933,48 +933,48 @@ def update_material(materials_polynomial_cp_a4_idx, **kwargs):
 # Polynomial kt model
 @state.change("materials_polynomial_kt_a0_idx")
 def update_material(materials_polynomial_kt_a0_idx, **kwargs):
-    print("Polynomial kt a0 value: ",materials_polynomial_kt_a0_idx)
+    log("info", f"Polynomial kt a0 value:  = {materials_polynomial_kt_a0_idx}")
     # update config option value
     state.jsonData['KT_POLYCOEFFS'][0]= materials_polynomial_kt_a0_idx
 
 # Polynomial kt model
 @state.change("materials_polynomial_kt_a1_idx")
 def update_material(materials_polynomial_kt_a1_idx, **kwargs):
-    print("Polynomial kt a1 value: ",materials_polynomial_kt_a1_idx)
+    log("info", f"Polynomial kt a1 value:  = {materials_polynomial_kt_a1_idx}")
     # update config option value
     state.jsonData['KT_POLYCOEFFS'][1]= materials_polynomial_kt_a1_idx
 
 # Polynomial kt model
 @state.change("materials_polynomial_kt_a2_idx")
 def update_material(materials_polynomial_kt_a2_idx, **kwargs):
-    print("Polynomial kt a2 value: ",materials_polynomial_kt_a2_idx)
+    log("info", f"Polynomial kt a2 value:  = {materials_polynomial_kt_a2_idx}")
     # update config option value
     state.jsonData['KT_POLYCOEFFS'][2]= materials_polynomial_kt_a2_idx
 
 # Polynomial kt model
 @state.change("materials_polynomial_kt_a3_idx")
 def update_material(materials_polynomial_kt_a3_idx, **kwargs):
-    print("Polynomial kt a3 value: ",materials_polynomial_kt_a3_idx)
+    log("info", f"Polynomial kt a3 value:  = {materials_polynomial_kt_a3_idx}")
     # update config option value
     state.jsonData['KT_POLYCOEFFS'][3]= materials_polynomial_kt_a3_idx
 
 # Polynomial kt model
 @state.change("materials_polynomial_kt_a4_idx")
 def update_material(materials_polynomial_kt_a4_idx, **kwargs):
-    print("Polynomial kt a4 value: ",materials_polynomial_kt_a4_idx)
+    log("info", f"Polynomial kt a4 value:  = {materials_polynomial_kt_a4_idx}")
     # update config option value
     state.jsonData['KT_POLYCOEFFS'][4]= materials_polynomial_kt_a4_idx
 
 # compressible gamma
 @state.change("materials_gamma_idx")
 def update_material(materials_gamma_idx, **kwargs):
-    print("gamma value: ",materials_gamma_idx)
+    log("info", f"gamma value:  = {materials_gamma_idx}")
     # update config option value
     state.jsonData['GAMMA_VALUE']= materials_gamma_idx
 
 # compressible specific gas constant
 @state.change("materials_gas_constant_idx")
 def update_material(materials_gas_constant_idx, **kwargs):
-    print("gamma value: ",materials_gas_constant_idx)
+    log("info", f"gamma value:  = {materials_gas_constant_idx}")
     # update config option value
     state.jsonData['GAS_CONSTANT']= materials_gas_constant_idx

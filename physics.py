@@ -83,15 +83,15 @@ LBoundaryIncOutletType= [
 def set_json_physics():
   # energy equation on/off
   state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
-  print("       ################# energy equation = ",state.physics_energy_idx)
+  log("info", f"       ################# energy equation =  = {state.physics_energy_idx}")
 
   # compressible or incompressible
   state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
-  print("       ################# compressible= ",state.physics_comp_idx)
+  log("info", f"       ################# compressible=  = {state.physics_comp_idx}")
 
   # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
   state.physics_energy_always_on = 0 if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS') else 1
-  print("energy always on = ",state.physics_energy_always_on)
+  log("info", f"energy always on =  = {state.physics_energy_always_on}")
 
   # the SA options
   state.SAOptions={"NONE":True,
@@ -116,15 +116,15 @@ def set_json_physics():
   state.physics_turb_sa_bcm_idx = 0
 
   if "EULER" in state.jsonData['SOLVER']:
-     print("EULER solver")
+     log("info", "EULER solver")
      state.physics_turb_idx = 0
   elif "NAVIER_STOKES" in state.jsonData['SOLVER']:
-     print("NAVIER-STOKES solver")
+     log("info", "NAVIER-STOKES solver")
      state.physics_turb_idx = 1
   elif "RANS" in state.jsonData['SOLVER']:
-    print("RANS solver")
+    log("info", "RANS solver")
     if state.jsonData['KIND_TURB_MODEL'] == "SA":
-      print("SA model")
+      log("info", "SA model")
       # must be SA
       state.physics_turb_idx = 2
       # activate sub_ui
@@ -143,13 +143,13 @@ def set_json_physics():
       state.physics_turb_sa_rotation_idx= bool("ROTATION" in state.jsonData['SA_OPTIONS'])
       state.physics_turb_sa_bcm_idx= bool("BCM" in state.jsonData['SA_OPTIONS'])
     else:
-      print("SST model")
+      log("info", "SST model")
       state.physics_turb_idx = 3
       # activate sub_ui
       #state.active_sub_ui = "subphysics_sst"
       state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
   else:
-     print("no proper solver defined")
+     log("info", "no proper solver defined")
 
   state.dirty('physics_energy_idx')
   state.dirty('physics_comp_idx')
@@ -172,7 +172,7 @@ def set_json_physics():
 ###############################################################
 def physics_card():
     with ui_card(title="Physics", ui_name="Physics"):
-        print("     ## Physics Selection ##")
+        log("info", "     ## Physics Selection ##")
 
         # todo: viscous flow on/off (Euler vs Navier-Stokes)
 
@@ -231,7 +231,7 @@ def physics_card():
 ###############################################################
 @state.change("physics_turb_sst_idx")
 def update_physics_turb_sst(physics_turb_sst_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sst_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sst_idx}")
     state.jsonData['SST_OPTIONS']= GetJsonName(physics_turb_sst_idx,LPhysicsTurbSSTOptions)
 
 ###############################################################
@@ -239,13 +239,13 @@ def update_physics_turb_sst(physics_turb_sst_idx, **kwargs):
 ###############################################################
 @state.change("physics_turb_sa_idx")
 def update_physics_turb_sa(physics_turb_sa_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_idx}")
     #NONE should be false
     state.SAOptions['NONE'] = False
     state.SAOptions['NEGATIVE'] = False
     state.SAOptions['EDWARDS'] = False
     state.SAOptions[GetJsonName(physics_turb_sa_idx,LPhysicsTurbSAOptions)] = True
-    print("     SA options=",state.SAOptions)
+    log("info", f"     SA options= = {state.SAOptions}")
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
@@ -255,68 +255,68 @@ def update_physics_turb_sa(physics_turb_sa_idx, **kwargs):
 
 @state.change("physics_turb_sa_ft2_idx")
 def update_physics_turb_sa(physics_turb_sa_ft2_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_ft2_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_ft2_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['WITHFT2'] = physics_turb_sa_ft2_idx
-    print("     SA options=",state.SAOptions)
+    log("info", f"     SA options= = {state.SAOptions}")
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key,", val=",value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_qcr2000_idx")
 def update_physics_turb_sa(physics_turb_sa_qcr2000_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_qcr2000_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_qcr2000_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['QCR2000'] = physics_turb_sa_qcr2000_idx
-    print("     SA options=",state.SAOptions)
+    log("info", f"     SA options= = {state.SAOptions}")
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key,", val=",value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_compressibility_idx")
 def update_physics_turb_sa(physics_turb_sa_compressibility_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_compressibility_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_compressibility_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['COMPRESSIBILITY'] = physics_turb_sa_compressibility_idx
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key,", val=",value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_rotation_idx")
 def update_physics_turb_sa(physics_turb_sa_rotation_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_rotation_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_rotation_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['ROTATION'] = physics_turb_sa_rotation_idx
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key,", val=",value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_bcm_idx")
 def update_physics_turb_sa(physics_turb_sa_bcm_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_bcm_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_bcm_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['BCM'] = physics_turb_sa_bcm_idx
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key,", val=",value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -326,7 +326,7 @@ def update_physics_turb_sa(physics_turb_sa_bcm_idx, **kwargs):
 @state.change("physics_energy_idx")
 def update_physics_energy(physics_energy_idx, **kwargs):
 
-    print("     energy selection: ",physics_energy_idx)
+    log("info", f"     energy selection:  = {physics_energy_idx}")
     # can only be activated/deactivated for incompressible
     #state.energy = bool(state.physics_energy_idx)
 
@@ -342,13 +342,13 @@ def update_physics_energy(physics_energy_idx, **kwargs):
 ############################################################################
 @state.change("physics_comp_idx")
 def update_physics_comp(physics_comp_idx, **kwargs):
-    print("     compressible selection: ",physics_comp_idx)
+    log("info", f"     compressible selection:  = {physics_comp_idx}")
     # compressible selected means we have either NAVIER_STOKES or RANS or EULER
     # incompressible selected means we have either INC_RANS or INC_NAVIER_STOKES or INC_EULER
     # This option goes together with the turbulence option
 
     compressible = bool(physics_comp_idx)
-    print("compressible = ",compressible)
+    log("info", f"compressible =  = {compressible}")
 
     # update the turbulence models from compressible to incompressible or vice versa
     update_physics_turb(state.physics_turb_idx)
@@ -358,21 +358,21 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     # - fluid materials (viscosity)
     # - boundary conditions
     if (compressible==True):
-      print("       selecting compressible for material fluids")
+      log("info", "       selecting compressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidComp
       #state.field_state_name = "Density"
       state.LMaterialsViscosity = LMaterialsViscosityComp
       state.LMaterialsConductivity = LMaterialsConductivityComp
-      print("       selecting compressible boundary type for inlet and outlet")
+      log("info", "       selecting compressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryInletType
       state.bcoutletsubtype = LBoundaryOutletType
     else:
-      print("       selecting incompressible for material fluids")
+      log("info", "       selecting incompressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidIncomp
       #state.field_state_name = "Pressure"
       state.LMaterialsViscosity = LMaterialsViscosityIncomp
       state.LMaterialsConductivity = LMaterialsConductivityIncomp
-      print("       selecting incompressible boundary type for inlet and outlet")
+      log("info", "       selecting incompressible boundary type for inlet and outlet")
       state.bcinletsubtype = LBoundaryIncInletType
       state.bcoutletsubtype = LBoundaryIncOutletType
     # communicate to update all options when loading json config file
@@ -389,7 +389,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
 ###############################################################
 @state.change("physics_turb_idx")
 def update_physics_turb(physics_turb_idx, **kwargs):
-    print("     turbulence selection: ",physics_turb_idx)
+    log("info", f"     turbulence selection:  = {physics_turb_idx}")
     # if turbulence is selected, we also need to select a default turbulence model
     # if turbulence is deselected, we put turbulence model to "NONE"
 
@@ -431,30 +431,30 @@ def update_physics_turb(physics_turb_idx, **kwargs):
             state.jsonData['KIND_TURB_MODEL']="SST"
 
     if (physics_turb_idx == 2):
-        print("     SA turbulence model activated")
+        log("info", "     SA turbulence model activated")
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sa"
         state.submodeltext = "SA text"
     elif (physics_turb_idx == 3):
-        print("     SST turbulence model activated")
+        log("info", "     SST turbulence model activated")
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sst"
         state.submodeltext = "SST text"
     else:
-        print("     SST turbulence model deactivated")
+        log("info", "     SST turbulence model deactivated")
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_none"
         state.submodeltext = "no model"
 
     # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
-    print("solver = ",state.jsonData['SOLVER'])
+    log("info", f"solver =  = {state.jsonData['SOLVER']}")
     if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS'):
       state.physics_energy_always_on = 0
     else:
       state.physics_energy_always_on = 1
 
     state.dirty('physics_energy_always_on')
-    print("Is energy always on? ",state.physics_energy_always_on)
+    log("info", f"Is energy always on?  = {state.physics_energy_always_on}")
     state.dirty('jsonData')
 
 

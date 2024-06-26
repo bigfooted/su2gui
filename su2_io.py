@@ -22,7 +22,7 @@ def remove_empty_lists(d):
 # create the json entries for the boundaries using BCDictList
 ########################################################################################
 def createjsonMarkers():
-  print("creating json entry for inlet")
+  log("info", "creating json entry for inlet")
   marker_inlet=[]
   marker_isothermal=[]
   marker_heatflux=[]
@@ -37,7 +37,7 @@ def createjsonMarkers():
 
   # loop over the boundaries and construct the markers
   for bcdict in state.BCDictList:
-    print("bcdict = ",bcdict)
+    log("info", f"bcdict =  = {bcdict}")
     # ##### WALL BOUNDARY CONDITIONS #####
     if bcdict['bc_subtype']=="Temperature":
         marker = [bcdict['bcName'], bcdict['bc_temperature']]
@@ -48,7 +48,7 @@ def createjsonMarkers():
     elif bcdict['bc_subtype']=="Heat transfer":
         marker = [bcdict['bcName']]
         marker.extend(bcdict['bc_heattransfer'])
-        print("heat transfer marker=",marker)
+        log("info", f"heat transfer marker= = {marker}")
         marker_heattransfer.append( marker )
     # ##### OUTLET BOUNDARY CONDITIONS #####
     elif bcdict['bc_subtype']=="Target mass flow rate":
@@ -94,20 +94,20 @@ def createjsonMarkers():
   state.jsonData['MARKER_INLET']=marker_inlet
   state.jsonData['INC_INLET_TYPE']=marker_inc_inlet_type
 
-  print("marker_isothermal=",state.jsonData['MARKER_ISOTHERMAL'])
-  print("marker_heatflux=",state.jsonData['MARKER_HEATFLUX'])
-  print("marker_heattransfer=",state.jsonData['MARKER_HEATTRANSFER'])
-  print("marker_outlet=",state.jsonData['MARKER_OUTLET'])
-  print("marker_inc_outlet_type=",state.jsonData['INC_OUTLET_TYPE'])
-  print("marker_symmetry=",state.jsonData['MARKER_SYM'])
-  print("marker_far=",state.jsonData['MARKER_FAR'])
-  print("marker_inlet=",state.jsonData['MARKER_INLET'])
-  print("marker_inc_inlet_type=",state.jsonData['INC_INLET_TYPE'])
+  log("info", f"marker_isothermal= = {state.jsonData['MARKER_ISOTHERMAL']}")
+  log("info", f"marker_heatflux= = {state.jsonData['MARKER_HEATFLUX']}")
+  log("info", f"marker_heattransfer= = {state.jsonData['MARKER_HEATTRANSFER']}")
+  log("info", f"marker_outlet= = {state.jsonData['MARKER_OUTLET']}")
+  log("info", f"marker_inc_outlet_type= = {state.jsonData['INC_OUTLET_TYPE']}")
+  log("info", f"marker_symmetry= = {state.jsonData['MARKER_SYM']}")
+  log("info", f"marker_far= = {state.jsonData['MARKER_FAR']}")
+  log("info", f"marker_inlet= = {state.jsonData['MARKER_INLET']}")
+  log("info", f"marker_inc_inlet_type= = {state.jsonData['INC_INLET_TYPE']}")
 
-  print(state.jsonData)
+  log("info", state.jsonData)
   # all empty markers will be removed for writing
   myDict = {key:val for key, val in state.jsonData.items() if val != []}
-  print(myDict)
+  log("info", myDict)
   state.jsonData = myDict
 
 ########################################################################################
@@ -116,13 +116,13 @@ def createjsonMarkers():
 # TODO: when we click the save button, the icon color changes
 ########################################################################################
 def save_json_cfg_file(filename_json_export,filename_cfg_export):
-    print("exporting files")
-    print("write config file ",filename_json_export),
-    print("write config file ",filename_cfg_export),
+    log("info", "exporting files")
+    log("info", f"write config file  = {filename_json_export}"),
+    log("info", f"write config file  = {filename_cfg_export}"),
     state.counter = state.counter + 1
-    print("counter=",state.counter)
+    log("info", f"counter= = {state.counter}")
     if (state.counter==2):
-      print("counter=",state.counter)
+      log("info", f"counter= = {state.counter}")
 
     # first, construct the boundaries using BCDictList
     createjsonMarkers()
@@ -168,10 +168,10 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
           for sublist in value:
             #print(sublist)
             if isinstance(sublist,list):
-              #print("sublist=",sublist)
+              #log("info", f"sublist= = {sublist}")
               for num in sublist:
                 flat_list.append(num)
-                #print("flatlist=",flat_list)
+                #log("info", f"flatlist= = {flat_list}")
             else:
               flat_list.append(sublist)
 
@@ -191,8 +191,8 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
 # ##### exports single block .su2 mesh with boundary conditions only
 ########################################################################################
 def save_su2mesh(multiblock,su2_export_filename):
-    print(type(multiblock))
-    print("export files:","clicked")
+    log("info", type(multiblock))
+    log("info", f"export files: = {"clicked"}")
     # export an su2 file
     # first, get the dimensions. If the z-dimension is smaller than 1e-6, we assume 2D
 
@@ -200,60 +200,60 @@ def save_su2mesh(multiblock,su2_export_filename):
     #MARKER_TAG = "1"
     #MARKER_ELEMS = 1
 
-    print("saving su2 mesh file")
+    log("info", "saving su2 mesh file")
     #global mb1
-    #print(type(mb1))
-    #print(dir(mb1))
-    #print("nr of blocks inside block = ",mb1.GetNumberOfBlocks())
+    #log("info", type(mb1))
+    #log("info", dir(mb1))
+    #log("info", f"nr of blocks inside block =  = {mb1.GetNumberOfBlocks(}"))
 
     internalBlock = multiblock.GetBlock(0)
     if (internalBlock==None):
-        print("no internal block, exiting")
+        log("info", "no internal block, exiting")
         return
 
     boundaryBlock = multiblock.GetBlock(1)
-    #print("nr of blocks inside internal block = ",internalBlock.GetNumberOfBlocks())
-    #print("nr of blocks inside block = ",boundaryBlock.GetNumberOfBlocks())
+    #log("info", f"nr of blocks inside internal block =  = {internalBlock.GetNumberOfBlocks(}"))
+    #log("info", f"nr of blocks inside block =  = {boundaryBlock.GetNumberOfBlocks(}"))
 
-    print(dir(internalBlock))
+    log("info", dir(internalBlock))
     # nr of data in internal block
     NELEM = internalBlock.GetNumberOfCells()
     NPOINT = internalBlock.GetNumberOfPoints()
     BOUND=[0,0,0,0,0,0]
     internalBlock.GetBounds(BOUND)
     dz = BOUND[5] - BOUND[2]
-    #print("dz=",dz)
+    #log("info", f"dz= = {dz}")
     if (dz<1e-12):
-        print("case is 2D")
+        log("info", "case is 2D")
         NDIME= 2
     else:
-        print("dz > 0, case is 3D")
+        log("info", "dz > 0, case is 3D")
         NDIME= 3
 
     pts = vtk.vtkIdList()
     for i in range(internalBlock.GetNumberOfBlocks()):
-        #print("number of internal elements = ", i+1," / ", internalBlock.GetNumberOfBlocks() )
+        #log("info", f"number of internal elements =  = {i+1," / ", internalBlock.GetNumberOfBlocks(}") )
         data = internalBlock.GetBlock(i)
         celldata = data.GetCells()
-        #print("data type=",type(data))
-        #print("data type=",dir(data))
-        #print("celldata type=",type(celldata))
-        #print("celldata type=",dir(celldata))
+        #log("info", f"data type= = {type(data}"))
+        #log("info", f"data type= = {dir(data}"))
+        #log("info", f"celldata type= = {type(celldata}"))
+        #log("info", f"celldata type= = {dir(celldata}"))
 
         for i in range(NELEM):
-            #print(i," ",celldata.GetCellSize(i))
+            #log("info", i," ",celldata.GetCellSize(i))
             celldata.GetCellAtId(i,pts)
-            #print("number of ids = ",pts.GetNumberOfIds())
-            #print("cell type =",data.GetCellType(i))
+            #log("info", f"number of ids =  = {pts.GetNumberOfIds(}"))
+            #log("info", f"cell type = = {data.GetCellType(i}"))
             #for j in range(pts.GetNumberOfIds()):
-            #    print(pts.GetId(j))
+            #    log("info", pts.GetId(j))
 
 
     for i in range(internalBlock.GetNumberOfBlocks()):
-        #print("number of internal elements = ", i+1," / ", internalBlock.GetNumberOfBlocks() )
+        #log("info", f"number of internal elements =  = {i+1," / ", internalBlock.GetNumberOfBlocks(}") )
         data = internalBlock.GetBlock(i)
         #for p in range(NPOINT):
-        #    print(p," ",data.GetPoint(p))
+        #    log("info", p," ",data.GetPoint(p))
 
 
     with open(BASE / "user" / su2_export_filename, 'w') as f:
@@ -267,11 +267,11 @@ def save_su2mesh(multiblock,su2_export_filename):
       # write element connectivity
       for i in range(NELEM):
         s = str(data.GetCellType(i)) + " "
-        #print(i," ",celldata.GetCellSize(i))
+        #log("info", i," ",celldata.GetCellSize(i))
         celldata.GetCellAtId(i,pts)
-        #print("number of ids = ",pts.GetNumberOfIds())
+        #log("info", f"number of ids =  = {pts.GetNumberOfIds(}"))
         for j in range(pts.GetNumberOfIds()):
-            #print(pts.GetId(j))
+            #log("info", pts.GetId(j))
             s += str(pts.GetId(j)) + " "
         s += str(i) + "\n"
         f.write(s)
@@ -291,16 +291,16 @@ def save_su2mesh(multiblock,su2_export_filename):
       s = "NMARK= " + str(NMARK) + "\n"
       f.write(s)
       for i in range(NMARK):
-        #print("i = ",i," / ",NMARK)
+        #log("info", f"i =  = {i," / ",NMARK}")
         data = boundaryBlock.GetBlock(i)
         celldata = data.GetCells()
         name = boundaryBlock.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
         s = "MARKER_TAG= " + str(name) + "\n"
         f.write(s)
-        #print("metadata block name = ",name)
-        #print(type(data))
+        #log("info", f"metadata block name =  = {name}")
+        #log("info", type(data))
         NCELLS = data.GetNumberOfCells()
-        #print("Npoints = ", data.GetNumberOfPoints())
+        #log("info", f"Npoints =  = {data.GetNumberOfPoints(}"))
         s = "MARKER_ELEMS= " + str(NCELLS) + "\n"
         f.write(s)
         for i in range(NCELLS):

@@ -19,7 +19,7 @@ def remove_empty_lists(d):
   return final_dict
 
 
-print("base = ",BASE)
+log("info", "base = ",BASE)
 # step 1: open .cfg file and read all lines that are not comments or empty
 # step 2: couple multiline commands together
 # step 3: convert to a uniform format: remove all opening and closing brackets and remove all commas

@@ -32,7 +32,7 @@ from output_files import update_download_dialog_card, download_diagol_card
 from uicard import ui_card, server
 
 # Logging funtions
-from logs import log
+from logger import log
 
 import vtk
 # vtm reader
@@ -105,7 +105,6 @@ from fileio import *
 # -----------------------------------------------------------------------------
 state, ctrl = server.state, server.controller
 
-state.md_content = ""
 
 from pipeline import PipelineManager
 from pathlib import Path
@@ -1236,7 +1235,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             classes="pt-1",
             #v_model=("field", "solid"),
             #items=("Object.values(fields)",),
-            #style="max-width: 200px;",
+            style="max-width: 300px;",
             #classes="mr-4",
         )
         ######################################################
@@ -1256,7 +1255,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             label="Load .SU2 Mesh File",
             dense=True,
             hide_details=True,
-            style="max-width: 300px;",
+            style="max-width: 250px;",
             # only accepts paraview .vtm files
             accept=".su2",
             __properties=["accept"],
@@ -1276,7 +1275,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             label="Load .CFG File (optional)",
             dense=True,
             hide_details=True,
-            style="max-width: 300px;",
+            style="max-width: 250px;",
             accept=".cfg",
             __properties=["accept"],
         )
@@ -1362,7 +1361,8 @@ with SinglePageWithDrawerLayout(server) as layout:
     with layout.content:
 
       # create the tabs
-      with vuetify.VTabs(v_model=("active_tab", 0), right=True):
+      with vuetify.VTabs(v_model=("active_tab", 0), right=True, 
+            style="position: sticky;"):
         vuetify.VTab("Geometry")
         vuetify.VTab("History")
         vuetify.VTab("Logs")
@@ -1462,7 +1462,7 @@ with SinglePageWithDrawerLayout(server) as layout:
 
                 markdown.Markdown(
                   content = ('md_content', state.md_content), 
-                  style = "padding-left: 3rem; color: black; background-color: white"
+                  style = "padding: 3rem; color: black; background-color: white"
                 )
 
 
@@ -1480,6 +1480,7 @@ def main():
     parser.add_argument('--mesh', type=str, help='Path to the SU2 mesh file in .su2 format.')
     parser.add_argument('--config', type=str, help='Path to the configuration file.')
     parser.add_argument('--restart', type=str, help='Path to the restart file in .csv format.')
+    parser.add_argument('--port', type=int,default=8080, help='Path to the restart file in .csv format.')
     
     args = parser.parse_args()
     
@@ -1487,6 +1488,7 @@ def main():
     config_path = args.config
     restart_path = args.restart
 
+    # input(state.BCDictList)
     if mesh_path and not os.path.exists(mesh_path):
         log("error", f"The SU2 mesh file {mesh_path} does not exist.")
         exit(1)
@@ -1495,17 +1497,6 @@ def main():
         log("info", f"Using SU2 mesh file {mesh_path}")
         with open(mesh_path, 'r') as f:
            content = f.read()
-          #  not showing mesh file
-          #  load_file_su2(
-          #     {
-          #     "name": os.path.basename(mesh_path),
-          #     "size" : os.stat(mesh_path).st_size,
-          #     "content": content,
-          #     "type": "text/plain",
-          #  }
-          #  )
-
-          #  not loading restart file
            state.su2_file_upload = {
               "name": os.path.basename(mesh_path),
               "size" : os.stat(mesh_path).st_size,
@@ -1547,9 +1538,10 @@ def main():
               "type": "text/plain",
            }
 
+    # input(state.BCDictList)
 
-    log("info", "Application Started - Initializing SU2GUI Server")
-    server.start()
+    log("info", f"Application Started - Initializing SU2GUI Server at {args.port} port")
+    server.start(port=args.port)
     log("info", "SU2GUI Server Ended...")
 
 
