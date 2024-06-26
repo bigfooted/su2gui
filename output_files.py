@@ -149,8 +149,6 @@ def download_diagol_card():
 
 @ctrl.trigger("download_output_files")
 def download_outputs():
-    
-    input(state.BCDictList)
     files_directory = BASE / "user" 
 
     zip_buffer = BytesIO()

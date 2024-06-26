@@ -1488,7 +1488,6 @@ def main():
     config_path = args.config
     restart_path = args.restart
 
-    # input(state.BCDictList)
     if mesh_path and not os.path.exists(mesh_path):
         log("error", f"The SU2 mesh file {mesh_path} does not exist.")
         exit(1)
@@ -1537,8 +1536,6 @@ def main():
               "content": content,
               "type": "text/plain",
            }
-
-    # input(state.BCDictList)
 
     log("info", f"Application Started - Initializing SU2GUI Server at {args.port} port")
     server.start(port=args.port)
