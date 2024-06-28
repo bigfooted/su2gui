@@ -768,13 +768,12 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     # Write the dictionary to a JSON file
     # with open(BASE / "user" / state.filename_json_export, 'w') as f:
     #     json.dump(cfg_dict, f, indent=4)
-    
     # assigning new values to jsonData
     state.jsonData.update(cfg_dict) 
     state.dirty('jsonData')
       
     # save the cfg file
-    save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+    # save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
 
     # set all physics states from the json file
     # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
@@ -784,6 +783,7 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     set_json_solver()
     set_json_fileio()
     set_json_materials()
+    updateBCDictListfromJSON()
 
 
 # load SU2 .su2 mesh file #

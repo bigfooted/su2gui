@@ -58,10 +58,13 @@ def log(type :str, message, **kwargs):
 
     if type.upper() == "INFO":
        logger.info(message)
-    if type.upper() == "WARN":
+    elif type.upper() == "WARN":
        logger.warning(message)
-    if type.upper() == "ERROR":
+    elif type.upper() == "ERROR":
        logger.error(message)
+       logger.warning(message)
+    elif type.upper() == "DEBUG":
+       logger.debug(message)
     
     # Capture the last log message and update state.md_content
     
