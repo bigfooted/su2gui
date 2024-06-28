@@ -1103,6 +1103,8 @@ def load_file_su2(su2_file_upload, **kwargs):
 
     renderer.ResetCamera()
     ctrl.view_update()
+    
+    updateBCDictListfromJSON()
 
 # -----------------------------------------------------------------------------
 # GUI elements
