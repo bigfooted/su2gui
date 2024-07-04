@@ -434,10 +434,11 @@ def get_entry_from_name(val,key,List):
 
   # loop over all dict items in the list
   for item in List:
-      log("info", f"item= = {item}")
+      log("debug", f"item= = {item}")
       if item[key]==val:
-        log("info", f"value found for item: = {item}")
+        log("debug", f"value found for item: = {item}")
         entry=item
+        break
   return entry
 
 # now get the index in LBoundariesMain using the name
@@ -535,13 +536,13 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
         break
 
 
-    log("info", f"boundaries_main_idx::selected index= = {index}")
+    log("debug", f"boundaries_main_idx::selected index= = {index}")
     state.selectedBoundaryIndex = index
 
     # from the main ui, we can call a dialog window.
     # 1. We have to get the dialog window corresponding to the chosen boundary condition.
     # 2. We have to set the values in the dialog window to the ones that were chosen/stored before.
-    log("info", f"boundaries_main_idx::bc type =  = {bctype}")
+    log("debug", f"boundaries_main_idx::bc type =  = {bctype}")
     if bctype == "Wall":
       # set the wall subtype for the dialog window from the saved state
       bc_subtype = state.BCDictList[index]['bc_subtype']

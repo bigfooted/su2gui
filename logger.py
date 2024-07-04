@@ -68,5 +68,5 @@ def log(type :str, message, **kwargs):
     
     # Capture the last log message and update state.md_content
     
-    state.md_content = state.md_content[-10000:] + handler.last_message
+    state.md_content =  handler.last_message + state.md_content[:20000]
     print(handler.last_message)

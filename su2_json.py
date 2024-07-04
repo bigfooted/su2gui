@@ -75,7 +75,7 @@ def marker_corrector(marker, length: int):
     This function adds 0 in place of missing elements in the marker.
     Example - 
     outlet marker before - ("outlet1", "outlet2", 10, "outlet3")
-                     after  - ("outlet1", 0, "outlet2", 10, "outlet3", 0)
+                  after  - ("outlet1", 0, "outlet2", 10, "outlet3", 0)
     """
     new_marker = []
     count = length
@@ -112,7 +112,7 @@ def updateBCDictListfromJSON():
       bc_name, value = state.jsonData['MARKER_OUTLET'][2*i:2*(i+1)]
       bcdict = findBCDictByName(bc_name)
       if bcdict != None:
-        bcdict['bcType'] = "outlet"
+        bcdict['bcType'] = "Outlet"
         if 'INC_OUTLET_TYPE' in state.jsonData:
             type = state.jsonData['INC_OUTLET_TYPE'][0] if isinstance(state.jsonData['INC_OUTLET_TYPE'], list) else state.jsonData['INC_OUTLET_TYPE'] 
             if type == 'MASS_FLOW_OUTLET':
@@ -131,7 +131,7 @@ def updateBCDictListfromJSON():
       bc_name, temp, value, v1, v2, v3 = state.jsonData['MARKER_INLET'][6*i:6*(i+1)]
       bcdict = findBCDictByName(bc_name) 
       if bcdict != None:
-        bcdict['bcType'] = "inlet"
+        bcdict['bcType'] = "Inlet"
         bcdict['bc_velocity_normal'] = [v1, v2, v3]
         bcdict['bc_temperature'] = temp
         if 'INC_INLET_TYPE' in state.jsonData:

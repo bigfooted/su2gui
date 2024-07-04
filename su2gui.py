@@ -734,9 +734,14 @@ def load_cfg_file(cfg_file_upload, **kwargs):
         value = value.strip()
         
         # Convert value to appropriate type
-        if (value.startswith('(') and value.endswith(')')) or ',' in value :
+        if (value.startswith('(') and value.endswith(')')) or ',' in value or ' ' in value:
             # Remove parentheses and split by comma
-            value = value[1:-1].split(',')
+            if value[0]=='(' or value[-1]==')':
+               value = value[1:-1]
+            if ',' in value:
+               value =  value.split(',')
+            else:
+               value = value.split()
             # Convert each item to an appropriate type
             value = [v.strip() for v in value]
             value = [int(v) if v.isdigit() else v for v in value]
@@ -757,19 +762,14 @@ def load_cfg_file(cfg_file_upload, **kwargs):
 
     # checking if the value of state.jsonData['OUTPUT_WRT_FREQ'] is int
     # if yes set it to a list of 2 elements with same value for proper working
-    if isinstance(cfg_dict['OUTPUT_WRT_FREQ'], int):
+    if 'OUTPUT_WRT_FREQ' in cfg_dict and isinstance(cfg_dict['OUTPUT_WRT_FREQ'], int):
       cfg_dict['OUTPUT_WRT_FREQ']= [cfg_dict['OUTPUT_WRT_FREQ']] * 2
-      
-    # checking if the value of state.jsonData['OUTPUT_WRT_FREQ'] is str
-    # if yes set it to a list of elements with same value for proper working
-    if isinstance(cfg_dict['OUTPUT_WRT_FREQ'], str):
-      cfg_dict['OUTPUT_WRT_FREQ']= [int(x) for x in cfg_dict['OUTPUT_WRT_FREQ'].split(",")]
 
     # Write the dictionary to a JSON file
     # with open(BASE / "user" / state.filename_json_export, 'w') as f:
     #     json.dump(cfg_dict, f, indent=4)
     # assigning new values to jsonData
-    state.jsonData.update(cfg_dict) 
+    state.jsonData = cfg_dict 
     state.dirty('jsonData')
       
     # save the cfg file
@@ -847,7 +847,7 @@ def load_file_su2(su2_file_upload, **kwargs):
            x = float()
            y = float()
            z = float()
-           line = f[index+point+1].split(" ")
+           line = f[index+point+1].split()
            x = float(line[0])
            y = float(line[1])
 
@@ -866,7 +866,7 @@ def load_file_su2(su2_file_upload, **kwargs):
     state.mesh= ["Number of cells: " + str(numCells) + "\n"]
 
     for cell in range(numCells):
-            data = f[index+cell+1].split(" ")
+            data = f[index+cell+1].split()
             CellType = int(data[0])
             # quadrilaterals
             if(CellType==9):
@@ -939,7 +939,7 @@ def load_file_su2(su2_file_upload, **kwargs):
           # loop over all cells
           for cell in range(numCells):
             counter+=1
-            data = f[index+counter].split(" ")
+            data = f[index+counter].split()
             #log("info", f"data =  = {data}")
             CellType = int(data[0])
             # line

@@ -222,13 +222,14 @@ def save_su2mesh(multiblock,su2_export_filename):
     BOUND=[0,0,0,0,0,0]
     internalBlock.GetBounds(BOUND)
     dz = BOUND[5] - BOUND[2]
-    #log("info", f"dz= = {dz}")
-    if (dz<1e-12):
-        log("info", "case is 2D")
-        NDIME= 2
-    else:
-        log("info", "dz > 0, case is 3D")
-        NDIME= 3
+    log("info", f"dz= = {dz}")
+    NDIME= state.nDim
+    # if (dz<1e-12):
+    #     log("info", "case is 2D")
+    #     NDIME= 2
+    # else:
+    #     log("info", "dz > 0, case is 3D")
+    #     NDIME= 3
 
     pts = vtk.vtkIdList()
     for i in range(internalBlock.GetNumberOfBlocks()):

@@ -136,11 +136,11 @@ async def start_countdown(result):
     while state.keep_updating:
         with state:
             await asyncio.sleep(2.0)
-            log("info", f"iteration =  = {state.global_iter, type(state.global_iter)}")
+            log("debug", f"iteration =  = {state.global_iter, type(state.global_iter)}")
             wrt_freq = state.jsonData['OUTPUT_WRT_FREQ'][1]
-            log("info", f"wrt_freq =  = {wrt_freq, type(wrt_freq)}")
-            log("info", f"iteration save =  = {state.global_iter % wrt_freq}")
-            log("info", f"keep updating =  = {state.keep_updating}")
+            log("debug", f"wrt_freq =  = {wrt_freq, type(wrt_freq)}")
+            log("debug", f"iteration save =  = {state.global_iter % wrt_freq}")
+            log("debug", f"keep updating =  = {state.keep_updating}")
             # update the history from file
             readHistory(BASE / "user" / state.history_filename)
             # update the restart from file, do not reset the active scalar value
@@ -150,9 +150,9 @@ async def start_countdown(result):
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
-            log("info", f"poll =  = {proc_SU2.poll()}")
+            log("debug", f"poll =  = {proc_SU2.poll()}")
             if proc_SU2.poll() != None:
-              log("info", "job has stopped")
+              log("debug", "job has stopped")
               # stop updating the graphs
               state.keep_updating = False
               # set the running state to false
@@ -165,7 +165,7 @@ async def start_countdown(result):
 ###############################################################
 def solver_card():
     with ui_card(title="Solver", ui_name="Solver"):
-        log("info", "## Solver Selection ##")
+        log("debug", "## Solver Selection ##")
       # 1 row of option lists
         with vuetify.VRow(classes="pt-2"):
           with vuetify.VCol(cols="8"):
@@ -201,7 +201,7 @@ def solver_card():
 @state.change("iter_idx")
 def update_material(iter_idx, **kwargs):
     #
-    log("info", f"ITER value:  = {state.iter_idx}")
+    log("debug", f"ITER value:  = {state.iter_idx}")
     #
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
@@ -247,19 +247,19 @@ def su2_play():
         # at this point we have started the simulation
         # we can now start updating the real-time plots
         state.keep_updating = True
-        log("info", f"start polling, poll =  = {proc_SU2.poll()}")
+        log("debug", f"start polling, poll =  = {proc_SU2.poll()}")
 
         # Wait until process terminates
         #while result.poll() is None:
         #  time.sleep(1.0)
-        log("info", f"result =  = {proc_SU2}")
-        log("info", f"result poll=  = {proc_SU2.poll()}")
+        log("debug", f"result =  = {proc_SU2}")
+        log("debug", f"result poll=  = {proc_SU2.poll()}")
 
         # periodic update of the monitor and volume result
         start_countdown(proc_SU2)
 
 
-        log("info", f"result =  = {proc_SU2}")
+        log("debug", f"result =  = {proc_SU2}")
         # save mesh
         # save config
         # save restart file
@@ -268,17 +268,17 @@ def su2_play():
         state.solver_icon="mdi-play-circle"
         log("info", "### SU2 solver stopped!"),
         # we need to terminate or kill the result process here if stop is pressed
-        log("info", f"process= = {type(proc_SU2)}")
+        log("debug", f"process= = {type(proc_SU2)}")
         proc_SU2.terminate()
 
 # matplotlib history
 def update_convergence_fields_visibility(index, visibility):
-    log("info", f"index= = {index}")
-    log("info", f"visible= = {state.convergence_fields_visibility}")
+    log("debug", f"index= = {index}")
+    log("debug", f"visible= = {state.convergence_fields_visibility}")
     state.convergence_fields_visibility[index] = visibility
-    log("info", f"visible= = {state.convergence_fields_visibility}")
+    log("debug", f"visible= = {state.convergence_fields_visibility}")
     state.dirty("convergence_fields_visibility")
-    log("info", f"Toggle {index} to {visibility}")
+    log("debug", f"Toggle {index} to {visibility}")
 
 
 # matplotlib history
@@ -317,15 +317,15 @@ def solver_dialog_card_convergence():
 
 ###############################################################################
 def update_solver_dialog_card_convergence():
-    log("info", f"changing state of solver_dialog_Card_convergence to: = {state.show_solver_dialog_card_convergence}")
+    log("debug", f"changing state of solver_dialog_Card_convergence to: = {state.show_solver_dialog_card_convergence}")
     state.show_solver_dialog_card_convergence = not state.show_solver_dialog_card_convergence
 
     # if we show the card, then also update the fields that we need to show
     if state.show_solver_dialog_card_convergence==True:
-      log("info", "updating list of fields")
+      log("debug", "updating list of fields")
       # note that Euler and inc_euler can be treated as compressible / incompressible as well
-      log("info", state.jsonData['SOLVER'])
-      log("info", state.jsonData['INC_ENERGY_EQUATION'])
+      log("debug", state.jsonData['SOLVER'])
+      log("debug", state.jsonData['INC_ENERGY_EQUATION'])
 
       if ("INC" in str(state.jsonData['SOLVER'])):
         compressible = False
@@ -361,14 +361,14 @@ def update_solver_dialog_card_convergence():
       # get the checkbox states from the jsondata
       state.convergence_fields_visibility = [False for i in state.convergence_fields]
       for field in state.jsonData['CONV_FIELD']:
-         log("info", f"field= = {field}")
+         log("debug", f"field= = {field}")
          for i in range(len(state.convergence_fields)):
-            log("info", f"i= = {i," ",state.convergence_fields[i]}")
+            log("debug", f"i= = {i," ",state.convergence_fields[i]}")
             if (field==state.convergence_fields[i]):
-               log("info", "field found")
+               log("debug", "field found")
                state.convergence_fields_visibility[i] = True
 
-      log("info", f"convergence fields: = {state.convergence_fields}")
+      log("debug", f"convergence fields: = {state.convergence_fields}")
       state.dirty('convergence_fields')
       state.dirty('convergence_fields_range')
     else:
@@ -398,7 +398,7 @@ def update_dialog():
 # Read the history file
 # set the names and visibility
 def readHistory(filename):
-    log("info", f"read_history, filename= = {filename}")
+    log("debug", f"read_history, filename= = {filename}")
     skipNrRows=[]
     # read the history file
     dataframe = pd.read_csv(filename,skiprows=skipNrRows)
@@ -436,10 +436,10 @@ def readHistory(filename):
 # # ##### upload ascii restart file #####
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
-  log("info", "Updating restart.csv file")
+  log("debug", "Updating restart.csv file")
   if restartFile is None:
     state.jsonData["RESTART_SOL"] = "NO"
-    log("info", "removed file")
+    log("debug", "removed file")
     return
 
   # for .csv
