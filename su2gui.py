@@ -34,6 +34,8 @@ from uicard import ui_card, server
 # Logging funtions
 from logger import log
 
+from config import *
+
 import vtk
 # vtm reader
 #from paraview.vtk.vtkIOXML import vtkXMLMultiBlockDataReader
@@ -785,6 +787,9 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     set_json_materials()
     updateBCDictListfromJSON()
 
+    # set config file data in config_str
+    update_config_str()
+
 
 # load SU2 .su2 mesh file #
 # currently loads a 2D or 3D .su2 file
@@ -1356,6 +1361,9 @@ with SinglePageWithDrawerLayout(server) as layout:
         set_json_fileio()
         set_json_numerics()
         set_json_solver()
+
+        # set config file data in config_str
+        update_config_str()
         #this necessary here?
         #state.dirty('jsonData')
 
@@ -1367,6 +1375,7 @@ with SinglePageWithDrawerLayout(server) as layout:
             style="position: sticky;"):
         vuetify.VTab("Geometry")
         vuetify.VTab("History")
+        vuetify.VTab("Config")
         vuetify.VTab("Logs")
 
       with vuetify.VContainer(
@@ -1459,7 +1468,53 @@ with SinglePageWithDrawerLayout(server) as layout:
 
             # Third Tab
             with vuetify.VTabItem(
-               value=(2,), style="width: 100%; height: 100%;"
+               value=(2,), style="width: 100%; height: 100%; padding: 3rem"
+            ):
+                
+                markdown.Markdown(
+                  content = ('config_tab_heading', "Add Properties Manually  \n"), 
+                  style = "font-weight:bolder;background-color: white; color:black; font-size: larger; "
+                )
+
+                with vuetify.VRow(
+                   style= "margin:1rem;"
+                ):
+                    with vuetify.VCol(
+                            style = "width:30%"):
+                        vuetify.VTextField(
+                            label="Key",
+                            v_model = ("key", None),
+                            outlined=True,
+                            dense=True,
+                            hide_details=True,
+                        )
+                    with vuetify.VCol(
+                            style = "width:70%"):
+                        vuetify.VTextField(
+                            label="Value",
+                            v_model = ("value", None),
+                            outlined=True,
+                            dense=True,
+                            hide_details=True,
+                        )
+                vuetify.VBtn("Add",click=(add_new_property),
+                             style = "background-color: #3a76de; margin-left: 2rem;"
+                             )
+
+                
+                markdown.Markdown(
+                  content = ('config_data_heading', "Configuration File Data  \n"), 
+                  style = "font-weight:bolder;background-color: white; color:black; margin:1rem;"
+                )
+                
+                markdown.Markdown(
+                  content = ('config_str', state.confing_str), 
+                  style = "background-color: white;"
+                )
+
+            # Fourth Tab
+            with vuetify.VTabItem(
+               value=(3,), style="width: 100%; height: 100%;"
             ):
 
                 markdown.Markdown(
