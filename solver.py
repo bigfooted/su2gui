@@ -64,14 +64,15 @@ state.global_iter = -1
 
 # initialize from json file
 def set_json_solver():
-  state.iter_idx = state.jsonData['ITER']
-  state.dirty('iter_idx')
-  state.convergence_val = state.jsonData['CONV_RESIDUAL_MINVAL']
-  state.dirty('convergence_val')
-
-  #for field in state.jsonData['CONV_FIELD']:
-  state.convergence_fields = state.jsonData['CONV_FIELD']
-  log("info", f"state convergence fields =  = {state.convergence_fields," ",type(state.convergence_fields)}")
+    if 'ITER' in state.jsonData:
+        state.iter_idx = state.jsonData['ITER']
+        state.dirty('iter_idx')
+    if 'CONV_RESIDUAL_MINVAL' in state.jsonData:
+        state.convergence_val = state.jsonData['CONV_RESIDUAL_MINVAL']
+        state.dirty('convergence_val')
+    if 'CONV_FIELD' in state.jsonData:
+        state.convergence_fields = state.jsonData['CONV_FIELD']
+        log("info", f"state convergence fields =  = {state.convergence_fields," ",type(state.convergence_fields)}")
 
 
 # matplotlib

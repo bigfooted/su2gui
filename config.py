@@ -1,3 +1,10 @@
+from fileio import set_json_fileio
+from initialization import set_json_initialization
+from materials import set_json_materials
+from numerics import set_json_numerics
+from physics import set_json_physics
+from solver import set_json_solver
+from su2_json import updateBCDictListfromJSON
 from uicard import server
 from logger import log
 
@@ -21,6 +28,13 @@ def add_new_property():
     state.jsonData[state.new_config_key] = state.new_config_value
     state.dirty('jsonData')
     update_config_str()
+    set_json_physics()
+    set_json_initialization()
+    set_json_numerics()
+    set_json_solver()
+    set_json_fileio()
+    set_json_materials()
+    updateBCDictListfromJSON()
     log("info", f"Added {state.new_config_key} : {state.new_config_value}({type(state.new_config_value)})")
 
 def update_config_str():

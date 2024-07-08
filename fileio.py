@@ -39,17 +39,27 @@ state, ctrl = server.state, server.controller
 # ### READ CONFIG FILE ### #
 # set the state variables using the json data from the config file
 def set_json_fileio():
-  state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
-  state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
-  state.fileio_restart_binary = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
-  state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
-
-  state.fileio_volume_name = state.jsonData['VOLUME_FILENAME']
-  state.fileio_volume_frequency = state.jsonData['OUTPUT_WRT_FREQ'][1]
-  state.fileio_volume_overwrite = bool(state.jsonData['WRT_VOLUME_OVERWRITE'])
-
-  state.fileio_history_name = state.jsonData['CONV_FILENAME']
-  state.fileio_history_frequency = state.jsonData['HISTORY_WRT_FREQ_INNER']
+  try:
+    state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
+    state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
+    state.fileio_restart_binary = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
+    state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
+  except KeyError as e:
+    log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
+    
+  try:
+    state.fileio_volume_name = state.jsonData['VOLUME_FILENAME']
+    state.fileio_volume_frequency = state.jsonData['OUTPUT_WRT_FREQ'][1]
+    state.fileio_volume_overwrite = bool(state.jsonData['WRT_VOLUME_OVERWRITE'])
+  except KeyError as e:
+    log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
+    
+  try:
+    state.fileio_history_name = state.jsonData['CONV_FILENAME']
+    state.fileio_history_frequency = state.jsonData['HISTORY_WRT_FREQ_INNER']
+  except KeyError as e:
+    log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
+    
 
   state.dirty('fileio_restart_name')
   state.dirty('fileio_restart_frequency')

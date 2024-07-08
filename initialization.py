@@ -70,7 +70,7 @@ LInitializationPatch= [
 # set the state variables using the json configuration file data
 def set_json_initialization():
   state.initial_option_idx = 0
-  if state.jsonData['RESTART_SOL']==True:
+  if 'RESTART_SOL' in state.jsonData and state.jsonData['RESTART_SOL']==True:
     log("info", "restarting solution from file")
     state.initial_option_idx = 1
   else:
@@ -79,7 +79,7 @@ def set_json_initialization():
     state.initial_option_idx = 0
   state.dirty('initial_option_idx')
 
-  if ("INC" in str(state.jsonData['SOLVER'])):
+  if 'SOLVER' in state.jsonData and ("INC" in str(state.jsonData['SOLVER'])):
     compressible = False
   else:
     compressible = True
@@ -87,16 +87,16 @@ def set_json_initialization():
   # if incompressible, we check if temperature is on
   energy = False
   if (compressible == False):
-    if (state.jsonData['INC_ENERGY_EQUATION']==True):
+    if 'INC_ENERGY_EQUATION' in state.jsonData and (state.jsonData['INC_ENERGY_EQUATION']==True):
        energy = True
 
   if (compressible==True):
     state.init_momx = 1.0
-  else:
+  elif 'INC_VELOCITY_INIT' in state.jsonData:
     state.init_velx = state.jsonData['INC_VELOCITY_INIT'][0]
     state.init_vely = state.jsonData['INC_VELOCITY_INIT'][1]
     state.init_velz = state.jsonData['INC_VELOCITY_INIT'][2]
-    if (energy==True):
+    if 'INC_TEMPERATURE_INIT' in state.jsonData and (energy==True):
       state.init_temperature = state.jsonData['INC_TEMPERATURE_INIT']
 
 ###############################################################

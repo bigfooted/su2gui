@@ -88,48 +88,73 @@ def set_json_materials():
 
   # set density fluid model
   if state.physics_comp_idx:
-    state.materials_fluid_idx= GetJsonIndex(state.jsonData['FLUID_MODEL'],LMaterialsFluidComp)
-    state.materials_viscosity_idx= GetJsonIndex(state.jsonData['VISCOSITY_MODEL'],LMaterialsViscosityComp)
-    state.materials_conductivity_idx= GetJsonIndex(state.jsonData['CONDUCTIVITY_MODEL'],LMaterialsConductivityComp)
+    if 'FLUID_MODEL' in state.jsonData:
+      state.materials_fluid_idx= GetJsonIndex(state.jsonData['FLUID_MODEL'],LMaterialsFluidComp)
+    if 'VISCOSITY_MODEL' in state.jsonData:
+      state.materials_viscosity_idx= GetJsonIndex(state.jsonData['VISCOSITY_MODEL'],LMaterialsViscosityComp)
+    if 'CONDUCTIVITY_MODEL' in state.jsonData:
+      state.materials_conductivity_idx= GetJsonIndex(state.jsonData['CONDUCTIVITY_MODEL'],LMaterialsConductivityComp)
   else:
-    state.materials_fluid_idx= GetJsonIndex(state.jsonData['FLUID_MODEL'],LMaterialsFluidIncomp)
-    state.materials_viscosity_idx= GetJsonIndex(state.jsonData['VISCOSITY_MODEL'],LMaterialsViscosityIncomp)
-    state.materials_conductivity_idx= GetJsonIndex(state.jsonData['CONDUCTIVITY_MODEL'],LMaterialsConductivityIncomp)
+    if 'FLUID_MODEL' in state.jsonData:
+      state.materials_fluid_idx= GetJsonIndex(state.jsonData['FLUID_MODEL'],LMaterialsFluidIncomp)
+    if 'VISCOSITY_MODEL' in state.jsonData:
+      state.materials_viscosity_idx= GetJsonIndex(state.jsonData['VISCOSITY_MODEL'],LMaterialsViscosityIncomp)
+    if 'CONDUCTIVITY_MODEL' in state.jsonData:
+      state.materials_conductivity_idx= GetJsonIndex(state.jsonData['CONDUCTIVITY_MODEL'],LMaterialsConductivityIncomp)
 
-  state.materials_inc_density_init_idx = state.jsonData['INC_DENSITY_INIT']
-  state.materials_inc_temperature_init_idx = state.jsonData['INC_TEMPERATURE_INIT']
-  state.materials_molecular_weight_idx = state.jsonData['MOLECULAR_WEIGHT']
+  if 'INC_DENSITY_INIT' in state.jsonData:
+    state.materials_inc_density_init_idx = state.jsonData['INC_DENSITY_INIT']
+  if 'INC_TEMPERATURE_INIT' in state.jsonData:
+    state.materials_inc_temperature_init_idx = state.jsonData['INC_TEMPERATURE_INIT']
+  if 'MOLECULAR_WEIGHT' in state.jsonData:
+    state.materials_molecular_weight_idx = state.jsonData['MOLECULAR_WEIGHT']
 
   # # set fluid viscosity
-  state.materials_constant_viscosity_idx = state.jsonData['MU_CONSTANT']
-  state.materials_sutherland_muref_idx = state.jsonData['MU_REF']
-  state.materials_sutherland_muTref_idx = state.jsonData['MU_T_REF']
-  state.materials_sutherland_S_idx = state.jsonData['SUTHERLAND_CONSTANT']
-  state.materials_polynomial_viscosity_a0_idx = state.jsonData['MU_POLYCOEFFS'][0]
-  state.materials_polynomial_viscosity_a1_idx = state.jsonData['MU_POLYCOEFFS'][1]
-  state.materials_polynomial_viscosity_a2_idx = state.jsonData['MU_POLYCOEFFS'][2]
-  state.materials_polynomial_viscosity_a3_idx = state.jsonData['MU_POLYCOEFFS'][3]
-  state.materials_polynomial_viscosity_a4_idx = state.jsonData['MU_POLYCOEFFS'][4]
+  if 'MU_CONSTANT' in state.jsonData:
+    state.materials_constant_viscosity_idx = state.jsonData['MU_CONSTANT']
+  if 'MU_REF' in state.jsonData:
+    state.materials_sutherland_muref_idx = state.jsonData['MU_REF']
+  if 'MU_T_REF' in state.jsonData:
+    state.materials_sutherland_muTref_idx = state.jsonData['MU_T_REF']
+  if 'SUTHERLAND_CONSTANT' in state.jsonData:
+    state.materials_sutherland_S_idx = state.jsonData['SUTHERLAND_CONSTANT']
+
+  if 'MU_POLYCOEFFS' in state.jsonData:
+    state.materials_polynomial_viscosity_a0_idx = state.jsonData['MU_POLYCOEFFS'][0]
+    state.materials_polynomial_viscosity_a1_idx = state.jsonData['MU_POLYCOEFFS'][1]
+    state.materials_polynomial_viscosity_a2_idx = state.jsonData['MU_POLYCOEFFS'][2]
+    state.materials_polynomial_viscosity_a3_idx = state.jsonData['MU_POLYCOEFFS'][3]
+    state.materials_polynomial_viscosity_a4_idx = state.jsonData['MU_POLYCOEFFS'][4]
 
   # # set heat capacity
-  state.materials_constant_cp_idx = state.jsonData['SPECIFIC_HEAT_CP']
-  state.materials_polynomial_cp_a0_idx = state.jsonData['CP_POLYCOEFFS'][0]
-  state.materials_polynomial_cp_a1_idx = state.jsonData['CP_POLYCOEFFS'][1]
-  state.materials_polynomial_cp_a2_idx = state.jsonData['CP_POLYCOEFFS'][2]
-  state.materials_polynomial_cp_a3_idx = state.jsonData['CP_POLYCOEFFS'][3]
-  state.materials_polynomial_cp_a4_idx = state.jsonData['CP_POLYCOEFFS'][4]
+  if 'SPECIFIC_HEAT_CP' in state.jsonData:
+    state.materials_constant_cp_idx = state.jsonData['SPECIFIC_HEAT_CP']
+
+  if 'CP_POLYCOEFFS' in state.jsonData:
+    state.materials_polynomial_cp_a0_idx = state.jsonData['CP_POLYCOEFFS'][0]
+    state.materials_polynomial_cp_a1_idx = state.jsonData['CP_POLYCOEFFS'][1]
+    state.materials_polynomial_cp_a2_idx = state.jsonData['CP_POLYCOEFFS'][2]
+    state.materials_polynomial_cp_a3_idx = state.jsonData['CP_POLYCOEFFS'][3]
+    state.materials_polynomial_cp_a4_idx = state.jsonData['CP_POLYCOEFFS'][4]
 
   # # set fluid conductivity
-  state.materials_constant_conductivity_idx = state.jsonData['THERMAL_CONDUCTIVITY_CONSTANT']
-  state.materials_constant_prandtl_idx = state.jsonData['PRANDTL_LAM']
-  state.materials_polynomial_kt_a0_idx = state.jsonData['KT_POLYCOEFFS'][0]
-  state.materials_polynomial_kt_a1_idx = state.jsonData['KT_POLYCOEFFS'][1]
-  state.materials_polynomial_kt_a2_idx = state.jsonData['KT_POLYCOEFFS'][2]
-  state.materials_polynomial_kt_a3_idx = state.jsonData['KT_POLYCOEFFS'][3]
-  state.materials_polynomial_kt_a4_idx = state.jsonData['KT_POLYCOEFFS'][4]
+  if 'THERMAL_CONDUCTIVITY_CONSTANT' in state.jsonData:
+    state.materials_constant_conductivity_idx = state.jsonData['THERMAL_CONDUCTIVITY_CONSTANT']
+  
+  if 'PRANDTL_LAM' in state.jsonData:
+    state.materials_constant_prandtl_idx = state.jsonData['PRANDTL_LAM']
+  
+  if 'KT_POLYCOEFFS' in state.jsonData:
+    state.materials_polynomial_kt_a0_idx = state.jsonData['KT_POLYCOEFFS'][0]
+    state.materials_polynomial_kt_a1_idx = state.jsonData['KT_POLYCOEFFS'][1]
+    state.materials_polynomial_kt_a2_idx = state.jsonData['KT_POLYCOEFFS'][2]
+    state.materials_polynomial_kt_a3_idx = state.jsonData['KT_POLYCOEFFS'][3]
+    state.materials_polynomial_kt_a4_idx = state.jsonData['KT_POLYCOEFFS'][4]
 
-  state.materials_gamma_idx = state.jsonData['GAMMA_VALUE']
-  state.materials_gas_constant_idx = state.jsonData['GAS_CONSTANT']
+  if 'GAMMA_VALUE' in state.jsonData:
+    state.materials_gamma_idx = state.jsonData['GAMMA_VALUE']
+  if 'GAS_CONSTANT' in state.jsonData:
+     state.materials_gas_constant_idx = state.jsonData['GAS_CONSTANT']
 
   state.dirty('materials_fluid_idx')
   state.dirty('materials_inc_density_init_idx')

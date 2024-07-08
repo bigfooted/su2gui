@@ -82,16 +82,18 @@ LBoundaryIncOutletType= [
 # set the state variables using the json data from the config file
 def set_json_physics():
   # energy equation on/off
-  state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
-  log("info", f"       ################# energy equation =  = {state.physics_energy_idx}")
+  if 'INC_ENERGY_EQUATION' in state.jsonData:
+    state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
+    log("debug", f"       ################# energy equation =  = {state.physics_energy_idx}")
 
-  # compressible or incompressible
-  state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
-  log("info", f"       ################# compressible=  = {state.physics_comp_idx}")
+  if 'SOLVER' in state.jsonData:
+    # compressible or incompressible
+    state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
+    log("debug", f"       ################# compressible=  = {state.physics_comp_idx}")
 
-  # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
-  state.physics_energy_always_on = 0 if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS') else 1
-  log("info", f"energy always on =  = {state.physics_energy_always_on}")
+    # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
+    state.physics_energy_always_on = 0 if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS') else 1
+    log("debug", f"energy always on =  = {state.physics_energy_always_on}")
 
   # the SA options
   state.SAOptions={"NONE":True,
