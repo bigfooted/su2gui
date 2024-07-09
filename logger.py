@@ -62,7 +62,6 @@ def log(type :str, message, **kwargs):
        logger.warning(message)
     elif type.upper() == "ERROR":
        logger.error(message)
-       logger.warning(message)
     elif type.upper() == "DEBUG":
        logger.debug(message)
     

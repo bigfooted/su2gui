@@ -17,15 +17,26 @@ state.cofig_str = ""
 def add_new_property():
     if state.new_config_key==None or state.new_config_value==None:
         return
-    
+    value = state.new_config_value
     # trying to convert new_config_value to a bool or float
     try:
-        state.new_config_value =  float(state.new_config_value)
+        value =  float(value)
     except:
-        if state.new_config_value.lower() in ("yes", "true", "no", "false"):
-            state.new_config_value =  state.new_config_value.lower() == "yes" or state.new_config_value.lower() == "true"
+        if value.lower() in ("yes", "true", "no", "false"):
+            value =  value.lower() == "yes" or value.lower() == "true"
+        elif (value.startswith('(') and value.endswith(')') or value.startswith('[') and value.endswith(']')) or ',' in value or ' ' in value:
+            # Remove parentheses and split by comma
+            if value[0]=='(' or value[-1]==')' or value[0]=='[' or value[-1]==']':
+               value = value[1:-1]
+            if ',' in value:
+               value =  value.split(',')
+            else:
+               value = value.split()
+            # Convert each item to an appropriate type
+            value = [v.strip() for v in value]
+            value = [int(v) if v.isdigit() else v for v in value]
     state.new_config_key = state.new_config_key.upper().strip()
-    state.jsonData[state.new_config_key] = state.new_config_value
+    state.jsonData[state.new_config_key] = value
     state.dirty('jsonData')
     update_config_str()
     set_json_physics()
