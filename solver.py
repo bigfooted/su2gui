@@ -32,6 +32,9 @@ from vtkmodules.vtkCommonDataModel import vtkDataObject
 from mesh import *
 from vtk_helper import *
 
+# Logging function
+from logger import log, update_su2_logs
+
 # matplotlib
 import matplotlib
 matplotlib.use("agg")
@@ -159,6 +162,8 @@ async def start_countdown(result):
               # set the running state to false
               state.solver_running = False
               state.solver_icon="mdi-play-circle"
+            log("debug", "here ")
+            update_su2_logs()
 
 
 ###############################################################

@@ -6,6 +6,9 @@ import logging
 state, ctrl = server.state, server.controller
 
 state.md_content = ""
+state.su2_logs = ""
+
+state.last_modified_log_len = 0
 
 # Custom logging handler to capture the last log message
 class MessageCaptureHandler(logging.Handler):
@@ -69,3 +72,15 @@ def log(type :str, message, **kwargs):
     
     state.md_content =  handler.last_message + state.md_content[:20000]
     print(handler.last_message)
+
+def update_su2_logs():
+    file = 'user/su2.out'
+    with open(file, 'r') as f:
+        # Move the file pointer to the last read position
+        f.seek(state.last_modified_log_len)
+        # Read the new content
+        new_content = f.read()
+        # Update the last modified log length
+        state.last_modified_log_len += len(new_content)
+        # Update the state logs with the new content
+        state.su2_logs = "```" + (state.su2_logs[3:-3] + new_content)[-25000:] + "```"

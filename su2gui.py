@@ -1371,8 +1371,7 @@ with SinglePageWithDrawerLayout(server) as layout:
     with layout.content:
 
       # create the tabs
-      with vuetify.VTabs(v_model=("active_tab", 0), right=True, 
-            style="position: sticky;"):
+      with vuetify.VTabs(v_model=("active_tab", 0), right=True):
         vuetify.VTab("Geometry")
         vuetify.VTab("History")
         vuetify.VTab("Config")
@@ -1498,7 +1497,7 @@ with SinglePageWithDrawerLayout(server) as layout:
                             hide_details=True,
                         )
                 vuetify.VBtn("Add",click=(add_new_property),
-                             style = "background-color: #3a76de; margin-left: 2rem;"
+                             style = "background-color: #3a76de; margin-left: 2rem; color: white;"
                              )
 
                 
@@ -1514,13 +1513,37 @@ with SinglePageWithDrawerLayout(server) as layout:
 
             # Fourth Tab
             with vuetify.VTabItem(
-               value=(3,), style="width: 100%; height: 100%;"
+              value=(3,), style="width: 100%; height: 100%;"
             ):
+              # with vuetify.VTabs(v_model=("log_tab", 0), right=True):
+              with vuetify.VTabs(v_model=("log_tab", 0)):
+                vuetify.VTab("SU2GUI")
+                vuetify.VTab("SU2")
 
-                markdown.Markdown(
-                  content = ('md_content', state.md_content), 
-                  style = "padding: 3rem; color: black; background-color: white"
-                )
+              with vuetify.VContainer(
+                fluid=True,
+                classes="pa-0 fill-height",
+                style="position: relative;"
+              ):
+                
+                with vuetify.VTabsItems(
+                    value=("log_tab",), style="width: 100%; height: 100%;"
+                ):
+                  with vuetify.VTabItem(
+                    value=(0,), style="width: 100%; height: 100%;"
+                  ):
+                        markdown.Markdown(
+                          content = ('md_content', state.md_content), 
+                          style = "padding: 3rem; color: black; background-color: white"
+                        )
+                  with vuetify.VTabItem(
+                    value=(1,), style="width: 100%; height: 100%;"
+                  ):
+                        markdown.Markdown(
+                          content = ('su2_logs', state.su2_logs), 
+                          style = "padding: 3rem; color: black; background-color: white",
+                          hide_details = True
+                        )
 
 
     log("info", "finalizing drawer layout")
