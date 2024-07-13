@@ -1,3 +1,9 @@
+# imports for json schema
+import json
+import jsonschema
+from jsonschema import validate
+
+# functions to update GUI after user enters a new key-value pair in jsonData
 from fileio import set_json_fileio
 from initialization import set_json_initialization
 from materials import set_json_materials
@@ -5,6 +11,8 @@ from numerics import set_json_numerics
 from physics import set_json_physics
 from solver import set_json_solver
 from su2_json import updateBCDictListfromJSON
+
+
 from uicard import server
 from logger import log
 
@@ -15,6 +23,8 @@ state, ctrl = server.state, server.controller
 state.cofig_str = ""
 
 def add_new_property():
+    # prepare a valid schema for using the function given below
+    # validate_dict_against_schema()
     if state.new_config_key==None or state.new_config_value==None:
         return
     value = state.new_config_value
@@ -59,3 +69,29 @@ def update_new_config_key(key, **kwargs):
 @state.change("value")
 def update_new_config_value(value, **kwargs):
     state.new_config_value = value
+
+
+def validate_dict_against_schema():
+    log("info", state.jsonData)
+    # Load the JSON schema from the file
+    try:
+        with open("./user/JsonSchema.json", 'r') as file:
+            schema = json.load(file)
+    except FileNotFoundError:
+        log("error", "Schema file not found.")
+        return False
+    except json.JSONDecodeError:
+        log("error", "Invalid JSON schema file.")
+        return False
+
+    # Validate the dictionary against the schema
+    try:
+        validate(instance=state.jsonData, schema=schema)
+        log("info", "The dictionary is valid.")
+        return True
+    except jsonschema.exceptions.ValidationError as ve:
+        log("error", f"Validation error: {ve.message}")
+        return False
+    except jsonschema.exceptions.SchemaError as se:
+        log("error", f"Schema error: {se.message}")
+        return False
