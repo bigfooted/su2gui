@@ -128,20 +128,33 @@ def updateBCDictListfromJSON():
       state.jsonData['MARKER_INLET'] = [state.jsonData['MARKER_INLET']]
     marker_corrector(state.jsonData['MARKER_INLET'], 6)
     for i in range(len(state.jsonData['MARKER_INLET']) // 6):
-      bc_name, temp, value, v1, v2, v3 = state.jsonData['MARKER_INLET'][6*i:6*(i+1)]
+      bc_name, val1, val2, v1, v2, v3 = state.jsonData['MARKER_INLET'][6*i:6*(i+1)]
       bcdict = findBCDictByName(bc_name) 
       if bcdict != None:
         bcdict['bcType'] = "Inlet"
         bcdict['bc_velocity_normal'] = [v1, v2, v3]
-        bcdict['bc_temperature'] = temp
+
+        # Checking the type of inlet marker
         if 'INC_INLET_TYPE' in state.jsonData:
+            bcdict['bc_temperature'] = val1
             type = state.jsonData['INC_INLET_TYPE'][0] if isinstance(state.jsonData['INC_INLET_TYPE'], list) else state.jsonData['INC_INLET_TYPE'] 
             if type == 'PRESSURE_INLET':
                 bcdict['bc_subtype'] = 'Pressure inlet'
-                bcdict['bc_pressure'] = value
+                bcdict['bc_pressure'] = val2
             else:
                 bcdict['bc_subtype'] = 'Velocity inlet'
-                bcdict['bc_velocity_magnitude'] = value
+                bcdict['bc_velocity_magnitude'] = val2
+
+        elif 'INLET_TYPE' in state.jsonData:
+            type = state.jsonData['INLET_TYPE'][0] if isinstance(state.jsonData['INLET_TYPE'], list) else state.jsonData['INLET_TYPE'] 
+            if type == 'TOTAL_CONDITIONS':
+                bcdict['bc_subtype'] = 'Total Conditions'
+                bcdict['bc_temperature'] = val1
+                bcdict['bc_pressure'] = val2
+            else:
+                bcdict['bc_subtype'] = 'Mass Flow'
+                bcdict['bc_density'] = val1
+                bcdict['bc_velocity_magnitude'] = val2
 
   # updating symmetry boundaries
   if "MARKER_SYM" in state.jsonData:
@@ -203,7 +216,15 @@ def updateBCDictListfromJSON():
         bcdict["bc_subtype"] = 'Heat transfer'
         bcdict["bc_heattransfer"] = [val1, val2]
 
-
+  # updating symmetry boundaries
+  if "MARKER_EULER" in state.jsonData:
+    if isinstance(state.jsonData['MARKER_EULER'], str):
+      state.jsonData['MARKER_EULER'] = [state.jsonData['MARKER_EULER']]
+    for bc_name in state.jsonData['MARKER_EULER']:
+      bcdict = findBCDictByName(bc_name) 
+      if bcdict != None:
+        bcdict["bcType"] = 'Wall'
+        bcdict["bc_subtype"] = 'Euler'
 
   state.dirty("BCDictList")
   log("debug", f"updateBCDictList + {state.BCDictList}")

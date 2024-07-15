@@ -444,7 +444,7 @@ def readHistory(filename):
 def uploadRestart(restartFile, **kwargs):
   log("debug", "Updating restart.csv file")
   if restartFile is None:
-    state.jsonData["RESTART_SOL"] = "NO"
+    state.jsonData["RESTART_SOL"] = False
     log("debug", "removed file")
     return
 
@@ -462,8 +462,8 @@ def uploadRestart(restartFile, **kwargs):
      restartFile.write(filecontent)
 
   state.jsonData["RESTART_FILENAME"] = "restart.csv"
-  state.jsonData["RESTART_SOL"] = "YES"
-  state.jsonData["READ_BINARY_RESTART"] = "NO"
+  state.jsonData["RESTART_SOL"] = True
+  state.jsonData["READ_BINARY_RESTART"] = False
 
   
   # log("info", ("Restart loaded ")

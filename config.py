@@ -11,6 +11,7 @@ from numerics import set_json_numerics
 from physics import set_json_physics
 from solver import set_json_solver
 from su2_json import updateBCDictListfromJSON
+from su2_io import createjsonMarkers
 
 
 from uicard import server
@@ -59,6 +60,7 @@ def add_new_property():
     log("info", f"Added {state.new_config_key} : {state.new_config_value}({type(state.new_config_value)})")
 
 def update_config_str():
+    createjsonMarkers()
     max_key_len = max(len(key) for key in state.jsonData.keys())  
     state.config_str = "  \n".join([f"\t{key:{max_key_len}} : {value}" for key, value in state.jsonData.items()])
 

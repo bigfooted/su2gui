@@ -119,12 +119,13 @@ def set_json_materials():
   if 'SUTHERLAND_CONSTANT' in state.jsonData:
     state.materials_sutherland_S_idx = state.jsonData['SUTHERLAND_CONSTANT']
 
-  if 'MU_POLYCOEFFS' in state.jsonData:
-    state.materials_polynomial_viscosity_a0_idx = state.jsonData['MU_POLYCOEFFS'][0]
-    state.materials_polynomial_viscosity_a1_idx = state.jsonData['MU_POLYCOEFFS'][1]
-    state.materials_polynomial_viscosity_a2_idx = state.jsonData['MU_POLYCOEFFS'][2]
-    state.materials_polynomial_viscosity_a3_idx = state.jsonData['MU_POLYCOEFFS'][3]
-    state.materials_polynomial_viscosity_a4_idx = state.jsonData['MU_POLYCOEFFS'][4]
+  if 'MU_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['MU_POLYCOEFFS'] = [0,0,0,0,0]
+  state.materials_polynomial_viscosity_a0_idx = state.jsonData['MU_POLYCOEFFS'][0]
+  state.materials_polynomial_viscosity_a1_idx = state.jsonData['MU_POLYCOEFFS'][1]
+  state.materials_polynomial_viscosity_a2_idx = state.jsonData['MU_POLYCOEFFS'][2]
+  state.materials_polynomial_viscosity_a3_idx = state.jsonData['MU_POLYCOEFFS'][3]
+  state.materials_polynomial_viscosity_a4_idx = state.jsonData['MU_POLYCOEFFS'][4]
 
   # # set heat capacity
   if 'SPECIFIC_HEAT_CP' in state.jsonData:
@@ -730,8 +731,6 @@ def update_material(materials_fluid_idx, **kwargs):
     else:
       state.jsonData['INC_DENSITY_MODEL']= 'VARIABLE'
 
-    log("info", f"FLUID_MODEL= = {state.jsonData['FLUID_MODEL']}")
-
     state.dirty('jsonData')
 
 
@@ -765,7 +764,6 @@ def update_material(materials_conductivity_idx, **kwargs):
     # only set it if the parent is Materials
     #if state.active_ui=="Materials":
     #  state.active_sub_ui = "submaterials_conductivity"
-    log("info", f"energy =  = {state.jsonData['INC_ENERGY_EQUATION']}")
 
     # update config option value
     state.jsonData['CONDUCTIVITY_MODEL']= GetJsonName(materials_conductivity_idx,state.LMaterialsConductivity)
@@ -777,12 +775,15 @@ def update_material(materials_conductivity_idx, **kwargs):
 
 def computePressure():
   #update thermodynamic pressure for displaying in the dialog
-  rho = float(state.jsonData['INC_DENSITY_INIT'])
-  T = float(state.jsonData['INC_TEMPERATURE_INIT'])
-  M = float(state.jsonData['MOLECULAR_WEIGHT'])
-  R = float(UNIVERSAL_GAS_CONSTANT / (M/1000.0))
+  try:
+    rho = float(state.jsonData['INC_DENSITY_INIT'])
+    T = float(state.jsonData['INC_TEMPERATURE_INIT'])
+    M = float(state.jsonData['MOLECULAR_WEIGHT'])
+    R = float(UNIVERSAL_GAS_CONSTANT / (M/1000.0))
 
-  state.jsonData['THERMODYNAMIC_PRESSURE']= round(rho*R*T,2)
+    state.jsonData['THERMODYNAMIC_PRESSURE']= round(rho*R*T,2)
+  except KeyError as e:
+    log("error",f'KeyError - { e}')
 
 ###############################################################
 # Materials - fluid model options
@@ -887,6 +888,9 @@ def update_material(materials_sutherland_S_idx, **kwargs):
 def update_material(materials_polynomial_viscosity_a0_idx, **kwargs):
     log("info", f"Polynomial viscosity a0 value:  = {materials_polynomial_viscosity_a0_idx}")
     # update config option value
+    
+    if 'MU_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['MU_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['MU_POLYCOEFFS'][0]= materials_polynomial_viscosity_a0_idx
 
 # Polynomial viscosity model
@@ -894,6 +898,9 @@ def update_material(materials_polynomial_viscosity_a0_idx, **kwargs):
 def update_material(materials_polynomial_viscosity_a1_idx, **kwargs):
     log("info", f"Polynomial viscosity a1 value:  = {materials_polynomial_viscosity_a1_idx}")
     # update config option value
+    
+    if 'MU_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['MU_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['MU_POLYCOEFFS'][1]= materials_polynomial_viscosity_a1_idx
 
 # Polynomial viscosity model
@@ -901,6 +908,9 @@ def update_material(materials_polynomial_viscosity_a1_idx, **kwargs):
 def update_material(materials_polynomial_viscosity_a2_idx, **kwargs):
     log("info", f"Polynomial viscosity a2 value:  = {materials_polynomial_viscosity_a2_idx}")
     # update config option value
+    
+    if 'MU_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['MU_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['MU_POLYCOEFFS'][2]= materials_polynomial_viscosity_a2_idx
 
 # Polynomial viscosity model
@@ -908,6 +918,9 @@ def update_material(materials_polynomial_viscosity_a2_idx, **kwargs):
 def update_material(materials_polynomial_viscosity_a3_idx, **kwargs):
     log("info", f"Polynomial viscosity a3 value:  = {materials_polynomial_viscosity_a3_idx}")
     # update config option value
+    
+    if 'MU_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['MU_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['MU_POLYCOEFFS'][3]= materials_polynomial_viscosity_a3_idx
 
 # Polynomial viscosity model
@@ -915,6 +928,9 @@ def update_material(materials_polynomial_viscosity_a3_idx, **kwargs):
 def update_material(materials_polynomial_viscosity_a4_idx, **kwargs):
     log("info", f"Polynomial viscosity a4 value:  = {materials_polynomial_viscosity_a4_idx}")
     # update config option value
+    
+    if 'MU_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['MU_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['MU_POLYCOEFFS'][4]= materials_polynomial_viscosity_a4_idx
 
 
@@ -923,6 +939,9 @@ def update_material(materials_polynomial_viscosity_a4_idx, **kwargs):
 def update_material(materials_polynomial_cp_a0_idx, **kwargs):
     log("info", f"Polynomial cp a0 value:  = {materials_polynomial_cp_a0_idx}")
     # update config option value
+    
+    if 'CP_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['CP_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['CP_POLYCOEFFS'][0]= materials_polynomial_cp_a0_idx
 
 # Polynomial cp model
@@ -930,6 +949,9 @@ def update_material(materials_polynomial_cp_a0_idx, **kwargs):
 def update_material(materials_polynomial_cp_a1_idx, **kwargs):
     log("info", f"Polynomial cp a1 value:  = {materials_polynomial_cp_a1_idx}")
     # update config option value
+    
+    if 'CP_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['CP_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['CP_POLYCOEFFS'][1]= materials_polynomial_cp_a1_idx
 
 # Polynomial cp model
@@ -937,6 +959,9 @@ def update_material(materials_polynomial_cp_a1_idx, **kwargs):
 def update_material(materials_polynomial_cp_a2_idx, **kwargs):
     log("info", f"Polynomial cp a2 value:  = {materials_polynomial_cp_a2_idx}")
     # update config option value
+    
+    if 'CP_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['CP_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['CP_POLYCOEFFS'][2]= materials_polynomial_cp_a2_idx
 
 # Polynomial cp model
@@ -944,6 +969,9 @@ def update_material(materials_polynomial_cp_a2_idx, **kwargs):
 def update_material(materials_polynomial_cp_a3_idx, **kwargs):
     log("info", f"Polynomial cp a3 value:  = {materials_polynomial_cp_a3_idx}")
     # update config option value
+    
+    if 'CP_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['CP_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['CP_POLYCOEFFS'][3]= materials_polynomial_cp_a3_idx
 
 # Polynomial cp model
@@ -951,6 +979,9 @@ def update_material(materials_polynomial_cp_a3_idx, **kwargs):
 def update_material(materials_polynomial_cp_a4_idx, **kwargs):
     log("info", f"Polynomial cp a4 value:  = {materials_polynomial_cp_a4_idx}")
     # update config option value
+    
+    if 'CP_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['CP_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['CP_POLYCOEFFS'][4]= materials_polynomial_cp_a4_idx
 
 
@@ -960,6 +991,8 @@ def update_material(materials_polynomial_cp_a4_idx, **kwargs):
 def update_material(materials_polynomial_kt_a0_idx, **kwargs):
     log("info", f"Polynomial kt a0 value:  = {materials_polynomial_kt_a0_idx}")
     # update config option value
+    if 'KT_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['KT_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['KT_POLYCOEFFS'][0]= materials_polynomial_kt_a0_idx
 
 # Polynomial kt model
@@ -967,6 +1000,9 @@ def update_material(materials_polynomial_kt_a0_idx, **kwargs):
 def update_material(materials_polynomial_kt_a1_idx, **kwargs):
     log("info", f"Polynomial kt a1 value:  = {materials_polynomial_kt_a1_idx}")
     # update config option value
+    
+    if 'KT_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['KT_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['KT_POLYCOEFFS'][1]= materials_polynomial_kt_a1_idx
 
 # Polynomial kt model
@@ -974,6 +1010,9 @@ def update_material(materials_polynomial_kt_a1_idx, **kwargs):
 def update_material(materials_polynomial_kt_a2_idx, **kwargs):
     log("info", f"Polynomial kt a2 value:  = {materials_polynomial_kt_a2_idx}")
     # update config option value
+    
+    if 'KT_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['KT_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['KT_POLYCOEFFS'][2]= materials_polynomial_kt_a2_idx
 
 # Polynomial kt model
@@ -981,6 +1020,9 @@ def update_material(materials_polynomial_kt_a2_idx, **kwargs):
 def update_material(materials_polynomial_kt_a3_idx, **kwargs):
     log("info", f"Polynomial kt a3 value:  = {materials_polynomial_kt_a3_idx}")
     # update config option value
+    
+    if 'KT_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['KT_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['KT_POLYCOEFFS'][3]= materials_polynomial_kt_a3_idx
 
 # Polynomial kt model
@@ -988,6 +1030,9 @@ def update_material(materials_polynomial_kt_a3_idx, **kwargs):
 def update_material(materials_polynomial_kt_a4_idx, **kwargs):
     log("info", f"Polynomial kt a4 value:  = {materials_polynomial_kt_a4_idx}")
     # update config option value
+    
+    if 'KT_POLYCOEFFS' not in state.jsonData:
+      state.jsonData['KT_POLYCOEFFS'] = [0,0,0,0,0]
     state.jsonData['KT_POLYCOEFFS'][4]= materials_polynomial_kt_a4_idx
 
 # compressible gamma

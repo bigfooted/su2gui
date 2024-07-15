@@ -188,12 +188,16 @@ def update_material(fileio_restart_name, **kwargs):
 # note that we currently support exactly 2 entries in OUTPUT_FILES, restart and paraview
 @state.change("fileio_restart_frequency")
 def update_material(fileio_restart_frequency, **kwargs):
+    if 'OUTPUT_WRT_FREQ' not in state.jsonData:
+       state.jsonData['OUTPUT_WRT_FREQ'] = [100, 100]
     state.jsonData['OUTPUT_WRT_FREQ'][0]= int(fileio_restart_frequency)
     state.dirty('jsonData')
 
 # if binary, change the file type
 @state.change("fileio_restart_binary")
 def update_material(fileio_restart_binary, **kwargs):
+    if 'OUTPUT_FILES' not in state.jsonData:
+       state.jsonData['OUTPUT_FILES'] = ["RESTART"]
     if bool(fileio_restart_binary)==True:
       state.jsonData['OUTPUT_FILES'][0]= "RESTART"
     else:

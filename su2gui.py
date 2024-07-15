@@ -753,6 +753,8 @@ def load_cfg_file(cfg_file_upload, **kwargs):
             value = True
         elif value.upper() == 'NO' or value.upper() == 'FALSE':
             value = False   
+        elif value.upper() == 'NONE':
+            value = None
         else:
             try:
                 value = float(value)
@@ -1109,7 +1111,7 @@ def load_file_su2(su2_file_upload, **kwargs):
     renderer.ResetCamera()
     ctrl.view_update()
     
-    updateBCDictListfromJSON()
+    update_config_str()
 
 # -----------------------------------------------------------------------------
 # GUI elements
@@ -1351,6 +1353,7 @@ with SinglePageWithDrawerLayout(server) as layout:
         boundaries_dialog_card_outlet()
         boundaries_dialog_card_wall()
         boundaries_dialog_card_farfield()
+        boundaries_dialog_card_supersonic_inlet()
 
         solver_dialog_card_convergence()
         # set all physics states from the json file
@@ -1497,15 +1500,19 @@ with SinglePageWithDrawerLayout(server) as layout:
                             hide_details=True,
                         )
                 vuetify.VBtn("Add",click=(add_new_property),
-                             style = "background-color: #3a76de; margin-left: 2rem; color: white;"
+                             style = "background-color: #3a76de; margin-left: 2rem; color: white; margin-bottom: 1rem;"
                              )
 
-                
-                markdown.Markdown(
-                  content = ('config_data_heading', "Configuration File Data  \n"), 
-                  style = "font-weight:bolder;background-color: white; color:black; margin:1rem;"
-                )
-                
+                with vuetify.VRow(
+                   style = "justify-content: space-between; margin:.5rem;"
+                ):
+                    markdown.Markdown(
+                      content = ('config_data_heading', "Configuration File Data  \n"), 
+                      style = "font-weight:bolder;background-color: white; color:black;"
+                    )
+                    vuetify.VBtn("Reload",click=(update_config_str),
+                      style = "background-color: #3a76de; margin-left: 2rem; color: white;"
+                      )
                 markdown.Markdown(
                   content = ('config_str', state.confing_str), 
                   style = "background-color: white;"

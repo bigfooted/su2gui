@@ -27,13 +27,19 @@ def createjsonMarkers():
   marker_isothermal=[]
   marker_heatflux=[]
   marker_heattransfer=[]
+  marker_euler=[]
   marker_symmetry=[]
   marker_farfield=[]
   marker_outlet=[]
+  marker_supersonic_inlet=[]
+  marker_supersonic_outlet=[]
+
   # PRESSURE_OUTLET or MASS_FLOW_OUTLET
   marker_inc_outlet_type=[]
   # PRESSURE_INLET or VELOCITY_INLET
   marker_inc_inlet_type=[]
+  # TOTAL_CONDITIONS or MASS_FLOW
+  marker_inlet_type=[]
 
   # loop over the boundaries and construct the markers
   for bcdict in state.BCDictList:
@@ -50,6 +56,9 @@ def createjsonMarkers():
         marker.extend(bcdict['bc_heattransfer'])
         log("info", f"heat transfer marker= = {marker}")
         marker_heattransfer.append( marker )
+    elif bcdict['bc_subtype']=="Euler":
+       marker = [bcdict['bcName']]
+       marker_euler.append(marker)
     # ##### OUTLET BOUNDARY CONDITIONS #####
     elif bcdict['bc_subtype']=="Target mass flow rate":
         marker = [bcdict['bcName'], bcdict['bc_massflow']]
@@ -71,6 +80,16 @@ def createjsonMarkers():
         marker.extend(bcdict['bc_velocity_normal'])
         marker_inlet.append( marker )
         marker_inc_inlet_type.append("PRESSURE_INLET")
+    elif bcdict['bc_subtype']=="Total Conditions":
+        marker = [bcdict['bcName'], bcdict['bc_temperature'], bcdict['bc_pressure']]
+        marker.extend(bcdict['bc_velocity_normal'])
+        marker_inlet.append( marker )
+        marker_inlet_type.append("TOTAL_CONDITIONS")
+    elif bcdict['bc_subtype']=="Mass Flow":
+        marker = [bcdict['bcName'], bcdict['bc_density'], bcdict['bc_velocity_magnitude']]
+        marker.extend(bcdict['bc_velocity_normal'])
+        marker_inlet.append( marker )
+        marker_inlet_type.append("MASS_FLOW")
     # ##### SYMMETRY BOUNDARY CONDITIONS #####
     elif bcdict['bc_subtype']=="Symmetry":
         marker = [bcdict['bcName']]
@@ -79,11 +98,21 @@ def createjsonMarkers():
     elif bcdict['bc_subtype']=="Far-field":
         marker = [bcdict['bcName']]
         marker_farfield.append( marker )
+    # ##### SUPERSONIC INLET BOUNDARY CONDITIONS #####
+    elif bcdict['bc_subtype']=="Supersonic Inlet":
+        marker = [bcdict['bcName'], bcdict['bc_temperature'], bcdict['bc_pressure']]
+        marker.extend(bcdict['bc_velocity_normal'])
+        marker_supersonic_inlet.append( marker )
+    # ##### SUPERSONIC OUTLET BOUNDARY CONDITIONS #####
+    elif bcdict['bc_subtype']=="Supersonic Outlet":
+        marker = [bcdict['bcName']]
+        marker_supersonic_outlet.append( marker )
 
   # ##### WALL #####
   state.jsonData['MARKER_ISOTHERMAL']=marker_isothermal
   state.jsonData['MARKER_HEATFLUX']=marker_heatflux
   state.jsonData['MARKER_HEATTRANSFER']=marker_heattransfer
+  state.jsonData['MARKER_EULER']=marker_euler
   # ##### OUTLET #####
   state.jsonData['MARKER_OUTLET']=marker_outlet
   state.jsonData['INC_OUTLET_TYPE']=marker_inc_outlet_type
@@ -93,6 +122,11 @@ def createjsonMarkers():
 
   state.jsonData['MARKER_INLET']=marker_inlet
   state.jsonData['INC_INLET_TYPE']=marker_inc_inlet_type
+  state.jsonData['INLET_TYPE']=marker_inlet_type
+
+  # ##### SUPERSONIC #####
+  state.jsonData['MARKER_SUPERSONIC_INLET']=marker_supersonic_inlet
+  state.jsonData['MARKER_SUPERSONIC_OUTLET']=marker_supersonic_outlet
 
   log("info", f"marker_isothermal= = {state.jsonData['MARKER_ISOTHERMAL']}")
   log("info", f"marker_heatflux= = {state.jsonData['MARKER_HEATFLUX']}")
@@ -103,6 +137,8 @@ def createjsonMarkers():
   log("info", f"marker_far= = {state.jsonData['MARKER_FAR']}")
   log("info", f"marker_inlet= = {state.jsonData['MARKER_INLET']}")
   log("info", f"marker_inc_inlet_type= = {state.jsonData['INC_INLET_TYPE']}")
+  log("info", f"marker_supersonic_inlet= = {state.jsonData['MARKER_SUPERSONIC_INLET']}")
+  log("info", f"marker_supersonic_outlet= = {state.jsonData['MARKER_SUPERSONIC_OUTLET']}")
 
   log("info", state.jsonData)
   # all empty markers will be removed for writing
@@ -162,7 +198,7 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
         # we can have lists or lists of lists
         # we can simply flatten the list, remove the quotations,
         # convert square brackets to round brackets and done.
-        if isinstance(value, list):
+        elif isinstance(value, list):
 
           flat_list = []
           for sublist in value:
@@ -180,6 +216,9 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
           # put the list between brackets
           value = "(" + flatlist + ")"
 
+        # pass if value is none
+        if value == None or (isinstance(value, str) and value.lower()=='none'):
+           continue
 
         filestring=str(attribute) + "= " + str(value) + "\n"
         f.write(filestring)
