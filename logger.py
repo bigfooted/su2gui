@@ -8,20 +8,8 @@ state, ctrl = server.state, server.controller
 state.md_content = ""
 state.su2_logs = ""
 
-state.last_modified_log_len = 0
-
-# Custom logging handler to capture the last log message
-class MessageCaptureHandler(logging.Handler):
-    def __init__(self):
-        super().__init__()
-        self.last_message = ""
-
-    def emit(self, record):
-        log_entry = self.format(record)
-        self.last_message = log_entry
-
-# Create a custom handler instance
-handler = MessageCaptureHandler()
+state.last_modified_su2_log_len = 0
+state.last_modified_su2gui_log_len = 0
 
 # Configure the root logger to suppress logs from other modules
 logging.basicConfig(
@@ -30,14 +18,14 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Ensure the custom handler uses the same formatter as the root logger
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-
 # Get the logger for the current module
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Allow DEBUG logs for this module
-logger.addHandler(handler)
+
+# Ensure the logger uses the same formatter as the root logger
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+for handler in logger.handlers:
+    handler.setFormatter(formatter)
 
 
 def log(type :str, message, **kwargs):
@@ -68,19 +56,27 @@ def log(type :str, message, **kwargs):
     elif type.upper() == "DEBUG":
        logger.debug(message)
     
-    # Capture the last log message and update state.md_content
-    
-    state.md_content =  handler.last_message + state.md_content[:20000]
-    print(handler.last_message)
+    # Capture the new log messages and update state.md_content
+    file = 'user/su2gui.log'
+    with open(file, 'r') as f:
+        # Move the file pointer to the last read position
+        f.seek(state.last_modified_su2gui_log_len)
+        # Read the new content
+        new_logs = f.read()
+        # print(new_logs)
+        # Update the last modified log length
+        state.last_modified_su2gui_log_len += len(new_logs)
+        # Update the state logs with the new content
+        state.md_content = (new_logs + state.md_content[:25000])
 
 def update_su2_logs():
     file = 'user/su2.out'
     with open(file, 'r') as f:
         # Move the file pointer to the last read position
-        f.seek(state.last_modified_log_len)
+        f.seek(state.last_modified_su2_log_len)
         # Read the new content
-        new_content = f.read()
+        new_logs = f.read()
         # Update the last modified log length
-        state.last_modified_log_len += len(new_content)
+        state.last_modified_su2_log_len += len(new_logs)
         # Update the state logs with the new content
-        state.su2_logs = "```" + (state.su2_logs[3:-3] + new_content)[-25000:] + "```"
+        state.su2_logs = "```" + (state.su2_logs[3:-3] + new_logs)[-25000:] + "```"

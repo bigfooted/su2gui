@@ -650,7 +650,8 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
       entry = get_entry_from_name(bc_subtype,'text',state.LBoundariesInlet)
       # set the state - this also calls the state function
       state.boundaries_inc_inlet_idx = entry['value']
-      state.boundary_inc_vel_usenormals_idx=state.jsonData['INC_INLET_USENORMAL']
+      if 'INC_INLET_USENORMAL' in state.jsonData:
+        state.boundary_inc_vel_usenormals_idx=state.jsonData['INC_INLET_USENORMAL']
       log("info", f"usenormals:  = {state.boundary_inc_vel_usenormals_idx}")
       # force update of state, so we call the state.change
       state.dirty('boundaries_inc_inlet_idx')
@@ -679,12 +680,16 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
       #state.boundaries_farfield_T_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_temperature']
       #state.boundaries_farfield_P_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_pressure']
       #state.boundaries_farfield_rho_idx = state.BCDictList[state.selectedBoundaryIndex]['bc_density']
-      state.boundaries_farfield_Vx_idx = state.jsonData['FREESTREAM_VELOCITY'][0]
-      state.boundaries_farfield_Vy_idx = state.jsonData['FREESTREAM_VELOCITY'][1]
-      state.boundaries_farfield_Vz_idx = state.jsonData['FREESTREAM_VELOCITY'][2]
-      state.boundaries_farfield_T_idx = state.jsonData['FREESTREAM_TEMPERATURE']
-      state.boundaries_farfield_P_idx = state.jsonData['FREESTREAM_PRESSURE']
-      state.boundaries_farfield_rho_idx = state.jsonData['FREESTREAM_DENSITY']
+      if 'FREESTREAM_VELOCITY' in state.jsonData:
+        state.boundaries_farfield_Vx_idx = state.jsonData['FREESTREAM_VELOCITY'][0]
+        state.boundaries_farfield_Vy_idx = state.jsonData['FREESTREAM_VELOCITY'][1]
+        state.boundaries_farfield_Vz_idx = state.jsonData['FREESTREAM_VELOCITY'][2]
+      if 'FREESTREAM_TEMPERATURE' in state.jsonData:
+        state.boundaries_farfield_T_idx = state.jsonData['FREESTREAM_TEMPERATURE']
+      if 'FREESTREAM_PRESSURE' in state.jsonData:
+        state.boundaries_farfield_P_idx = state.jsonData['FREESTREAM_PRESSURE']
+      if 'FREESTREAM_DENSITY' in state.jsonData:
+        state.boundaries_farfield_rho_idx = state.jsonData['FREESTREAM_DENSITY']
       # in the case of farfield, the farfield is:
       # 1. the same for all farfield boundaries
       # 2. stored in the freestream conditions
@@ -1015,6 +1020,8 @@ def update_material(boundaries_farfield_Vx_idx, **kwargs):
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
     state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0] = boundaries_farfield_Vx_idx
     #log("info", f"BCDictList =  = {state.BCDictList}")
+    if 'FREESTREAM_VELOCITY' not in state.jsonData:
+       state.jsonData['FREESTREAM_VELOCITY'] = [0,0,0]
     state.jsonData['FREESTREAM_VELOCITY'][0]=boundaries_farfield_Vx_idx
 
 @state.change("boundaries_farfield_Vy_idx")
@@ -1025,6 +1032,8 @@ def update_material(boundaries_farfield_Vy_idx, **kwargs):
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
     state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][1] = boundaries_farfield_Vy_idx
     #log("info", f"BCDictList =  = {state.BCDictList}")
+    if 'FREESTREAM_VELOCITY' not in state.jsonData:
+       state.jsonData['FREESTREAM_VELOCITY'] = [0,0,0]
     state.jsonData['FREESTREAM_VELOCITY'][1]=boundaries_farfield_Vy_idx
 
 @state.change("boundaries_farfield_Vz_idx")
@@ -1035,6 +1044,8 @@ def update_material(boundaries_farfield_Vz_idx, **kwargs):
     state.BCDictList[state.selectedBoundaryIndex]['bcType'] = "Far-field"
     state.BCDictList[state.selectedBoundaryIndex]['bc_velocity_normal'][0] = boundaries_farfield_Vz_idx
     #log("info", f"BCDictList =  = {state.BCDictList}")
+    if 'FREESTREAM_VELOCITY' not in state.jsonData:
+       state.jsonData['FREESTREAM_VELOCITY'] = [0,0,0]
     state.jsonData['FREESTREAM_VELOCITY'][2]=boundaries_farfield_Vz_idx
 
 @state.change("boundaries_farfield_T_idx")
