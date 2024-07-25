@@ -55,7 +55,7 @@ state.LBoundariesInlet= [
 ]
 
 
-LBoundariesOutletInc= [
+state.LBoundariesOutlet= [
   {"text": "Pressure outlet", "value": 0},
   {"text": "Target mass flow rate", "value": 1},
 ]
@@ -238,7 +238,7 @@ def boundaries_dialog_card_outlet():
                 # What to do when something is selected
                 v_model=("boundaries_inc_outlet_idx", 0),
                 # The items in the list
-                items=("representations_outlet_inc",LBoundariesOutletInc),
+                items=("LBoundariesOutlet", state.LBoundariesOutlet),
                 # the name of the list box
                 label="Outlet type",
                 hide_details=True,
@@ -636,7 +636,7 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
       bc_subtype = state.BCDictList[index]['bc_subtype']
       log("info", f"bc_subtype= = {bc_subtype}")
       # now find the subtype in the list LBoundariesWall and retrieve the index in the list
-      entry = get_entry_from_name(bc_subtype,'text',LBoundariesOutletInc)
+      entry = get_entry_from_name(bc_subtype,'text',state.LBoundariesOutlet)
       # set the state - this also calls the state function
       state.boundaries_inc_outlet_idx = entry['value']
       # force update of state, so we call the state.change
@@ -666,7 +666,7 @@ def update_boundaries_main(boundaries_main_idx, **kwargs):
       state.BCDictList[state.selectedBoundaryIndex]['bc_subtype'] = "Symmetry"
 
       # now find the subtype in the list LBoundariesWall and retrieve the index in the list
-      #entry = get_entry_from_name(bc_subtype,'text',LBoundariesOutletInc)
+      #entry = get_entry_from_name(bc_subtype,'text',state.LBoundariesOutlet)
       # set the state - this also calls the state function
       #state.boundaries_inc_outlet_idx = entry['value']
       # force update of state, so we call the state.change

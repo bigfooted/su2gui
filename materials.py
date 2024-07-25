@@ -72,8 +72,8 @@ LMaterialsHeatCapacityPoly= [
 ]
 
 LMaterialsConductivityIncomp= [
-  {"text": "Constant value", "value": 0, "json": "CONSTANT_CONDUCTIVITY"},
-  {"text": "Constant Prandtl", "value": 1, "json": "CONSTANT_PRANDTL"},
+  {"text": "Constant Prandtl", "value": 0, "json": "CONSTANT_PRANDTL"},
+  {"text": "Constant value", "value": 1, "json": "CONSTANT_CONDUCTIVITY"},
   {"text": "Polynomial k(T)", "value": 2, "json": "POLYNOMIAL_CONDUCTIVITY"},
 ]
 
@@ -728,7 +728,7 @@ def update_material(materials_fluid_idx, **kwargs):
     # for incompressible, constant density, we set the inc_density_model
     if (state.jsonData['FLUID_MODEL'] == "CONSTANT_DENSITY"):
       state.jsonData['INC_DENSITY_MODEL']= 'CONSTANT'
-    else:
+    elif (state.jsonData['FLUID_MODEL'] in ['INC_IDEAL_GAS','INC_IDEAL_GAS_POLY']):
       state.jsonData['INC_DENSITY_MODEL']= 'VARIABLE'
 
     state.dirty('jsonData')
@@ -767,6 +767,10 @@ def update_material(materials_conductivity_idx, **kwargs):
 
     # update config option value
     state.jsonData['CONDUCTIVITY_MODEL']= GetJsonName(materials_conductivity_idx,state.LMaterialsConductivity)
+
+    if ('FLUID_MODEL' in state.jsonData and state.jsonData['FLUID_MODEL'] in ('STANDARD_AIR', 'IDEAL_GAS')):
+        state.jsonData['CONDUCTIVITY_MODEL'] = 'CONSTANT_PRANDTL'
+        state.materials_conductivity_idx = 1
     state.dirty('jsonData')
 
 ###############################################################

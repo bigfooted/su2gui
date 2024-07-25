@@ -160,7 +160,7 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
     if (state.counter==2):
       log("info", f"counter= = {state.counter}")
 
-    # first, construct the boundaries using BCDictList
+    # construct the boundaries using BCDictList
     createjsonMarkers()
     #
     ########################################################################################

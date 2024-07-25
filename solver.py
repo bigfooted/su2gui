@@ -222,6 +222,14 @@ def update_material(convergence_val, **kwargs):
     state.jsonData['CONV_RESIDUAL_MINVAL']= int(state.convergence_val)
 
 
+########################################################################################
+# Checks/Corrects some json entries before starting the Solver
+########################################################################################
+def checkjsonData():
+   if 'RESTART_FILENAME' in state.jsonData:
+       state.jsonData['RESTART_FILENAME' ] = 'restart'
+   if 'SOLUTION_FILENAME' in state.jsonData:
+       state.jsonData['SOLUTION_FILENAME' ] = 'solution_flow'
 
 # start SU2 solver
 def su2_play():
@@ -240,6 +248,10 @@ def su2_play():
         # save the mesh file
         global root
         save_su2mesh(root,state.jsonData['MESH_FILENAME'])
+
+        # clear old su2 log and set new one
+        state.last_modified_su2_log_len = 0
+        state.su2_logs = ""
 
         # run SU2_CFD with config.cfg
         with open(BASE / "user" / "su2.out", "w") as outfile:
@@ -572,8 +584,7 @@ def readRestart(restartFile, reset_active_field):
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
-
-  renderer.ResetCamera()
+  # renderer.ResetCamera()
   ctrl.view_update()
 
 
@@ -601,53 +612,35 @@ def figure_size():
 ###############################################################################
 def mpl_plot_history():
     plt.close('all')
-    fig, ax = plt.subplots(1,1,**figure_size(),facecolor='blue')
-    #ax.cla()
-
-    #fig.set_facecolor('black')
-    #fig.tight_layout()
-    #fig.patch.set_linewidth(10)
-    #fig.patch.set_edgecolor('purple')
+    fig, ax = plt.subplots(1, 1, **figure_size(), facecolor='blue')
     ax.set_facecolor('#eafff5')
     fig.set_facecolor('blue')
     fig.patch.set_facecolor('blue')
-    #ax.plot(
-    #    np.random.rand(20),
-    #    "-o",
-    #    alpha=0.5,
-    #    color="black",
-    #    linewidth=5,
-    #    markerfacecolor="green",
-    #    markeredgecolor="lightgreen",
-    #    markersize=20,
-    #    markeredgewidth=10,
-    #)
-    #fig.subplots_adjust(top=0.95, bottom=0.1, left=0.1, right=0.9,hspace=0.8)
+    fig.subplots_adjust(top=0.98, bottom=0.15, left=0.05, right=0.99, hspace=0.0, wspace=0.0)
 
-    fig.subplots_adjust(top=0.98, bottom=0.15, left=0.05, right=0.99, hspace=0.0,wspace=0.0)
-    #fig.tight_layout()
+    try:
+        # Loop over the list and plot
+        for idx in state.monitorLinesRange:
+            # Only plot if the visibility is True
+            if state.monitorLinesVisibility[idx]:
+                ax.plot(state.x, state.ylist[idx], label=state.monitorLinesNames[idx], linewidth=5, markersize=20, markeredgewidth=10, color=mplColorList[idx % 20])
 
-    # loop over the list and plot
-    for idx in state.monitorLinesRange:
-      #log("info", f"line=  = {idx,", name= ",state.monitorLinesNames[idx]," visible:",state.monitorLinesVisibility[idx]}")
-      #log("info", f"__ range x =  = {min(state.x}"), " ",max(state.x))
-      # only plot if the visibility is True
-      if state.monitorLinesVisibility[idx]:
-        #log("info", f"log("info", ing line  = {idx}")
-        ax.plot( state.x,state.ylist[idx], label=state.monitorLinesNames[idx],linewidth=5, markersize=20, markeredgewidth=10,color=mplColorList[idx])
+        ax.set_xlabel('iterations', labelpad=10)
+        ax.set_ylabel('residuals', labelpad=-15)
+        ax.grid(True, color="lightgray", linestyle="solid")
+        ax.legend(framealpha=1, facecolor='white')
 
-    ax.set_xlabel('iterations',labelpad=10)
-    ax.set_ylabel('residuals',labelpad=-15)
-    ax.grid(True, color="lightgray", linestyle="solid")
-    ax.legend(framealpha=1,facecolor='white')
+        # Autoscale the axis
+        ax.autoscale(enable=True, axis="x")
+        ax.autoscale(enable=True, axis="y")
 
-    # autoscale the axis
-    ax.autoscale(enable=True,axis="x")
-    ax.autoscale(enable=True,axis="y")
-    #ax.set_xlim(0, 22)
-    #ax.set_ylim(-20, 0)
-    #frame = ax.legend.get_frame()
-    #frame.set_color('white')
+    except IndexError as e:
+        # Add more specific logging to identify which list caused the error
+        log("error", f"IndexError                         : {e}. Index causing error: {idx}")
+        log("error", f"state.x length                     : {len(state.x)}")
+        log("error", f"state.ylist length                 : {len(state.ylist)}")
+        log("error", f"state.monitorLinesNames length     : {len(state.monitorLinesNames)}")
+        log("error", f"state.monitorLinesVisibility length: {len(state.monitorLinesVisibility)}")
+        log("error", f"mplColorList length                : {len(mplColorList)}")
 
     return fig
-

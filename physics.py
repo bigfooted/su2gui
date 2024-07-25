@@ -50,35 +50,6 @@ LPhysicsTurbSSTOptions= [
 
 
 
-# compressible inlet boundary types
-# json name: INLET_TYPE
-LBoundaryInletType= [
-        {"text": "Total conditions", "value": 0,"json":"TOTAL_CONDITIONS"},
-        {"text": "Mass flow", "value": 1,"json":"MASS_FLOW"},
-]
-# compressible inlet boundary types
-# json name: -
-LBoundaryOutletType= [
-  {"text": "None", "value": 0},
-]
-
-# incompressible inlet boundary types
-# json name: INC_INLET_TYPE
-LBoundaryIncInletType= [
-        {"text": "Pressure", "value": 0,"json":"PRESSURE_INLET"},
-        {"text": "Velocity", "value": 1,"json":"VELOCITY_INLET"},
-]
-
-# incompressible outlet boundary types
-# json name: INC_OUTLET_TYPE
-LBoundaryIncOutletType= [
-        {"text": "Pressure", "value": 0,"json":"PRESSURE_OUTLET"},
-        {"text": "Mass flow", "value": 1,"json":"VELOCITY_OUTLET"},
-]
-
-
-
-
 # set the state variables using the json data from the config file
 def set_json_physics():
   # energy equation on/off
@@ -334,7 +305,8 @@ def update_physics_energy(physics_energy_idx, **kwargs):
     # can only be activated/deactivated for incompressible
     #state.energy = bool(state.physics_energy_idx)
 
-    # state.jsonData['INC_ENERGY_EQUATION']= bool(physics_energy_idx)
+    if 'INC_DENSITY_MODEL' in state.jsonData and state.jsonData['INC_DENSITY_MODEL']!='CONSTANT':
+        state.jsonData['INC_ENERGY_EQUATION']= bool(physics_energy_idx)
 
     # update jsonData
     state.dirty("jsonData")
@@ -367,13 +339,14 @@ def update_physics_comp(physics_comp_idx, **kwargs):
       #state.field_state_name = "Density"
       state.LMaterialsViscosity = LMaterialsViscosityComp
       state.LMaterialsConductivity = LMaterialsConductivityComp
-      log("info", "       selecting compressible boundary type for inlet and outlet")
-      state.bcinletsubtype = LBoundaryInletType
-      state.bcoutletsubtype = LBoundaryOutletType
+      log("info", "       selecting compressible boundary type ")
       state.LBoundariesMain = state.LBoundariesMain[:5]
       state.LBoundariesInlet= [
         {"text": "Total Conditions", "value": 2},
         {"text": "Mass flow", "value": 3},
+        ]
+      state.LBoundariesOutlet = [
+        {"text": "Pressure outlet", "value": 0},
         ]
 
       
@@ -383,13 +356,16 @@ def update_physics_comp(physics_comp_idx, **kwargs):
       #state.field_state_name = "Pressure"
       state.LMaterialsViscosity = LMaterialsViscosityIncomp
       state.LMaterialsConductivity = LMaterialsConductivityIncomp
-      log("info", "       selecting incompressible boundary type for inlet and outlet")
-      state.bcinletsubtype = LBoundaryIncInletType
-      state.bcoutletsubtype = LBoundaryIncOutletType
+      log("info", "       selecting incompressible boundary type ")
+      
       state.LBoundariesMain+= [{"text": "Supersonic Inlet", "value": 5},{"text": "Supersonic Outlet", "value": 6}]
       state.LBoundariesInlet= [
         {"text": "Velocity inlet", "value": 0},
         {"text": "Pressure inlet", "value": 1},
+        ]
+      state.LBoundariesOutlet = [
+        {"text": "Pressure outlet", "value": 0},
+        {"text": "Target mass flow rate", "value": 1},
         ]
 
     # communicate to update all options when loading json config file
@@ -398,9 +374,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     state.dirty('LMaterialsFluid')
     state.dirty('LMaterialsViscosity')
     state.dirty('LMaterialsConductivity')
-    #state.dirty('field_state_name')
-    state.dirty('bcinletsubtype')
-    state.dirty('bcoutletsubtype')
+    #state.dirty('field_state_name')s
 
 
 ###############################################################

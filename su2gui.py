@@ -774,7 +774,9 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     #     json.dump(cfg_dict, f, indent=4)
     # assigning new values to jsonData
     state.jsonData = cfg_dict 
+    checkjsonData()
     state.dirty('jsonData')
+
       
     # save the cfg file
     # save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
