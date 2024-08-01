@@ -786,8 +786,8 @@ def computePressure():
     R = float(UNIVERSAL_GAS_CONSTANT / (M/1000.0))
 
     state.jsonData['THERMODYNAMIC_PRESSURE']= round(rho*R*T,2)
-  except KeyError as e:
-    log("error",f'KeyError - { e}')
+  except Exception as e:
+    log("warn",f'Unable to set THERMODYNAMIC_PRESSURE due to incorrect value for {e} in Materials Tab')
 
 ###############################################################
 # Materials - fluid model options

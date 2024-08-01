@@ -26,13 +26,13 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #
 from vtk_helper import *
 # 
-from output_files import update_download_dialog_card, download_diagol_card
+from output_files2 import update_download_dialog_card, download_dialog_card, case_name_dialog_card
 #
 # Definition of ui_card and the server.
 from uicard import ui_card, server
 
 # Logging funtions
-from logger import log
+from logger import log, clear_logs , Error_dialog_card, Warn_dialog_card
 
 from config import *
 
@@ -114,6 +114,7 @@ BASE = Path(__file__).parent
 
 from trame.assets.local import LocalFileManager
 
+clear_logs()
 log("info" , f"""
 ****************************************
 Base path = {BASE}    
@@ -565,9 +566,6 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
     else:
         array =  {'text': 'Solid', 'value': 0, 'range': [1.0, 1.0], 'type': 0}
 
-    log("info", f"array =  = {array}")
-    log("info", f"mesh actor= = {mesh_actor}")
-    log("info", f"mesh actor list= = {mesh_actor_list}")
     if state.nDim == 2:
       # color the internal
       #color_by_array(mesh_actor, array)
@@ -575,9 +573,7 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
         actor = get_entry_from_name('internal','name',mesh_actor_list)
       else:
         actor = get_entry_from_name('internal','name',[{"id":0,"name":"internal","mesh":mesh_actor}])
-      log("info", f"start::actor= = {actor['mesh']}")
       color_by_array(actor['mesh'], array)
-      log("info", f"end::actor= = {actor['mesh']}")
     else:
       # color all boundaries (all mesh actors that are not internal)
       for actor in mesh_actor_list:
@@ -595,18 +591,19 @@ def update_mesh_color_by_name(mesh_color_array_idx, **kwargs):
 #
 @state.change("active_ui")
 def update_active_ui(active_ui, **kwargs):
-    log("info", f"update_active_ui::  = {active_ui}")
+    # log("info", f"update_active_ui::  = {active_ui}")
 
     if not(state.active_id == 0):
       # get boundary name belonging to ID
       _name = pipeline.get_node(state.active_id)['name']
-      log("info", f"update_active_ui::name= = {_name}")
+      # log("info", f"update_active_ui::name= = {_name}")
 
       if (_name=="Physics"):
-        log("info", "update node physics")
+        # log("info", "update node physics")
         #pipeline.update_node_value("Physics","subui",active_ui)
+        pass
       elif (_name=="Initialization"):
-        log("info", "update node Initialization")
+        # log("info", "update node Initialization")
         # force update of initial_option_idx so we get the submenu
         state.dirty('initial_option_idx')
         #pipeline.update_node_value("Initialization","subui",active_ui)
@@ -1344,7 +1341,9 @@ with SinglePageWithDrawerLayout(server) as layout:
 
         # dialog cards - these are predefined 'popup windows'
         # Output dialog
-        download_diagol_card()
+        download_dialog_card()
+        # Physics dialog
+        wall_function_dialog_card()
         # material dialogs
         materials_dialog_card_fluid()
         materials_dialog_card_viscosity()
@@ -1356,6 +1355,9 @@ with SinglePageWithDrawerLayout(server) as layout:
         boundaries_dialog_card_wall()
         boundaries_dialog_card_farfield()
         boundaries_dialog_card_supersonic_inlet()
+        # error/warn dialog
+        Error_dialog_card()
+        Warn_dialog_card()
 
         solver_dialog_card_convergence()
         # set all physics states from the json file

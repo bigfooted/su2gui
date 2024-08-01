@@ -41,7 +41,10 @@ LNumericsGradRecon= [
 # set the state variables using the json data from the config file
 def set_json_numerics():
     if 'CFL_NUMBER' in state.jsonData:
-        state.CFL_idx = float(state.jsonData['CFL_NUMBER'])
+        try:
+            state.CFL_idx = float(state.jsonData['CFL_NUMBER'])
+        except Exception as e:
+            log("error", f"Error in setting CFL number in Numeric Tab:  \n {e}")
     if 'NUM_METHOD_GRAD' in state.jsonData:
         state.numerics_grad_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD'],LNumericsGrad)
     if 'NUM_METHOD_GRAD_RECON' in state.jsonData:
@@ -118,4 +121,8 @@ def update_material(CFL_idx, **kwargs):
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
-    state.jsonData['CFL_NUMBER']= float(CFL_idx)
+    try:
+        state.jsonData['CFL_NUMBER']= float(CFL_idx)
+    except Exception as e:
+        log("error", f"Error in setting CFL number in Numeric Tab:  \n {e}")
+   

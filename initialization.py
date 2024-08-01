@@ -254,7 +254,10 @@ def initialize_uniform():
 
   for i in range(len(FieldNames)):
     name = FieldNames[i]
-    value = float(FieldValues[i])
+    try:
+      value = float(FieldValues[i])
+    except Exception as e:
+      log("error", f"error in setting value for {name} in Initialization:  \n {e}")
 
     ArrayObject = vtk.vtkFloatArray()
     ArrayObject.SetName(name)
@@ -430,17 +433,25 @@ def initialize_patch():
   shape = None
     
   if state.initial_patch_idx == 0:
-      origin = (float(state.plane_point_x), float(state.plane_point_y), float(state.plane_point_z))
-      normal = (float(state.plane_vector_x), float(state.plane_vector_y), float(state.plane_vector_z))
+      try:
+          origin = (float(state.plane_point_x), float(state.plane_point_y), float(state.plane_point_z))
+          normal = (float(state.plane_vector_x), float(state.plane_vector_y), float(state.plane_vector_z))
+      except Exception as e:
+          log("error", f"Error in setting plane origin and normal:  \n {e}")
+          return
 
       shape = vtk.vtkPlaneSource()
       shape.SetOrigin(origin)
       shape.SetNormal(normal)
 
   elif state.initial_patch_idx == 1:
-      origin = (float(state.box_origin_x), float(state.box_origin_y), float(state.box_origin_z))
-      dimensions = (float(state.box_len_x), float(state.box_len_y) ,float(state.box_len_z))
-
+      try:
+        origin = (float(state.box_origin_x), float(state.box_origin_y), float(state.box_origin_z))
+        dimensions = (float(state.box_len_x), float(state.box_len_y) ,float(state.box_len_z))
+      except Exception as e:
+          log("error", f"Error in setting box origin and dimensions:  \n {e}")  
+          return
+      
       shape = vtk.vtkCubeSource()
       shape.SetXLength(dimensions[0])
       shape.SetYLength(dimensions[1])
@@ -448,8 +459,12 @@ def initialize_patch():
       shape.SetCenter(origin)
       
   elif state.initial_patch_idx == 2:
-      origin = (float(state.sphere_origin_x), float(state.sphere_origin_y), float(state.sphere_origin_z))
-      dimensions = (float(state.sphere_radius),)
+      try:
+        origin = (float(state.sphere_origin_x), float(state.sphere_origin_y), float(state.sphere_origin_z))
+        dimensions = (float(state.sphere_radius),)
+      except Exception as e:
+          log("error", f"Error in setting sphere origin and radius:  \n {e}")
+          return
 
       shape = vtk.vtkSphereSource()
       shape.SetCenter(origin)
@@ -463,8 +478,12 @@ def initialize_patch():
 
       for i in range(len(FieldNames)):
           name = FieldNames[i]
-          val1 = float(FieldValues1[i])
-          val2 = float(FieldValues2[i])
+          try:
+              val1 = float(FieldValues1[i])
+              val2 = float(FieldValues2[i])
+          except Exception as e:
+              log("error", f"Error in setting value for {name} in Initialization:  \n {e}")
+              return
 
           ArrayObject = vtk.vtkFloatArray()
           ArrayObject.SetName(name)

@@ -1,8 +1,10 @@
 from logger import log
+from su2_io import save_json_cfg_file, save_su2mesh
 from uicard import server
 import zipfile, os
 from io import BytesIO
 from trame.widgets import vuetify
+from mesh import root
 from trame.assets.remote import HttpFile
 
 from pathlib import Path
@@ -23,7 +25,7 @@ state.output_list = {
 }
 
 # Dialog card for selecting the output
-def download_diagol_card():
+def download_dialog_card():
     with vuetify.VDialog(position='{X:10,Y:10}',
                          width = 350,
                          transition="dialog-top-transition",
@@ -150,6 +152,9 @@ def download_diagol_card():
 @ctrl.trigger("download_output_files")
 def download_outputs():
     files_directory = BASE / "user" 
+    
+    save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+    save_su2mesh(root,state.jsonData['MESH_FILENAME'])
 
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zip_ref:

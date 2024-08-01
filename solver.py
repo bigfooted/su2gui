@@ -213,13 +213,19 @@ def update_material(iter_idx, **kwargs):
     #state.active_sub_ui = "submaterials_fluid"
     #
     # update config option value
-    state.jsonData['ITER']= int(state.iter_idx)
+    try:
+      state.jsonData['ITER'] = int(state.iter_idx)
+    except ValueError:
+      log("error", "Invalid value for ITER")
 
 @state.change("convergence_val")
 def update_material(convergence_val, **kwargs):
     #
     # update config option value
-    state.jsonData['CONV_RESIDUAL_MINVAL']= int(state.convergence_val)
+    try:
+      state.jsonData['CONV_RESIDUAL_MINVAL'] = int(state.convergence_val)
+    except ValueError:
+      log("error", "Invalid value for CONV_RESIDUAL_MINVAL in solver")
 
 
 ########################################################################################
@@ -242,6 +248,7 @@ def su2_play():
         log("info", "### SU2 solver started!")
         # change the solver button icon
         state.solver_icon="mdi-stop-circle"
+        state.monitorLinesNames = []
 
         # save the cfg file
         save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
@@ -639,7 +646,7 @@ def mpl_plot_history():
         log("error", f"IndexError                         : {e}. Index causing error: {idx}")
         log("error", f"state.x length                     : {len(state.x)}")
         log("error", f"state.ylist length                 : {len(state.ylist)}")
-        log("error", f"state.monitorLinesNames length     : {len(state.monitorLinesNames)}")
+        log("error", f"state.monitorLinesNames length     : {len(state.monitorLinesNames), state.monitorLinesNames}")
         log("error", f"state.monitorLinesVisibility length: {len(state.monitorLinesVisibility)}")
         log("error", f"mplColorList length                : {len(mplColorList)}")
 

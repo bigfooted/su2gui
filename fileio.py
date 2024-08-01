@@ -190,8 +190,11 @@ def update_material(fileio_restart_name, **kwargs):
 def update_material(fileio_restart_frequency, **kwargs):
     if 'OUTPUT_WRT_FREQ' not in state.jsonData:
        state.jsonData['OUTPUT_WRT_FREQ'] = [100, 100]
-    state.jsonData['OUTPUT_WRT_FREQ'][0]= int(fileio_restart_frequency)
-    state.dirty('jsonData')
+    try:
+      state.jsonData['OUTPUT_WRT_FREQ'][0]= int(fileio_restart_frequency)
+      state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 
 # if binary, change the file type
 @state.change("fileio_restart_binary")
@@ -206,8 +209,11 @@ def update_material(fileio_restart_binary, **kwargs):
 
 @state.change("fileio_restart_overwrite")
 def update_material(fileio_restart_overwrite, **kwargs):
-    state.jsonData['WRT_RESTART_OVERWRITE']= bool(fileio_restart_overwrite)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['WRT_RESTART_OVERWRITE']= bool(fileio_restart_overwrite)
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 
 #
 @state.change("fileio_volume_name")
@@ -217,13 +223,19 @@ def update_material(fileio_volume_name, **kwargs):
 
 @state.change("fileio_volume_frequency")
 def update_material(fileio_volume_frequency, **kwargs):
-    state.jsonData['OUTPUT_WRT_FREQ'][1]= int(fileio_volume_frequency)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['OUTPUT_WRT_FREQ'][1]= int(fileio_volume_frequency)
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 
 @state.change("fileio_volume_overwrite")
 def update_material(fileio_volume_overwrite, **kwargs):
-    state.jsonData['WRT_VOLUME_OVERWRITE']= bool(fileio_volume_overwrite)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['WRT_VOLUME_OVERWRITE']= bool(fileio_volume_overwrite)
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 # if binary, change the file type
 #@state.change("fileio_volume_binary")
 #def update_material(fileio_restart_binary, **kwargs):
@@ -242,6 +254,9 @@ def update_material(fileio_history_name, **kwargs):
 
 @state.change("fileio_history_frequency")
 def update_material(fileio_history_frequency, **kwargs):
-    state.jsonData['HISTORY_WRT_FREQ_INNER']= int(fileio_history_frequency)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['HISTORY_WRT_FREQ_INNER']= int(fileio_history_frequency) 
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n{str(e)}")
 

@@ -33,6 +33,7 @@ def createjsonMarkers():
   marker_outlet=[]
   marker_supersonic_inlet=[]
   marker_supersonic_outlet=[]
+  marker_wall_functions = []
 
   # PRESSURE_OUTLET or MASS_FLOW_OUTLET
   marker_inc_outlet_type=[]
@@ -48,17 +49,21 @@ def createjsonMarkers():
     if bcdict['bc_subtype']=="Temperature":
         marker = [bcdict['bcName'], bcdict['bc_temperature']]
         marker_isothermal.append( marker )
+        marker_wall_functions.append( [bcdict['bcName'], "STANDARD_WALL_FUNCTION"] )
     elif bcdict['bc_subtype']=="Heat flux":
         marker = [bcdict['bcName'], bcdict['bc_heatflux']]
         marker_heatflux.append( [bcdict['bcName'], bcdict['bc_heatflux']] )
+        marker_wall_functions.append( [bcdict['bcName'], "STANDARD_WALL_FUNCTION"] )
     elif bcdict['bc_subtype']=="Heat transfer":
         marker = [bcdict['bcName']]
         marker.extend(bcdict['bc_heattransfer'])
         log("info", f"heat transfer marker= = {marker}")
         marker_heattransfer.append( marker )
+        marker_wall_functions.append( [bcdict['bcName'], "STANDARD_WALL_FUNCTION"] )
     elif bcdict['bc_subtype']=="Euler":
-       marker = [bcdict['bcName']]
-       marker_euler.append(marker)
+        marker = [bcdict['bcName']]
+        marker_euler.append(marker)
+        marker_wall_functions.append( [bcdict['bcName'], "STANDARD_WALL_FUNCTION"] )
     # ##### OUTLET BOUNDARY CONDITIONS #####
     elif bcdict['bc_subtype']=="Target mass flow rate":
         marker = [bcdict['bcName'], bcdict['bc_massflow']]
@@ -113,6 +118,11 @@ def createjsonMarkers():
   state.jsonData['MARKER_HEATFLUX']=marker_heatflux
   state.jsonData['MARKER_HEATTRANSFER']=marker_heattransfer
   state.jsonData['MARKER_EULER']=marker_euler
+
+  # ##### WALL FUNCTIONS #####
+  if state.wall_function:
+    state.jsonData['MARKER_WALL_FUNCTIONS']=marker_wall_functions
+
   # ##### OUTLET #####
   state.jsonData['MARKER_OUTLET']=marker_outlet
   state.jsonData['INC_OUTLET_TYPE']=marker_inc_outlet_type

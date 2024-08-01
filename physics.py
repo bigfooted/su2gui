@@ -15,6 +15,9 @@ from materials import *
 import copy
 state, ctrl = server.state, server.controller
 
+# show the material dialog cards
+state.show_wall_function_dialog_card = False
+
 
 ############################################################################
 # Physics models - list options #
@@ -123,6 +126,23 @@ def set_json_physics():
       #state.active_sub_ui = "subphysics_sst"
       if  'SST_OPTIONS' in state.jsonData :
         state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
+
+    # settings for wall functions
+    if ('WALLMODEL_KAPPA' in state.jsonData):
+        state.wallmodel_kappa_idx = state.jsonData['WALLMODEL_KAPPA']
+    if ('WALLMODEL_B' in state.jsonData):   
+        state.wallmodel_b_idx = state.jsonData['WALLMODEL_B']
+    if ('WALLMODEL_MINYPLUS' in state.jsonData):   
+        state.wallmodel_miny_idx = state.jsonData['WALLMODEL_MINYPLUS']
+    if ('WALLMODEL_MAXITER' in state.jsonData):  
+        state.wallmodel_maxiter_idx = state.jsonData['WALLMODEL_MAXITER'] 
+    if ('WALLMODEL_RELFAC' in state.jsonData):  
+        state.wallmodel_relax_factor_idx = state.jsonData['WALLMODEL_RELFAC']
+    if ('MARKER_WALL_FUNCTIONS' in state.jsonData):
+        state.wall_function = True
+    else:
+        state.wall_function = False
+
   else:
      log("info", "no proper solver defined")
 
@@ -196,9 +216,150 @@ def physics_card():
             outlined=True,
             classes="pt-1 mt-1",
         )
+        
+        with vuetify.VRow(classes="pt-2"):
+            with vuetify.VCol(cols="6"):
+                vuetify.VCheckbox(
+                    v_model=("wall_function", False),
+                    label="Wall Function",
+                    classes="mt-1 pt-1",
+                    # use wall function only if the turbulence model is RANS or INC_RANS
+                    disabled=("physics_turb_idx < 2",0),
+                    hide_details=True,
+                    dense=True,
+                )
+            with vuetify.VCol(cols="4"):
+              with vuetify.VBtn(
+                                elevation=1,
+                                variant="text",
+                                color="white",
+                                click=update_wall_function_dialog_card,
+                                disabled=("!wall_function",0),
+                                icon="mdi-dots-vertical"):
+                vuetify.VIcon("mdi-dots-vertical",density="compact",color="green")
 
 
 ###############################################################
+
+
+# WALL FUNCTION Dialog box
+# Marker_wall is built by su2_io->createjsonMarkers
+# and not stored in BCDictList
+def wall_function_dialog_card():
+    with vuetify.VDialog(width=300,position='{X:10,Y:10}',transition="dialog-top-transition",v_model=("show_wall_function_dialog_card",False)):
+      with vuetify.VCard():
+
+        vuetify.VCardTitle("Wall Functions",
+                           classes="grey lighten-1 py-1 grey--text text--darken-3")
+        
+        with vuetify.VContainer(fluid=True, classes="pl-4"):
+          # ####################################################### #
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_kappa_idx", 0.41),
+                label="Von Karman Constant",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_b_idx", 5.0),
+                label="Model Constant B",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_miny_idx", 5.5),
+                label="Minimum Y+ value",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_maxiter_idx", 200),
+                label="Max Newton iterations",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_relax_factor_idx", 0.5),
+                label="Relaxation factor",
+              )
+        
+        with vuetify.VCardText():
+          vuetify.VBtn("close", click=update_wall_function_dialog_card)
+
+
+###############################################################
+# Wall Functions 
+###############################################################
+
+def update_wall_function_dialog_card():
+    state.show_wall_function_dialog_card = not state.show_wall_function_dialog_card
+
+@state.change("wall_function")
+def update_wall_function(wall_function, **kwargs):
+    log("info", f"     wall function selection:  = {wall_function}")
+    if wall_function==False:
+        keys_to_remove = [
+            "MARKER_WALL_FUNCTIONS",
+            # "WALLMODEL_KAPPA",
+            # "WALLMODEL_B",
+            # "WALLMODEL_MINYPLUS",
+            # "WALLMODEL_MAXITER",
+            # "WALLMODEL_RELFAC"
+            ]   
+
+        for key in keys_to_remove:
+            state.jsonData.pop(key, None)
+    # else:
+    #     state.jsonData['WALLMODEL_KAPPA'] = state.wallmodel_kappa_idx
+    #     state.jsonData['WALLMODEL_B'] = state.wallmodel_b_idx
+    #     state.jsonData['WALLMODEL_MINYPLUS'] = state.wallmodel_miny_idx
+    #     state.jsonData['WALLMODEL_MAXITER'] = state.wallmodel_maxiter_idx
+    #     state.jsonData['WALLMODEL_RELFAC'] = state.wallmodel_relax_factor_idx
+    
+    state.dirty('jsonData')
+
+@state.change("wallmodel_kappa_idx")
+def update_wallmodel_kappa(wallmodel_kappa_idx, **kwargs):
+    if state.wall_function:
+      try:
+          state.jsonData['WALLMODEL_KAPPA'] = float(wallmodel_kappa_idx)
+      except Exception as e:
+          log("error", f"Error in setting wallmodel_kappa_idx:  \n {e}")
+
+@state.change("wallmodel_b_idx")
+def update_wallmodel_b(wallmodel_b_idx, **kwargs):
+    if state.wall_function:
+      try:
+          state.jsonData['WALLMODEL_B'] = float(wallmodel_b_idx)
+      except Exception as e:  
+          log("error", f"Error in setting wallmodel_b_idx:  \n {e}")
+
+@state.change("wallmodel_miny_idx")
+def update_wallmodel_miny(wallmodel_miny_idx, **kwargs):
+    if state.wall_function:
+      try:
+        state.jsonData['WALLMODEL_MINYPLUS'] = float(wallmodel_miny_idx)
+      except Exception as e:
+        log("error", f"Error in setting wallmodel_miny_idx:  \n {e}")
+
+@state.change("wallmodel_maxiter_idx")
+def update_wallmodel_maxiter(wallmodel_maxiter_idx, **kwargs):
+    if state.wall_function:
+      try:
+        state.jsonData['WALLMODEL_MAXITER'] = float(wallmodel_maxiter_idx)
+      except Exception as e:
+        log("error", f"Error in setting wallmodel_maxiter_idx:  \n {e}")
+
+@state.change("wallmodel_relax_factor_idx")
+def update_wallmodel_relax_factor(wallmodel_relax_factor_idx, **kwargs):
+    if state.wall_function:
+      try:
+        state.jsonData['WALLMODEL_RELFAC'] = float(wallmodel_relax_factor_idx)
+      except Exception as e:
+        log("error", f"Error in setting wallmodel_relax_factor_idx:  \n {e}")
+
 
 
 ###############################################################
