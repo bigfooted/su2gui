@@ -2,6 +2,8 @@ from datetime import datetime
 from uicard import server
 import logging
 from trame.widgets import vuetify, markdown
+from pathlib import Path
+BASE = Path(__file__).parent
 
 # Extract state and controller from the server
 state, ctrl = server.state, server.controller
@@ -17,12 +19,14 @@ state.warn_msg = ""
 state.last_modified_su2_log_len = 0
 state.last_modified_su2gui_log_len = 0
 
+state.case_name = "new_case"
+
 
 
 #################### LOGGING HANDLER ####################
 # Configure the root logger to suppress logs from other modules
 logging.basicConfig(
-    filename="./user/su2gui.log",
+    filename=f"{BASE}/user/su2gui.log",
     level=logging.WARNING,  # Suppress logs at levels lower than WARNING
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -88,7 +92,7 @@ def add_new_logs(msg):
 
 # Clear previous logs in the LOGS -> SU2GUI Tab and start fresh
 def clear_logs():
-    with open('user/su2gui.log', 'w') as f:
+    with open(BASE / "user" / state.case_name / 'su2gui.log', 'w') as f:
         f.write('')
     state.last_modified_su2gui_log_len = 0
     state.su2_logs = ""
@@ -124,19 +128,21 @@ def handle_warn(warn_message):
 # Update the SU2 logs in the LOGS -> SU2 Tab
 # called by asyn function start_countdown in solver.py
 def update_su2_logs():
-    file = 'user/su2.out'
-    with open(file, 'r') as f:
-        # Move the file pointer to the last read position
-        f.seek(state.last_modified_su2_log_len)
-        # Read the new content
-        new_logs = f.read()
-        # Update the last modified log length
-        state.last_modified_su2_log_len += len(new_logs)
-        # Update the state logs with the new content
-        state.su2_logs = "```" + (state.su2_logs[3:-3] + new_logs)[-25000:] + "```"
-        # Check for error messages in the new logs
-        find_error_message(new_logs)
-
+    file = BASE / "user" / state.case_name / 'su2.out'
+    try:
+        with open(file, 'r') as f:
+            # Move the file pointer to the last read position
+            f.seek(state.last_modified_su2_log_len)
+            # Read the new content
+            new_logs = f.read()
+            # Update the last modified log length
+            state.last_modified_su2_log_len += len(new_logs)
+            # Update the state logs with the new content
+            state.su2_logs = "```" + (state.su2_logs[3:-3] + new_logs)[-25000:] + "```"
+            # Check for error messages in the new logs
+            find_error_message(new_logs)
+    except FileNotFoundError:
+        state.su2_logs = "# File not found"
 
 # find the error message in the su2 log file
 # and display it in the error dialog card

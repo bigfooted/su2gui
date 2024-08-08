@@ -26,7 +26,7 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #
 from vtk_helper import *
 # 
-from output_files2 import update_download_dialog_card, download_dialog_card, case_name_dialog_card
+from cases import update_manage_case_dialog_card, manage_case_dialog_card, case_name_dialog_card, create_new_case
 #
 # Definition of ui_card and the server.
 from uicard import ui_card, server
@@ -706,6 +706,11 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     if cfg_file_upload is None:
         return
 
+    # check if the case name is set
+    if not checkCaseName():
+        state.cfg_file_upload = None
+        return
+
     file = ClientFile(cfg_file_upload)
     try:
         filecontent = file.content.decode('utf-8')
@@ -778,6 +783,7 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     # save the cfg file
     # save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
 
+    updateBCDictListfromJSON()
     # set all physics states from the json file
     # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
     set_json_physics()
@@ -786,7 +792,6 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     set_json_solver()
     set_json_fileio()
     set_json_materials()
-    updateBCDictListfromJSON()
 
     # set config file data in config_str
     update_config_str()
@@ -804,6 +809,11 @@ def load_file_su2(su2_file_upload, **kwargs):
     del mesh_actor_list[:]
 
     if su2_file_upload is None:
+        return
+
+    # check if the case name is set
+    if not checkCaseName():
+        state.su2_file_upload = None
         return
 
     # log("info", f"name =  = {su2_file_upload.get("name"}"))
@@ -1189,9 +1199,9 @@ def update_color_bar_visibility(color_bar_visibility, **kwargs):
 
 # buttons in the top header
 def standard_buttons():
-    # button for opening dialog box for downloading the output files
-    with vuetify.VBtn("Outputs",click=(update_download_dialog_card)):
-       vuetify.VIcon("mdi-download-box-outline")
+    # button for opening dialog box for managing cases
+    with vuetify.VBtn("Cases",click=(update_manage_case_dialog_card)):
+       vuetify.VIcon("mdi-folder-multiple-outline", classes="ml-2")
 
 
 # -----------------------------------------------------------------------------
@@ -1206,7 +1216,7 @@ with SinglePageWithDrawerLayout(server) as layout:
     layout.title.set_text(" ")
 
     # matplotlib monitor: read the initial history file
-    [state.x,state.ylist] = readHistory(BASE / "user" / state.history_filename)
+    [state.x,state.ylist] = readHistory(BASE / "user" / state.case_name / state.history_filename)
     log("info", f"x= = {state.x}")
     log("info", f"y= = {state.ylist}")
 
@@ -1341,7 +1351,8 @@ with SinglePageWithDrawerLayout(server) as layout:
 
         # dialog cards - these are predefined 'popup windows'
         # Output dialog
-        download_dialog_card()
+        manage_case_dialog_card()
+        case_name_dialog_card()
         # Physics dialog
         wall_function_dialog_card()
         # material dialogs
@@ -1571,6 +1582,7 @@ def main():
     parser.add_argument('--mesh', type=str, help='Path to the SU2 mesh file in .su2 format.')
     parser.add_argument('--config', type=str, help='Path to the configuration file.')
     parser.add_argument('--restart', type=str, help='Path to the restart file in .csv format.')
+    parser.add_argument('--case', type=str, help='Name of case to start with.')
     parser.add_argument('--port', type=int,default=8080, help='Path to the restart file in .csv format.')
     
     args = parser.parse_args()
@@ -1578,6 +1590,7 @@ def main():
     mesh_path = args.mesh
     config_path = args.config
     restart_path = args.restart
+    case = args.case
 
     if mesh_path and not os.path.exists(mesh_path):
         log("error", f"The SU2 mesh file {mesh_path} does not exist.")
@@ -1627,6 +1640,10 @@ def main():
               "content": content,
               "type": "text/plain",
            }
+    
+    if case:
+       state.new_case_name = case
+       create_new_case()
 
     log("info", f"Application Started - Initializing SU2GUI Server at {args.port} port")
     server.start(port=args.port)

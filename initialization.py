@@ -326,7 +326,7 @@ def initialize_uniform():
       solution_filename += '.csv'
 
   
-  with open(BASE / "user" / solution_filename,'w') as f:
+  with open(BASE / "user" / state.case_name / solution_filename,'w') as f:
     fields = ["PointID","x","y"]
     if (state.nDim==3):
         fields.append("z")
@@ -549,7 +549,7 @@ def initialize_patch():
   if not solution_filename.endswith('.csv'):
       solution_filename += '.csv'
 
-  with open(BASE / "user" / solution_filename,'w') as f:
+  with open(BASE / "user" / state.case_name / solution_filename,'w') as f:
     fields = ["PointID","x","y"]
     if (state.nDim==3):
         fields.append("z")

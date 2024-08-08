@@ -121,6 +121,9 @@ def updateBCDictListfromJSON():
             else:
                 bcdict['bc_subtype'] = 'Pressure outlet'
                 bcdict['bc_pressure'] = value
+        else:
+            bcdict['bc_subtype'] = 'Pressure outlet'
+            bcdict['bc_pressure'] = value
 
   # Updating inlet boundaries
   if "MARKER_INLET" in state.jsonData:

@@ -176,14 +176,14 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
     ########################################################################################
     # ##### save the json file
     ########################################################################################
-    with open(BASE / "user" / filename_json_export,'w') as jsonOutputFile:
+    with open(BASE / "user" / state.case_name / filename_json_export,'w') as jsonOutputFile:
         json.dump(state.jsonData,jsonOutputFile,sort_keys=True,indent=4,ensure_ascii=False)
     ########################################################################################
 
     ########################################################################################
     # ##### convert json file to cfg file and save
     ########################################################################################
-    with open(BASE / "user" / filename_cfg_export,'w') as f:
+    with open(BASE / "user" / state.case_name / filename_cfg_export,'w') as f:
       f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
       f.write("%                                                                              %\n")
       f.write("% SU2 configuration file                                                       %\n")
@@ -306,7 +306,7 @@ def save_su2mesh(multiblock,su2_export_filename):
         #    log("info", p," ",data.GetPoint(p))
 
 
-    with open(BASE / "user" / su2_export_filename, 'w') as f:
+    with open(BASE / "user" /  state.case_name /su2_export_filename, 'w') as f:
       # write dimensions
       s = "NDIME= " + str(NDIME) + "\n"
       f.write(s)

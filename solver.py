@@ -143,26 +143,25 @@ async def start_countdown(result):
             log("debug", f"iteration =  = {state.global_iter, type(state.global_iter)}")
             wrt_freq = state.jsonData['OUTPUT_WRT_FREQ'][1]
             log("debug", f"wrt_freq =  = {wrt_freq, type(wrt_freq)}")
-            log("debug", f"iteration save =  = {state.global_iter % wrt_freq}")
+            log("info", f"iteration save =  = {state.global_iter % wrt_freq}")
             log("debug", f"keep updating =  = {state.keep_updating}")
             # update the history from file
-            readHistory(BASE / "user" / state.history_filename)
+            readHistory(BASE / "user" / state.case_name / state.history_filename)
             # update the restart from file, do not reset the active scalar value
             # do not update when we are about to write to the file
-            readRestart(BASE / "user" / state.restart_filename, False)
+            readRestart(BASE / "user" / state.case_name / state.restart_filename, False)
 
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
             log("debug", f"poll =  = {proc_SU2.poll()}")
             if proc_SU2.poll() != None:
-              log("debug", "job has stopped")
+              log("info", "job has stopped")
               # stop updating the graphs
               state.keep_updating = False
               # set the running state to false
               state.solver_running = False
               state.solver_icon="mdi-play-circle"
-            log("debug", "here ")
             update_su2_logs()
 
 
@@ -200,6 +199,21 @@ def solver_card():
         with vuetify.VBtn("Solve",click=su2_play):
             vuetify.VIcon("{{solver_icon}}",color="purple")
 
+########################################################################################
+# Checks/Corrects some json entries before starting the Solver
+########################################################################################
+def checkjsonData():
+   if 'RESTART_FILENAME' in state.jsonData:
+       state.jsonData['RESTART_FILENAME' ] = 'restart'
+       state.restart_filename = 'restart.csv'
+   if 'SOLUTION_FILENAME' in state.jsonData:
+       state.jsonData['SOLUTION_FILENAME' ] = 'solution_flow'
+
+def checkCaseName():
+    if state.case_name is None or state.case_name == "":
+        log("error", "Case name is empty, create a new case.  \n Otherwise your data will not be saved!")
+        return False
+    return True
 
 ###############################################################
 # Solver - state changes
@@ -228,15 +242,6 @@ def update_material(convergence_val, **kwargs):
       log("error", "Invalid value for CONV_RESIDUAL_MINVAL in solver")
 
 
-########################################################################################
-# Checks/Corrects some json entries before starting the Solver
-########################################################################################
-def checkjsonData():
-   if 'RESTART_FILENAME' in state.jsonData:
-       state.jsonData['RESTART_FILENAME' ] = 'restart'
-   if 'SOLUTION_FILENAME' in state.jsonData:
-       state.jsonData['SOLUTION_FILENAME' ] = 'solution_flow'
-
 # start SU2 solver
 def su2_play():
 
@@ -248,7 +253,13 @@ def su2_play():
         log("info", "### SU2 solver started!")
         # change the solver button icon
         state.solver_icon="mdi-stop-circle"
+
+        # reset monitorLinesNames for the history plot
         state.monitorLinesNames = []
+
+        # check if the case name is set
+        if not checkCaseName():
+            return
 
         # save the cfg file
         save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
@@ -261,10 +272,10 @@ def su2_play():
         state.su2_logs = ""
 
         # run SU2_CFD with config.cfg
-        with open(BASE / "user" / "su2.out", "w") as outfile:
-          with open(BASE / "user" / "su2.err", "w") as errfile:
+        with open(BASE / "user" / state.case_name / "su2.out", "w") as outfile:
+          with open(BASE / "user" / state.case_name / "su2.err", "w") as errfile:
             proc_SU2 = subprocess.Popen(['SU2_CFD', state.filename_cfg_export],
-                                cwd="user/",
+                                cwd=f"user/{state.case_name}",
                                 text=True,
                                 stdout=outfile,
                                 stderr=errfile
@@ -462,9 +473,14 @@ def readHistory(filename):
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
   log("debug", "Updating restart.csv file")
-  if restartFile is None:
+  if restartFile is None or not restartFile.name.endswith(".csv"):
     state.jsonData["RESTART_SOL"] = False
     log("debug", "removed file")
+    return
+
+  # check if the case name is set
+  if not checkCaseName():
+    state.restartFile = None
     return
 
   # for .csv
@@ -477,7 +493,7 @@ def uploadRestart(restartFile, **kwargs):
 
   f = filecontent.splitlines()
 
-  with open(BASE / "user" / "restart.csv",'w') as restartFile:
+  with open(BASE / "user" / state.case_name / "restart.csv",'w') as restartFile:
      restartFile.write(filecontent)
 
   state.jsonData["RESTART_FILENAME"] = "restart.csv"
@@ -491,7 +507,7 @@ def uploadRestart(restartFile, **kwargs):
   # we reset the active field because we read or upload the restart from file as a user action
   readRestart(io.StringIO('\n'.join(f)), True)
   
-  # readRestart(BASE / "user" / state.restart_filename, False)
+  # readRestart(BASE / "user" / state.case_name / state.restart_filename, False)
 
 
 # check if a file has a handle on it
@@ -553,14 +569,17 @@ def readRestart(restartFile, reset_active_field):
 
     grid.GetPointData().AddArray(ArrayObject)
 
-    datasetArrays.append(
-            {
+    datasetArray = {
                 "text": name,
                 "value": counter,
-                "range": [df.min()[key],df.max()[key]],
                 "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
             }
-    )
+
+    try:
+        datasetArray["range"] = [df[name].min(), df[name].max()]
+    except TypeError as e:
+        log("error", f"Could not compute range for field {name}: {e}")
+    datasetArrays.append(datasetArray)
     counter += 1
 
   state.dataset_arrays = datasetArrays
