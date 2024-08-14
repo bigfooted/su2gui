@@ -35,9 +35,9 @@ def add_new_property():
     except:
         if value.lower() in ("yes", "true", "no", "false"):
             value =  value.lower() == "yes" or value.lower() == "true"
-        elif (value.startswith('(') and value.endswith(')') or value.startswith('[') and value.endswith(']')) or ',' in value or ' ' in value:
+        elif ',' in value or ' ' in value or ((value.startswith('(') and value.endswith(')')) or (value.startswith('[') and value.endswith(']')) or (value.startswith('{') and value.endswith('}'))) :
             # Remove parentheses and split by comma
-            if value[0]=='(' or value[-1]==')' or value[0]=='[' or value[-1]==']':
+            if value[0]=='(' or value[-1]==')' or value[0]=='[' or value[-1]==']' or value[0]=='{' or value[-1]=='}':
                value = value[1:-1]
             if ',' in value:
                value =  value.split(',')

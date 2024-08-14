@@ -26,7 +26,7 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #
 from vtk_helper import *
 # 
-from cases import update_manage_case_dialog_card, manage_case_dialog_card, case_name_dialog_card, create_new_case
+from cases import update_manage_case_dialog_card, manage_case_dialog_card, case_name_dialog_card, case_args
 #
 # Definition of ui_card and the server.
 from uicard import ui_card, server
@@ -775,8 +775,9 @@ def load_cfg_file(cfg_file_upload, **kwargs):
     # with open(BASE / "user" / state.filename_json_export, 'w') as f:
     #     json.dump(cfg_dict, f, indent=4)
     # assigning new values to jsonData
-    state.jsonData = cfg_dict 
-    checkjsonData()
+
+    cfg_dict.pop('SOLUTION_FILENAME', None)
+    state.jsonData = cfg_dict
     state.dirty('jsonData')
 
       
@@ -855,7 +856,7 @@ def load_file_su2(su2_file_upload, **kwargs):
     #state.meshText += "Mesh Dimensions: " + str(NDIME) + "D \n"
 
     index = [idx for idx, s in enumerate(f) if 'NPOIN' in s][0]
-    numPoints = int(f[index].split('=')[1])
+    numPoints = int((f[index].split('=')[1]).split()[0])
     #state.meshText += "Number of points: " + str(numPoints) + "\n"
 
     # get all the points
@@ -1579,11 +1580,11 @@ def main():
     # Defining arguments while calling su2gui
     # for starting it with different files 
     parser = argparse.ArgumentParser(description='Start the SU2 GUI application.')
-    parser.add_argument('--mesh', type=str, help='Path to the SU2 mesh file in .su2 format.')
+    parser.add_argument('-p', '--port', type=int,default=8080, help='Path to the restart file in .csv format.')
+    parser.add_argument('-c', '--case', type=str, help='Name of case to start with.')
+    parser.add_argument('-m', '--mesh', type=str, help='Path to the SU2 mesh file in .su2 format.')
     parser.add_argument('--config', type=str, help='Path to the configuration file.')
-    parser.add_argument('--restart', type=str, help='Path to the restart file in .csv format.')
-    parser.add_argument('--case', type=str, help='Name of case to start with.')
-    parser.add_argument('--port', type=int,default=8080, help='Path to the restart file in .csv format.')
+    parser.add_argument('--restart', type=str, help='Path to the restart file in .csv/.dat format.')
     
     args = parser.parse_args()
     
@@ -1592,6 +1593,9 @@ def main():
     restart_path = args.restart
     case = args.case
 
+    if case:
+       case_args(case)
+       
     if mesh_path and not os.path.exists(mesh_path):
         log("error", f"The SU2 mesh file {mesh_path} does not exist.")
         exit(1)
@@ -1640,10 +1644,6 @@ def main():
               "content": content,
               "type": "text/plain",
            }
-    
-    if case:
-       state.new_case_name = case
-       create_new_case()
 
     log("info", f"Application Started - Initializing SU2GUI Server at {args.port} port")
     server.start(port=args.port)

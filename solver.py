@@ -7,6 +7,7 @@
 # 4) define any global state variables that might be needed
 
 # definition of ui_card
+import shutil
 from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
@@ -17,7 +18,7 @@ from su2_io import save_su2mesh, save_json_cfg_file
 
 import pandas as pd
 
-import sys, subprocess, io, time
+import subprocess, io, struct, os
 
 # real-time update, asynchronous io
 import asyncio
@@ -202,12 +203,12 @@ def solver_card():
 ########################################################################################
 # Checks/Corrects some json entries before starting the Solver
 ########################################################################################
-def checkjsonData():
-   if 'RESTART_FILENAME' in state.jsonData:
-       state.jsonData['RESTART_FILENAME' ] = 'restart'
-       state.restart_filename = 'restart.csv'
-   if 'SOLUTION_FILENAME' in state.jsonData:
-       state.jsonData['SOLUTION_FILENAME' ] = 'solution_flow'
+# def checkjsonData():
+#    if 'RESTART_FILENAME' in state.jsonData:
+#        state.jsonData['RESTART_FILENAME' ] = 'restart'
+#        state.restart_filename = 'restart'
+#    if 'SOLUTION_FILENAME' in state.jsonData:
+#        state.jsonData['SOLUTION_FILENAME' ] = 'solution_flow'
 
 def checkCaseName():
     if state.case_name is None or state.case_name == "":
@@ -469,11 +470,46 @@ def readHistory(filename):
 
 
 ###############################################################################
+# read binay restart file
+def Read_SU2_Restart_Binary(val_filename):
+    val_filename = str(val_filename)
+    fname = val_filename
+    nRestart_Vars = 5
+    Restart_Vars = [0] * nRestart_Vars
+    fields = []
+
+    try:
+      with open(fname, "rb") as fhw:
+          # Read the number of variables and points
+          Restart_Vars = struct.unpack('i' * nRestart_Vars, fhw.read(4 * nRestart_Vars))
+
+          nFields = Restart_Vars[1]
+          nPointFile = Restart_Vars[2]
+
+          # Read variable names
+          for _ in range(nFields):
+              str_buf = fhw.read(33).decode('utf-8').strip('\x00')
+              fields.append(str_buf)
+
+          # Read restart data
+          Restart_Data = struct.unpack('d' * nFields * nPointFile, fhw.read(8 * nFields * nPointFile))
+
+          # Convert the data into a pandas DataFrame
+          Restart_Data = [Restart_Data[i:i + nFields] for i in range(0, len(Restart_Data), nFields)]
+          df = pd.DataFrame(Restart_Data, columns=fields)
+    except:
+      log("info", "Unable able to read binary restart file")
+      df = pd.DataFrame()
+
+
+    return df
+
+
 # # ##### upload ascii restart file #####
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
   log("debug", "Updating restart.csv file")
-  if restartFile is None or not restartFile.name.endswith(".csv"):
+  if restartFile is None:
     state.jsonData["RESTART_SOL"] = False
     log("debug", "removed file")
     return
@@ -483,31 +519,44 @@ def uploadRestart(restartFile, **kwargs):
     state.restartFile = None
     return
 
-  # for .csv
-
+  filename = restartFile['name']
   file = ClientFile(restartFile)
-  try:
-      filecontent = file.content.decode('utf-8')
-  except:
-      filecontent = file.content
 
-  f = filecontent.splitlines()
+  # for .csv
+  if filename.endswith(".csv"):
+    try:
+        filecontent = file.content.decode('utf-8')
+    except:
+        filecontent = file.content
 
-  with open(BASE / "user" / state.case_name / "restart.csv",'w') as restartFile:
-     restartFile.write(filecontent)
+    f = filecontent.splitlines()
 
-  state.jsonData["RESTART_FILENAME"] = "restart.csv"
-  state.jsonData["RESTART_SOL"] = True
-  state.jsonData["READ_BINARY_RESTART"] = False
+    with open(BASE / "user" / state.case_name / filename,'w') as restartFile:
+      restartFile.write(filecontent)
 
-  
-  # log("info", ("Restart loaded ")
+    state.jsonData["SOLUTION_FILENAME"] = filename
+    state.jsonData["RESTART_SOL"] = True
+    state.jsonData["READ_BINARY_RESTART"] = False
+    
+    # we reset the active field because we read or upload the restart from file as a user action
+    readRestart(BASE / "user" / state.case_name / filename, True, initialization='.csv')
 
 
-  # we reset the active field because we read or upload the restart from file as a user action
-  readRestart(io.StringIO('\n'.join(f)), True)
-  
-  # readRestart(BASE / "user" / state.case_name / state.restart_filename, False)
+  # for .dat bianry restart file
+  elif filename.endswith(".dat"):
+    filecontent = file.content
+    with open(BASE / "user" / state.case_name / filename,'wb') as restartFile:
+      restartFile.write(filecontent)
+    
+    state.jsonData["SOLUTION_FILENAME"] = filename
+    state.jsonData["RESTART_SOL"] = True
+    state.jsonData["READ_BINARY_RESTART"] = True
+
+    
+    # we reset the active field because we read or upload the restart from file as a user action
+    readRestart(BASE / "user" / state.case_name / filename, True, initialization='.dat')
+      
+  log("info", "Restart loaded ")
 
 
 # check if a file has a handle on it
@@ -525,17 +574,40 @@ def uploadRestart(restartFile, **kwargs):
 
 # read the restart file
 # reset_active_field is used to show the active field
-def readRestart(restartFile, reset_active_field):
+def readRestart(restartFile, reset_active_field, **kwargs):
 
+  # check and add extension if needed
+  restartFile = str(restartFile)
+  log("debug", f"read_restart, filename= = {restartFile}")
+
+
+  # kwargs is used to pass the initialization of the restart file
+  # check if function is called by restart initialization 
+  if 'initialization' in kwargs:
+    if kwargs['initialization']=='.dat':
+       df = Read_SU2_Restart_Binary(restartFile)
+    else:
+        df = pd.read_csv(restartFile)
+
+
+  else:
   # move the file to prevent that the file is overwritten while reading
   # the file can still be overwritten while renaming, but the time window is smaller
   # we also try to prevent this by not calling readRestart when we are about to write a file
   # (based on current iteration number)
-  if isinstance(restartFile,str):
-    os.rename(restartFile, restartFile + ".lock")
-    df = pd.read_csv(restartFile+'.lock')
-  else:
-    df = pd.read_csv(restartFile)
+    try:
+      if os.path.exists(restartFile + ".lock"):
+        os.replace(restartFile, restartFile + ".lock")
+      else:
+        os.rename(restartFile, restartFile + ".lock")
+      if state.fileio_restart_binary :
+        df = Read_SU2_Restart_Binary(restartFile+'.lock')
+      else:
+        df = pd.read_csv(restartFile+'.lock')
+    except Exception as e:
+      log("info", f"Unable to read restart file. Seems like it is not available yet or has been busy by another process  \n {e}")
+      df = pd.DataFrame()
+
 
   # check if the points and cells match, if not then we probably were writing to the file
   # while reading it and we just skip this update
@@ -578,7 +650,7 @@ def readRestart(restartFile, reset_active_field):
     try:
         datasetArray["range"] = [df[name].min(), df[name].max()]
     except TypeError as e:
-        log("error", f"Could not compute range for field {name}: {e}")
+        log("info", f"Could not compute range for field {name}: {e}")
     datasetArrays.append(datasetArray)
     counter += 1
 

@@ -41,6 +41,9 @@ state, ctrl = server.state, server.controller
 def set_json_fileio():
   try:
     state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
+    state.restart_filename = state.jsonData['RESTART_FILENAME']
+    if state.restart_filename.endswith(".dat") or state.restart_filename.endswith(".csv"):
+       state.restart_filename = state.restart_filename[:-4]
     state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
     state.fileio_restart_binary = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
     state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
@@ -201,10 +204,36 @@ def update_material(fileio_restart_frequency, **kwargs):
 def update_material(fileio_restart_binary, **kwargs):
     if 'OUTPUT_FILES' not in state.jsonData:
        state.jsonData['OUTPUT_FILES'] = ["RESTART"]
+
     if bool(fileio_restart_binary)==True:
-      state.jsonData['OUTPUT_FILES'][0]= "RESTART"
+      # change extension to .dat
+      if state.restart_filename.endswith(".csv"):
+        state.restart_filename = state.restart_filename[:-4] + ".dat"
+      elif not state.restart_filename.endswith(".dat"): 
+        state.restart_filename += ".dat"
+
+      # changes in config file
+      try:
+        restart_index = state.jsonData['OUTPUT_FILES'].index("RESTART_ASCII")
+        state.jsonData['OUTPUT_FILES'][restart_index]= "RESTART"
+      except:
+          if "RESTART" not in state.jsonData['OUTPUT_FILES']:
+            state.jsonData['OUTPUT_FILES'] += ["RESTART"]
     else:
-      state.jsonData['OUTPUT_FILES'][0]= "RESTART_ASCII"
+
+      # change extension to .csv
+      if state.restart_filename.endswith(".dat"):
+        state.restart_filename = state.restart_filename[:-4] + ".csv"
+      elif not state.restart_filename.endswith(".csv"): 
+        state.restart_filename += ".csv"
+
+      # changes is config file
+      try:
+        restart_index = state.jsonData['OUTPUT_FILES'].index("RESTART")
+        state.jsonData['OUTPUT_FILES'][restart_index]= "RESTART_ASCII"
+      except:
+         if "RESTART_ASCII" not in state.jsonData['OUTPUT_FILES']:
+          state.jsonData['OUTPUT_FILES'] += ["RESTART_ASCII"]
     state.dirty('jsonData')
 
 @state.change("fileio_restart_overwrite")

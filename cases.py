@@ -4,15 +4,22 @@ import zipfile, os
 from io import BytesIO
 from trame.widgets import vuetify
 
+from fileio import set_json_fileio
+from initialization import set_json_initialization
 from logger import log
+from materials import set_json_materials
+from numerics import set_json_numerics
+from physics import set_json_physics
 from su2_io import save_json_cfg_file, save_su2mesh
+from su2_json import updateBCDictListfromJSON
 from uicard import server
 from mesh import root , mesh_actor, mesh_mapper
 from vtk_helper import renderer
-from solver import proc_SU2
+from solver import proc_SU2, set_json_solver
 
 
 from pathlib import Path
+import json
 BASE = Path(__file__).parent 
 user_path = BASE / "user"
 
@@ -31,7 +38,7 @@ state.case_list = []
 # Dialog card for managing CASES 
 def manage_case_dialog_card():
     with vuetify.VDialog(position='{X:10,Y:10}',
-                         width = 500,
+                         width = 650,
                          min_height = 300,
                          transition="dialog-top-transition",
                          v_model=("show_manage_case_dialog_card",False),
@@ -81,20 +88,23 @@ def manage_case_dialog_card():
 
                 with vuetify.VRow():
                     with vuetify.VCol():
-                        # Add a button to trigger the done action
                         with vuetify.VBtn("Download", 
                                     click=f"utils.download('output.zip', trigger('download_case'))"
                         ):
                             vuetify.VIcon("mdi-download-box-outline")
                     with vuetify.VCol():
-                        # Add a button to trigger the done action
                         with vuetify.VBtn("Delete", 
                                     click=(delete_case, '[selected_case_idx]'),
                                     disabled=("selected_case_idx == case_name || solver_running", False)
                         ):
                             vuetify.VIcon("mdi-trash-can-outline")
                     with vuetify.VCol():
-                        # Add a button to trigger the done action
+                        with vuetify.VBtn("Load Case", 
+                                    click=(load_case, '[selected_case_idx]'),
+                                    disabled=("selected_case_idx == case_name || solver_running", False)
+                        ):
+                            vuetify.VIcon("mdi-folder-edit-outline")
+                    with vuetify.VCol():
                         with vuetify.VBtn("New Case", 
                                     disabled=("solver_running",False),
                                     click=open_new_case_dialog
@@ -131,8 +141,16 @@ def case_name_dialog_card():
                                     hide_details=True,
                                     dense=True,
                                 )
-                    with vuetify.VCardActions():
-                        vuetify.VBtn("Create", click="trigger('create_new_case')")
+                    
+                    with vuetify.VRow(classname= 'pt-4'):
+                        with vuetify.VCol():
+                            with vuetify.VCardActions():
+                                with vuetify.VBtn("Create ", click="trigger('create_new_case')"):
+                                    vuetify.VIcon("mdi-folder-plus-outline")
+                        with vuetify.VCol():
+                            with vuetify.VCardActions():
+                                with vuetify.VBtn("Load Case", click=open_manage_case_dialog):
+                                    vuetify.VIcon("mdi-folder-edit-outline")
 
 
 
@@ -140,9 +158,17 @@ def case_name_dialog_card():
 
 # function to open the new case dialog
 def open_new_case_dialog():
+    set_cases_list()
     state.show_manage_case_dialog_card = False
     state.case_name_help = ''
     state.show_case_name_dialog = True
+
+# function to open the manage case dialog
+def open_manage_case_dialog():
+    set_cases_list()
+    state.show_case_name_dialog = False
+    state.case_name_help = ''
+    state.show_manage_case_dialog_card = True
 
 
 # function to delete the cases
@@ -150,12 +176,11 @@ def delete_case(case_name):
     # if select_all_cases is True, delete all cases
     if state.select_all_cases==True:
         state.select_all_cases=False
-        state.case_name = ''
         set_cases_list()
         for case in state.case_list:
             delete_case(case)
         return
-    if case_name is None or case_name == '': 
+    if case_name is None or case_name == '' or case_name == state.case_name: 
         return
     # delete the single case
     log('info', f'case name = {case_name}')
@@ -227,6 +252,12 @@ def download_case():
 @ctrl.trigger("create_new_case")
 def create_new_case():
     set_cases_list()
+
+    if state.delete_all_previous_cases == True:
+        set_cases_list()
+        for case in state.case_list:
+            delete_case(case)
+
     if state.new_case_name is None or state.new_case_name == "":
         state.case_name_help = "> Please enter a valid case name."
 
@@ -247,14 +278,6 @@ def create_new_case():
         # create history file
         with open(BASE / "user" / state.case_name / state.history_filename, 'w') as f:
             f.write('"Time_Iter","Outer_Iter","Inner_Iter",     "rms[P]"     ,     "rms[U]"     ,     "rms[V]"     ,     "rms[T]"     ,     "rms[nu]"    ')
-        # create restart file
-        with open(BASE / "user" / state.case_name / state.restart_filename, 'w') as f:
-            f.write('"PointID","x","y","Pressure","Velocity_x","Velocity_y","Pressure_Coefficient","Density"')
-
-        # reset the input files
-        state.restartFile = None
-        state.su2_file_upload = None
-        state.cfg_file_upload = None
 
         log("info", f"Case name set to {state.case_name}")
 
@@ -263,6 +286,69 @@ def create_new_case():
             for case in state.case_list:
                 if case != state.case_name:
                     delete_case(case)
+
+
+# function to load existing case
+def load_case(case_name):
+    if case_name is None or case_name == '':
+        state.case_name_help = "> Please enter a valid case name."
+        return
+    if case_name not in state.case_list:
+        state.case_name_help = "> Case name does not exist.  \nPlease enter a valid name."
+        return
+    state.case_name = case_name
+    state.show_manage_case_dialog_card = False
+    state.show_case_name_dialog = False
+    reset_values()
+    case_path = os.path.join(user_path, case_name)
+
+    # get the list of files in the case path
+    root, dirs, filenames = os.walk(case_path).__next__()
+
+    # try to laod mesh file first
+    for file in filenames:
+        if file.endswith(".su2"):
+            mesh_path = os.path.join(root, file)
+            with open(mesh_path, 'r') as f:
+                content = f.read()
+                state.su2_file_upload = {
+                    "name": os.path.basename(mesh_path),
+                    "size" : os.stat(mesh_path).st_size,
+                    "content": content,
+                    "type": "text/plain",
+                }
+            break
+
+    # variables to check if the config and restart files are loaded
+    got_config=False
+    got_restart=False
+
+    for file in filenames:
+        if not got_config and file.endswith(".cfg"):
+            config_path = os.path.join(root, file)
+            with open(config_path, 'r') as f:
+                content = f.read()
+                state.cfg_file_upload = {
+                    "name": os.path.basename(config_path),
+                    "size" : os.stat(config_path).st_size,
+                    "content": content,
+                    "type": "text/plain",
+                }
+            got_config = True
+
+        if not got_restart and file.startswith("restart") and (file.endswith(".csv") or file.endswith(".dat") or file.endswith(".csv.lock") or file.endswith(".dat.lock")):
+            restart_path = os.path.join(root, file) 
+            with open(restart_path, 'r') as f:
+                content = f.read()
+                state.restartFile = {
+                    "name": os.path.basename(restart_path),
+                    "size" : os.stat(restart_path).st_size,
+                    "content": content,
+                    "type": "text/plain",
+                }
+            got_restart = True
+
+    log("info", f"Case '{case_name}' loaded successfully.")
 
 
 #############################################
@@ -302,6 +388,15 @@ def set_cases_list():
         log('error', f"Path to User Folder not found: '{user_path}'")
     log('info', f"Cases list = {state.case_list}")
 
+# function to start case from the terminal
+def case_args(case_name):
+    set_cases_list()
+    state.new_case_name = case_name
+    if case_name in state.case_list:
+        load_case(case_name)
+    else:
+        create_new_case()
+
 
 # reset the values, when a new case is created
 def reset_values():
@@ -310,6 +405,13 @@ def reset_values():
         state.solver_running = False
         state.solver_icon="mdi-play-circle"
         # proc_SU2.kill()
+
+    
+    # reset the input files
+    state.restartFile = None
+    state.su2_file_upload = None
+    state.cfg_file_upload = None
+
 
     state.monitorLinesVisibility = []
     state.monitorLinesNames = []
@@ -368,6 +470,24 @@ def reset_values():
     # set su2 logs to empty
     state.su2_logs = '' 
 
+    # # reset jsondata
+    # with open('./user/config.json', 'r') as f:
+    #     state.jsonData = json.load(f)
+
+    # state.dirty('jsonData')
+    
+    # # save the cfg file
+    # # save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+
+    # updateBCDictListfromJSON()
+    # # set all physics states from the json file
+    # # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
+    # set_json_physics()
+    # set_json_initialization()
+    # set_json_numerics()
+    # set_json_solver()
+    # set_json_fileio()
+    # set_json_materials()
 
 # when the manage case dialog card is opened, update the cases list
 def update_manage_case_dialog_card():
