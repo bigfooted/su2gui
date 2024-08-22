@@ -12,7 +12,6 @@ from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
 from materials import *
-import copy
 state, ctrl = server.state, server.controller
 
 # show the material dialog cards

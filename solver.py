@@ -17,7 +17,7 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #import psutil
 
 import pandas as pd
-
+from base64 import b64decode
 import subprocess, io, struct, os
 
 # real-time update, asynchronous io
@@ -276,7 +276,7 @@ def su2_play():
         with open(BASE / "user" / state.case_name / "su2.out", "w") as outfile:
           with open(BASE / "user" / state.case_name / "su2.err", "w") as errfile:
             proc_SU2 = subprocess.Popen(['SU2_CFD', state.filename_cfg_export],
-                                cwd=f"user/{state.case_name}",
+                                cwd= BASE / "user" / state.case_name,
                                 text=True,
                                 stdout=outfile,
                                 stderr=errfile
@@ -478,21 +478,26 @@ def Read_SU2_Restart_Binary(val_filename):
     Restart_Vars = [0] * nRestart_Vars
     fields = []
 
+    # Determine sizes dynamically
+    int_size = struct.calcsize('i')
+    double_size = struct.calcsize('d')
+    string_size = 33  # Assuming the fixed length for variable names
+
     try:
       with open(fname, "rb") as fhw:
           # Read the number of variables and points
-          Restart_Vars = struct.unpack('i' * nRestart_Vars, fhw.read(4 * nRestart_Vars))
+          Restart_Vars = struct.unpack('i' * nRestart_Vars, fhw.read(int_size * nRestart_Vars))
 
           nFields = Restart_Vars[1]
           nPointFile = Restart_Vars[2]
 
           # Read variable names
           for _ in range(nFields):
-              str_buf = fhw.read(33).decode('utf-8').strip('\x00')
+              str_buf = fhw.read(string_size).decode('utf-8').strip('\x00')
               fields.append(str_buf)
 
           # Read restart data
-          Restart_Data = struct.unpack('d' * nFields * nPointFile, fhw.read(8 * nFields * nPointFile))
+          Restart_Data = struct.unpack('d' * nFields * nPointFile, fhw.read(double_size * nFields * nPointFile))
 
           # Convert the data into a pandas DataFrame
           Restart_Data = [Restart_Data[i:i + nFields] for i in range(0, len(Restart_Data), nFields)]
@@ -522,6 +527,9 @@ def uploadRestart(restartFile, **kwargs):
   filename = restartFile['name']
   file = ClientFile(restartFile)
 
+  base_path = Path("e:/gsoc/su2gui/user") / state.case_name
+  base_path.mkdir(parents=True, exist_ok=True)  # Create directories if they do not exist
+    
   # for .csv
   if filename.endswith(".csv"):
     try:
@@ -542,9 +550,9 @@ def uploadRestart(restartFile, **kwargs):
     readRestart(BASE / "user" / state.case_name / filename, True, initialization='.csv')
 
 
-  # for .dat bianry restart file
+  # for .dat binary restart file
   elif filename.endswith(".dat"):
-    filecontent = file.content
+    filecontent = b64decode(file.content)
     with open(BASE / "user" / state.case_name / filename,'wb') as restartFile:
       restartFile.write(filecontent)
     
@@ -596,17 +604,19 @@ def readRestart(restartFile, reset_active_field, **kwargs):
   # we also try to prevent this by not calling readRestart when we are about to write a file
   # (based on current iteration number)
     try:
-      if os.path.exists(restartFile + ".lock"):
-        os.replace(restartFile, restartFile + ".lock")
-      else:
-        os.rename(restartFile, restartFile + ".lock")
-      if state.fileio_restart_binary :
-        df = Read_SU2_Restart_Binary(restartFile+'.lock')
-      else:
-        df = pd.read_csv(restartFile+'.lock')
+        lock_file = restartFile + ".lock"
+
+        # Copy or overwrite the lock_file with the contents of restartFile
+        shutil.copy2(restartFile, lock_file)
+
+        # Read the lock_file based on the state
+        if state.fileio_restart_binary:
+            df = Read_SU2_Restart_Binary(lock_file)
+        else:
+            df = pd.read_csv(lock_file)
     except Exception as e:
-      log("info", f"Unable to read restart file. Seems like it is not available yet or has been busy by another process  \n {e}")
-      df = pd.DataFrame()
+        log("info", f"Unable to read restart file. It may not be available yet or is being used by another process.\n{e}")
+        df = pd.DataFrame()
 
 
   # check if the points and cells match, if not then we probably were writing to the file
@@ -614,6 +624,7 @@ def readRestart(restartFile, reset_active_field, **kwargs):
   log("info", f"number of points read =  = {len(df)}")
   log("info", f"number of points expected =  = {grid.GetPoints().GetNumberOfPoints()}")
   if len(df) != grid.GetPoints().GetNumberOfPoints():
+    log("info", "Restart file is invalid, skipping update")
     return
 
   # construct the dataset_arrays
@@ -716,24 +727,25 @@ def mpl_plot_history():
     fig.patch.set_facecolor('blue')
     fig.subplots_adjust(top=0.98, bottom=0.15, left=0.05, right=0.99, hspace=0.0, wspace=0.0)
 
+    has_lines = False
+
     try:
-        # Loop over the list and plot
         for idx in state.monitorLinesRange:
-            # Only plot if the visibility is True
             if state.monitorLinesVisibility[idx]:
                 ax.plot(state.x, state.ylist[idx], label=state.monitorLinesNames[idx], linewidth=5, markersize=20, markeredgewidth=10, color=mplColorList[idx % 20])
+                has_lines = True
 
         ax.set_xlabel('iterations', labelpad=10)
         ax.set_ylabel('residuals', labelpad=-15)
         ax.grid(True, color="lightgray", linestyle="solid")
-        ax.legend(framealpha=1, facecolor='white')
 
-        # Autoscale the axis
+        if has_lines:
+            ax.legend(framealpha=1, facecolor='white')
+
         ax.autoscale(enable=True, axis="x")
         ax.autoscale(enable=True, axis="y")
 
     except IndexError as e:
-        # Add more specific logging to identify which list caused the error
         log("error", f"IndexError                         : {e}. Index causing error: {idx}")
         log("error", f"state.x length                     : {len(state.x)}")
         log("error", f"state.ylist length                 : {len(state.ylist)}")

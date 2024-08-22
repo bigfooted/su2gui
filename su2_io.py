@@ -1,6 +1,5 @@
 import vtk
 from su2_json import *
-from datetime import date
 
 from pathlib import Path
 BASE = Path(__file__).parent
@@ -162,6 +161,9 @@ def createjsonMarkers():
 # TODO: when we click the save button, the icon color changes
 ########################################################################################
 def save_json_cfg_file(filename_json_export,filename_cfg_export):
+    if state.case_name == None or state.case_name == "":
+        log("info", "Case name is not defined, did not export the configuration file")
+        return
     log("info", "exporting files")
     log("info", f"write config file  = {filename_json_export}"),
     log("info", f"write config file  = {filename_cfg_export}"),
@@ -184,21 +186,10 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
     # ##### convert json file to cfg file and save
     ########################################################################################
     with open(BASE / "user" / state.case_name / filename_cfg_export,'w') as f:
-      f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
-      f.write("%                                                                              %\n")
-      f.write("% SU2 configuration file                                                       %\n")
-      f.write("% Case description:                                                            %\n")
-      f.write("% Author:                                                                      %\n")
-      s = "% Date: " \
-        + str(date.today()) \
-        + "                                                             %\n"
-      f.write(s)
-      f.write("% SU2 version:                                                                 %\n")
-      f.write("%                                                                              %\n")
-      f.write("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+      f.write(f"{state.config_desc}  \n")
       #for k in state.jsonData:
       for attribute, value in state.jsonData.items():
-        print(attribute, value)
+        # print(attribute, value)
         # convert boolean
         if isinstance(value, bool):
             if value==True:

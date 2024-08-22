@@ -19,7 +19,6 @@ from solver import proc_SU2, set_json_solver
 
 
 from pathlib import Path
-import json
 BASE = Path(__file__).parent 
 user_path = BASE / "user"
 
@@ -159,6 +158,7 @@ def case_name_dialog_card():
 # function to open the new case dialog
 def open_new_case_dialog():
     set_cases_list()
+    state.delete_all_previous_cases = False
     state.show_manage_case_dialog_card = False
     state.case_name_help = ''
     state.show_case_name_dialog = True
@@ -205,6 +205,10 @@ def download_case():
 
         # if select_all_cases is False, download all files in the case folder
         if state.select_all_cases==False:
+
+            # save the cfg file
+            save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+
             case_path = os.path.join(user_path, case_name)
             if case_name == '':
                 log("Error", "No case selected.") 
@@ -290,12 +294,9 @@ def create_new_case():
 
 # function to load existing case
 def load_case(case_name):
-    if case_name is None or case_name == '':
-        state.case_name_help = "> Please enter a valid case name."
-        return
-    if case_name not in state.case_list:
-        state.case_name_help = "> Case name does not exist.  \nPlease enter a valid name."
-        return
+    # save the cfg file for the previous case
+    save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+
     state.case_name = case_name
     state.show_manage_case_dialog_card = False
     state.show_case_name_dialog = False
@@ -304,8 +305,9 @@ def load_case(case_name):
 
     # get the list of files in the case path
     root, dirs, filenames = os.walk(case_path).__next__()
-
-    # try to laod mesh file first
+    del dirs
+    
+    # try to load mesh file first
     for file in filenames:
         if file.endswith(".su2"):
             mesh_path = os.path.join(root, file)
@@ -317,36 +319,82 @@ def load_case(case_name):
                     "content": content,
                     "type": "text/plain",
                 }
+            state.dirty('su2_file_upload')
+            state.flush()
             break
 
-    # variables to check if the config and restart files are loaded
-    got_config=False
-    got_restart=False
-
+    # try to load config file
     for file in filenames:
-        if not got_config and file.endswith(".cfg"):
+        if file.endswith(".cfg"):
             config_path = os.path.join(root, file)
             with open(config_path, 'r') as f:
                 content = f.read()
-                state.cfg_file_upload = {
-                    "name": os.path.basename(config_path),
-                    "size" : os.stat(config_path).st_size,
-                    "content": content,
-                    "type": "text/plain",
-                }
-            got_config = True
 
-        if not got_restart and file.startswith("restart") and (file.endswith(".csv") or file.endswith(".dat") or file.endswith(".csv.lock") or file.endswith(".dat.lock")):
-            restart_path = os.path.join(root, file) 
-            with open(restart_path, 'r') as f:
-                content = f.read()
-                state.restartFile = {
-                    "name": os.path.basename(restart_path),
-                    "size" : os.stat(restart_path).st_size,
-                    "content": content,
-                    "type": "text/plain",
-                }
-            got_restart = True
+            state.cfg_file_upload = {
+                "name": os.path.basename(config_path),
+                "size" : os.stat(config_path).st_size,
+                "content": content,
+                "type": "text/plain",
+            }
+
+            for line in content.splitlines():
+                if 'RESTART_FILENAME' in line:
+                    _, value = line.split('=', 1)
+                    state.restart_filename = value.strip()
+                    break
+
+            log("info", f"Config file '{state.cfg_file_upload['name']}' loaded successfully.")
+
+            # load the restart file
+            log('info', f"Restart file name = {state.restart_filename}")
+            if state.restart_filename == None or state.restart=='':
+                state.restart_filename = 'restart'
+                log("info", f"Restart file not found in the config file.")
+                return
+
+            # got the restart file name, now try to load the restart file
+            restart_path = os.path.join(root, state.restart_filename) 
+
+            # check if the restart file exists
+            if not os.path.isfile(restart_path):
+                # try to add extension to the file if not found
+                if not (restart_path.endswith(".dat") or restart_path.endswith(".csv")):
+                    if 'OUTPUT_FILES' in state.jsonData and 'RESTART_ASCII' in state.jsonData['OUTPUT_FILES']:
+                        restart_path += ".csv"
+                    else:
+                        restart_path += ".dat"
+
+                # check if the restart file exists
+                if not os.path.isfile(restart_path):
+                    # check if restart file is lock file, and rename it to restart file
+                    if os.path.isfile(restart_path + ".lock"):
+                        os.rename(restart_path + ".lock", restart_path)
+                    else:
+                        log("info", f"Restart file '{restart_path}' not found in the case.")
+                        return
+
+            if restart_path.endswith(".dat"):
+                with open(restart_path, 'rb') as f:
+                    content = f.read()
+                    state.restartFile = {
+                        "name": os.path.basename(restart_path),
+                        "size" : os.stat(restart_path).st_size,
+                        "content": content,
+                        "type": "text/plain",
+                    }
+            else:
+                with open(restart_path, 'r') as f:
+                    content = f.read()
+                    state.restartFile = {
+                        "name": os.path.basename(restart_path),
+                        "size" : os.stat(restart_path).st_size,
+                        "content": content,
+                        "type": "text/plain",
+                    }
+
+            log("info", f"Restart file '{state.restart_filename}' loaded successfully.")
+
+            break
 
     log("info", f"Case '{case_name}' loaded successfully.")
 
@@ -396,6 +444,7 @@ def case_args(case_name):
         load_case(case_name)
     else:
         create_new_case()
+    state.flush()
 
 
 # reset the values, when a new case is created

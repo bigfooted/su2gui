@@ -60,7 +60,7 @@ logging.getLogger().addHandler(custom_handler)
 #################### LOGS -> SU2GUI TAB ####################
 def log(type :str, message, **kwargs):
     """
-    Appends a message to the "su2gui.log" file.
+    Appends a message to the "su2gui.log" file and LOGS Tab.
 
     Args:
         type (str) : Type of message to be appended, like INFO, ERROR, WARN, etc - Any
@@ -101,11 +101,13 @@ def clear_logs():
 
 # Handle the error message for LOGS -> SU2GUI Tab
 def handle_error(error_message):
+    # Display the error message in the error dialog card
+    # set the char limit to 20000 to avoid overflow
     if state.show_error_dialog_card == False:
-        state.error_msg = error_message
+        state.error_msg = error_message[:20000]
         state.show_error_dialog_card = True
     else:
-        state.error_msg+=(error_message)
+        state.error_msg=(state.error_msg+error_message)[:20000]
 
     # Also Printing the error message in terminal
     print(f"{error_message}")
@@ -113,15 +115,22 @@ def handle_error(error_message):
 
 # Handle the warning message for LOGS -> SU2GUI Tab
 def handle_warn(warn_message):
+    # Display the warning message in the warning dialog card
+    # set the char limit to 20000 to avoid overflow
     if state.show_warn_dialog_card == False:
-        state.warn_msg = warn_message
+        state.warn_msg = warn_message[:20000]
         state.show_warn_dialog_card = True
     else:
-        state.warn_msg+=(warn_message)
+        state.warn_msg=(state.warn_msg+warn_message)[:20000]
 
     # Also printing the warning message in terminal
     print(f"{warn_message}")
 
+
+@ctrl.trigger("download_su2gui_log")
+def download_su2gui_log():
+    with open(BASE / "user" / 'su2gui.log', 'r') as f:
+        return f.read()
 
 
 #################### LOGS -> SU2 TAB ####################
@@ -161,11 +170,14 @@ def find_error_message(msg):
     
     if error_lines:
         error_message = "\n".join(error_lines)
+
+    # Display the error message in the error dialog card
+    # set the char limit to 20000 to avoid overflow
         if state.show_error_dialog_card == False:
-            state.error_msg = error_message
+            state.error_msg = error_message[:20000]
             state.show_error_dialog_card = True
         else:
-            state.error_msg+=(error_message)
+            state.error_msg=(state.error_msg+error_message)[:20000]
 
     return error_found
 
@@ -212,4 +224,42 @@ def hide_warn_dialog_card():
     state.show_warn_dialog_card = False
     state.warn_msg = ""
 
+#################### LOGS TAB ####################
 
+def logs_tab():
+    with vuetify.VTabItem(
+              value=(3,), style="width: 100%; height: 100%;"
+            ):
+              # with vuetify.VTabs(v_model=("log_tab", 0), right=True):
+              with vuetify.VTabs(v_model=("log_tab", 0)):
+                vuetify.VTab("SU2GUI")
+                vuetify.VTab("SU2")
+
+              with vuetify.VContainer(
+                fluid=True,
+                classes="pa-0 fill-height",
+                style="position: relative;"
+              ):
+                
+                with vuetify.VTabsItems(
+                    value=("log_tab",), style="width: 100%; height: 100%;"
+                ):
+                  with vuetify.VTabItem(
+                    value=(0,), style="width: 100%; height: 100%;"
+                  ):
+                        with vuetify.VBtn("Logs",
+                                          click = f"utils.download('su2gui.log', trigger('download_su2gui_log'), 'text/plain')",
+                                          style="margin-left: 80%;"):
+                            vuetify.VIcon("mdi-arrow-down-bold-box-outline")
+                        markdown.Markdown(
+                          content = ('md_content', state.md_content), 
+                          style = "padding: 0.5rem 3rem; color: black; background-color: white"
+                        )
+                  with vuetify.VTabItem(
+                    value=(1,), style="width: 100%; height: 100%;"
+                  ):
+                        markdown.Markdown(
+                          content = ('su2_logs', state.su2_logs), 
+                          style = "padding: 3rem; color: black; background-color: white",
+                          hide_details = True
+                        )

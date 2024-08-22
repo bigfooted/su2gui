@@ -11,7 +11,6 @@ from uicard import ui_card, ui_subcard, ui_card_children_only,ui_card_parent_onl
 from trame.widgets import vuetify
 from su2_json import *
 from materials import *
-import copy
 state, ctrl = server.state, server.controller
 
 # for dialog cards:

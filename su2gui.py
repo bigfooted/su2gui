@@ -2,10 +2,9 @@ r"""
 The SU2 Graphical User Interface.
 """
 
-import os, copy, io
-
-import pandas as pd
+import os
 import argparse
+from base64 import b64encode
 
 from trame.app import get_server
 from trame.app.file_upload import ClientFile
@@ -32,7 +31,7 @@ from cases import update_manage_case_dialog_card, manage_case_dialog_card, case_
 from uicard import ui_card, server
 
 # Logging funtions
-from logger import log, clear_logs , Error_dialog_card, Warn_dialog_card
+from logger import log, clear_logs , Error_dialog_card, Warn_dialog_card, logs_tab
 
 from config import *
 
@@ -130,6 +129,7 @@ local_file_manager = LocalFileManager(__file__)
 local_file_manager.url("collapsed", BASE / "icons/chevron-up.svg")
 local_file_manager.url("collapsible", BASE / "icons/chevron-down.svg")
 local_file_manager.url("su2logo", BASE / "img/logoSU2small.png")
+local_file_manager.url("favicon", BASE / "img/favicon.ico")
 
 log("info", f"""
 ****************************************
@@ -149,7 +149,7 @@ state.show_dialog = False
 
 # TODO FIXME update from user input / cfg file
 state.history_filename = 'history.csv'
-state.restart_filename = 'restart.csv'
+state.fileio_restart_filename = 'restart'
 
 state.monitorLinesVisibility = []
 state.monitorLinesNames = []
@@ -333,10 +333,10 @@ id_boundaries = pipeline.add_node(parent=id_numerics,   name="Boundaries",
 id_initial    = pipeline.add_node(parent=id_boundaries, name="Initialization",
                                   subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
 # 7
-id_monitor    = pipeline.add_node(parent=id_initial,    name="Monitor",
-                                  subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
+# id_monitor    = pipeline.add_node(parent=id_initial,    name="Monitor",
+#                                   subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
 # 8
-id_fileio     = pipeline.add_node(parent=id_monitor,    name="File I/O",
+id_fileio     = pipeline.add_node(parent=id_initial,    name="File I/O",
                                   subui="none", visible=1, color="#42A5F5", actions=["collapsible"])
 # 9
 id_solver     = pipeline.add_node(parent=id_fileio,    name="Solver",
@@ -508,6 +508,11 @@ def actives_change(ids):
     state.active_ui = _headnode
 
     # check if we need to show a subui
+
+# improvements required
+def resetCamera():
+    renderer.ResetCamera()
+    ctrl.view_update()
 
 ###############################################################
 # PIPELINE CARD : BOUNDARY
@@ -699,110 +704,10 @@ state.LMaterialsHeatCapacity = LMaterialsHeatCapacityConst
 # FILES
 ###############################################################
 
-# load cofiguration .cfg file
-@state.change("cfg_file_upload")
-def load_cfg_file(cfg_file_upload, **kwargs):
-
-    if cfg_file_upload is None:
-        return
-
-    # check if the case name is set
-    if not checkCaseName():
-        state.cfg_file_upload = None
-        return
-
-    file = ClientFile(cfg_file_upload)
-    try:
-        filecontent = file.content.decode('utf-8')
-    except:
-        filecontent = file.content
-
-    # reading each line of configuration file
-    f = filecontent.splitlines()
-    cfglist = []
-    f = [element for element in f if not (element.strip().startswith("%")) and len(element.strip())]
-    for item in f:
-       item = item.strip()
-       if(item[0] == "%" or len(item)<1):
-          continue   
-       if(len(cfglist) and cfglist[-1][-1]=='\\'):
-          cfglist[-1] = cfglist[-1][:-1]
-          cfglist[-1] += item
-       else:
-          cfglist.append(item)
-    
-    cfg_dict = {}
-    for item in cfglist:
-        key, value = item.split('=', 1)
-        key = key.strip()
-        value = value.strip()
-        
-        # Convert value to appropriate type
-        if (value.startswith('(') and value.endswith(')')) or ',' in value or ' ' in value:
-            # Remove parentheses and split by comma
-            if value[0]=='(' or value[-1]==')':
-               value = value[1:-1]
-            if ',' in value:
-               value =  value.split(',')
-            else:
-               value = value.split()
-            # Convert each item to an appropriate type
-            value = [v.strip() for v in value]
-            value = [int(v) if v.isdigit() else v for v in value]
-        elif value.isdigit():
-            value = int(value)
-        elif value.upper() == 'YES' or value.upper() == 'TRUE':
-            value = True
-        elif value.upper() == 'NO' or value.upper() == 'FALSE':
-            value = False   
-        elif value.upper() == 'NONE':
-            value = None
-        else:
-            try:
-                value = float(value)
-            except ValueError:
-                pass # Keep as string if it cannot be converted to int or float
-        
-        cfg_dict[key] = value
-
-
-    # checking if the value of state.jsonData['OUTPUT_WRT_FREQ'] is int
-    # if yes set it to a list of 2 elements with same value for proper working
-    if 'OUTPUT_WRT_FREQ' in cfg_dict and isinstance(cfg_dict['OUTPUT_WRT_FREQ'], int):
-      cfg_dict['OUTPUT_WRT_FREQ']= [cfg_dict['OUTPUT_WRT_FREQ']] * 2
-
-    # Write the dictionary to a JSON file
-    # with open(BASE / "user" / state.filename_json_export, 'w') as f:
-    #     json.dump(cfg_dict, f, indent=4)
-    # assigning new values to jsonData
-
-    cfg_dict.pop('SOLUTION_FILENAME', None)
-    state.jsonData = cfg_dict
-    state.dirty('jsonData')
-
-      
-    # save the cfg file
-    # save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
-
-    updateBCDictListfromJSON()
-    # set all physics states from the json file
-    # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
-    set_json_physics()
-    set_json_initialization()
-    set_json_numerics()
-    set_json_solver()
-    set_json_fileio()
-    set_json_materials()
-
-    # set config file data in config_str
-    update_config_str()
-
-
 # load SU2 .su2 mesh file #
 # currently loads a 2D or 3D .su2 file
 @state.change("su2_file_upload")
 def load_file_su2(su2_file_upload, **kwargs):
-
     global pipeline
     # remove the added boundary conditions in the pipeline
     pipeline.remove_right_subnode("Boundaries")
@@ -1118,10 +1023,111 @@ def load_file_su2(su2_file_upload, **kwargs):
     axes1 = MakeAxesActor()
     coord_axes = MakeOrientationMarkerWidget(axes1)
 
-    renderer.ResetCamera()
-    ctrl.view_update()
+    resetCamera()
     
     update_config_str()
+    state.dirty('restartFile')
+
+
+# load cofiguration .cfg file
+@state.change("cfg_file_upload")
+def load_cfg_file(cfg_file_upload, **kwargs):
+
+    if cfg_file_upload is None:
+        return
+
+    # check if the case name is set
+    if not checkCaseName():
+        state.cfg_file_upload = None
+        return
+
+    file = ClientFile(cfg_file_upload)
+    try:
+        filecontent = file.content.decode('utf-8')
+    except:
+        filecontent = file.content
+
+    # reading each line of configuration file
+    f = filecontent.splitlines()
+    cfglist = []
+    f = [element for element in f if not (element.strip().startswith("%")) and len(element.strip())]
+    for item in f:
+       item = item.strip()
+       if(item[0] == "%" or len(item)<1):
+          continue   
+       if(len(cfglist) and cfglist[-1][-1]=='\\'):
+          cfglist[-1] = cfglist[-1][:-1]
+          cfglist[-1] += item
+       else:
+          cfglist.append(item)
+    
+    cfg_dict = {}
+    for item in cfglist:
+        key, value = item.split('=', 1)
+        key = key.strip()
+        value = value.strip()
+        
+        # Convert value to appropriate type
+        if (value.startswith('(') and value.endswith(')')) or ',' in value or ' ' in value:
+            # Remove parentheses and split by comma
+            if value[0]=='(' or value[-1]==')':
+               value = value[1:-1]
+            if ',' in value:
+               value =  value.split(',')
+            else:
+               value = value.split()
+            # Convert each item to an appropriate type
+            value = [v.strip() for v in value]
+            value = [int(v) if v.isdigit() else v for v in value]
+        elif value.isdigit():
+            value = int(value)
+        elif value.upper() == 'YES' or value.upper() == 'TRUE':
+            value = True
+        elif value.upper() == 'NO' or value.upper() == 'FALSE':
+            value = False   
+        elif value.upper() == 'NONE':
+            value = None
+        else:
+            try:
+                value = float(value)
+            except ValueError:
+                pass # Keep as string if it cannot be converted to int or float
+        
+        cfg_dict[key] = value
+
+
+    # checking if the value of state.jsonData['OUTPUT_WRT_FREQ'] is int
+    # if yes set it to a list of 2 elements with same value for proper working
+    if 'OUTPUT_WRT_FREQ' in cfg_dict and isinstance(cfg_dict['OUTPUT_WRT_FREQ'], int):
+      cfg_dict['OUTPUT_WRT_FREQ']= [cfg_dict['OUTPUT_WRT_FREQ']] * 2
+
+    # Write the dictionary to a JSON file
+    # with open(BASE / "user" / state.filename_json_export, 'w') as f:
+    #     json.dump(cfg_dict, f, indent=4)
+    # assigning new values to jsonData
+
+    cfg_dict.pop('SOLUTION_FILENAME', None)
+    cfg_dict.pop('RESTART_SOL', None)
+    state.jsonData = cfg_dict
+    state.dirty('jsonData')
+
+      
+    # save the cfg file
+    # save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
+
+    updateBCDictListfromJSON()
+    # set all physics states from the json file
+    # this is reading the config file (done by read_json_data) and filling it into the GUI menu's
+    set_json_physics()
+    set_json_initialization()
+    set_json_numerics()
+    set_json_solver()
+    set_json_fileio()
+    set_json_materials()
+
+    # set config file data in config_str
+    update_config_str()
+
 
 # -----------------------------------------------------------------------------
 # GUI elements
@@ -1210,6 +1216,7 @@ def standard_buttons():
 # -----------------------------------------------------------------------------
 
 state.trame__title = "SU2 GUI"
+state.trame__favicon = local_file_manager.assets['favicon']
 
 with SinglePageWithDrawerLayout(server) as layout:
 
@@ -1416,7 +1423,7 @@ with SinglePageWithDrawerLayout(server) as layout:
 
                   with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
                     # reset the view
-                    with vuetify.VBtn(icon=True, click="$refs.view.resetCamera()"):
+                    with vuetify.VBtn(icon=True, click=(resetCamera)):
                       vuetify.VIcon("mdi-crop-free")
 
                   with vuetify.VRow(dense=True,classes="pa-0 ma-0"):
@@ -1485,88 +1492,10 @@ with SinglePageWithDrawerLayout(server) as layout:
                     ctrl.update_figure = html_figure.update
 
             # Third Tab
-            with vuetify.VTabItem(
-               value=(2,), style="width: 100%; height: 100%; padding: 3rem"
-            ):
-                
-                markdown.Markdown(
-                  content = ('config_tab_heading', "Add Properties Manually  \n"), 
-                  style = "font-weight:bolder;background-color: white; color:black; font-size: larger; "
-                )
-
-                with vuetify.VRow(
-                   style= "margin:1rem;"
-                ):
-                    with vuetify.VCol(
-                            style = "width:30%"):
-                        vuetify.VTextField(
-                            label="Key",
-                            v_model = ("key", None),
-                            outlined=True,
-                            dense=True,
-                            hide_details=True,
-                        )
-                    with vuetify.VCol(
-                            style = "width:70%"):
-                        vuetify.VTextField(
-                            label="Value",
-                            v_model = ("value", None),
-                            outlined=True,
-                            dense=True,
-                            hide_details=True,
-                        )
-                vuetify.VBtn("Add",click=(add_new_property),
-                             style = "background-color: #3a76de; margin-left: 2rem; color: white; margin-bottom: 1rem;"
-                             )
-
-                with vuetify.VRow(
-                   style = "justify-content: space-between; margin:.5rem;"
-                ):
-                    markdown.Markdown(
-                      content = ('config_data_heading', "Configuration File Data  \n"), 
-                      style = "font-weight:bolder;background-color: white; color:black;"
-                    )
-                    vuetify.VBtn("Reload",click=(update_config_str),
-                      style = "background-color: #3a76de; margin-left: 2rem; color: white;"
-                      )
-                markdown.Markdown(
-                  content = ('config_str', state.confing_str), 
-                  style = "background-color: white;"
-                )
+            config_tab()
 
             # Fourth Tab
-            with vuetify.VTabItem(
-              value=(3,), style="width: 100%; height: 100%;"
-            ):
-              # with vuetify.VTabs(v_model=("log_tab", 0), right=True):
-              with vuetify.VTabs(v_model=("log_tab", 0)):
-                vuetify.VTab("SU2GUI")
-                vuetify.VTab("SU2")
-
-              with vuetify.VContainer(
-                fluid=True,
-                classes="pa-0 fill-height",
-                style="position: relative;"
-              ):
-                
-                with vuetify.VTabsItems(
-                    value=("log_tab",), style="width: 100%; height: 100%;"
-                ):
-                  with vuetify.VTabItem(
-                    value=(0,), style="width: 100%; height: 100%;"
-                  ):
-                        markdown.Markdown(
-                          content = ('md_content', state.md_content), 
-                          style = "padding: 3rem; color: black; background-color: white"
-                        )
-                  with vuetify.VTabItem(
-                    value=(1,), style="width: 100%; height: 100%;"
-                  ):
-                        markdown.Markdown(
-                          content = ('su2_logs', state.su2_logs), 
-                          style = "padding: 3rem; color: black; background-color: white",
-                          hide_details = True
-                        )
+            logs_tab()
 
 
     log("info", "finalizing drawer layout")
@@ -1575,79 +1504,104 @@ with SinglePageWithDrawerLayout(server) as layout:
 # CLI
 # -----------------------------------------------------------------------------
 
-def main():
+def check_su2():
+    # Check if SU2 is installed by trying to locate the SU2_CFD command
+    su2_command = shutil.which("SU2_CFD")
     
-    # Defining arguments while calling su2gui
-    # for starting it with different files 
+    if su2_command:
+        print("SU2_GUI is Able to access SU2_CFD.")
+    else:
+        print("\nSU2 is not installed.")
+        print("Please install SU2 from the following link:")
+        print("https://su2code.github.io/download/")
+
+        # Prompt user to continue or exit
+        response = input("Would you like to continue without SU2? (y/n): ").strip().lower()
+        if response != 'y' or response != '':
+            exit("Process aborted. Please install SU2 and try again.")
+
+
+def main():
+    # check if SU2 is installed
+    check_su2()
+
+    # Argument parsing
     parser = argparse.ArgumentParser(description='Start the SU2 GUI application.')
-    parser.add_argument('-p', '--port', type=int,default=8080, help='Path to the restart file in .csv format.')
+    parser.add_argument('-p', '--port', type=int, default=8080, help='Port to run the server.')
     parser.add_argument('-c', '--case', type=str, help='Name of case to start with.')
     parser.add_argument('-m', '--mesh', type=str, help='Path to the SU2 mesh file in .su2 format.')
     parser.add_argument('--config', type=str, help='Path to the configuration file.')
     parser.add_argument('--restart', type=str, help='Path to the restart file in .csv/.dat format.')
     
     args = parser.parse_args()
-    
+
     mesh_path = args.mesh
     config_path = args.config
     restart_path = args.restart
     case = args.case
 
     if case:
-       case_args(case)
-       
-    if mesh_path and not os.path.exists(mesh_path):
-        log("error", f"The SU2 mesh file {mesh_path} does not exist.")
-        exit(1)
+        case_args(case)
 
-    if mesh_path:
+    if mesh_path and os.path.exists(mesh_path):
         log("info", f"Using SU2 mesh file {mesh_path}")
         with open(mesh_path, 'r') as f:
-           content = f.read()
-           state.su2_file_upload = {
-              "name": os.path.basename(mesh_path),
-              "size" : os.stat(mesh_path).st_size,
-              "content": content,
-              "type": "text/plain",
-           }
+            content = f.read()
+            state.su2_file_upload = {
+                "name": os.path.basename(mesh_path),
+                "size": os.stat(mesh_path).st_size,
+                "content": content,
+                "type": "text/plain",
+            }
+        state.dirty('su2_file_upload')
+    elif mesh_path:
+        log("error", f"The SU2 mesh file {mesh_path} does not exist, and was not loaded.")
 
-    if config_path and not os.path.exists(config_path):
-        log("Error", f"The configuration file {config_path} does not exist.")
-        exit(1)
-
-    if config_path:
+    if config_path and os.path.exists(config_path):
         log("info", f"Using configuration file {config_path}")
         with open(config_path, 'r') as f:
-           content = f.read()
-           state.cfg_file_upload = {
-              "name": os.path.basename(config_path),
-              "size" : os.stat(config_path).st_size,
-              "content": content,
-              "type": "text/plain",
-           }
-           
+            content = f.read()
+            state.cfg_file_upload = {
+                "name": os.path.basename(config_path),
+                "size": os.stat(config_path).st_size,
+                "content": content,
+                "type": "text/plain",
+            }
+        state.dirty('cfg_file_upload')
+    elif config_path:
+        log("error", f"The configuration file {config_path} does not exist, and was not loaded.")
 
-    if restart_path and not os.path.exists(restart_path):
-        log("Error", f"The restart file {restart_path} does not exist.")
-        exit(1)
-
-    if restart_path:
+    if restart_path and os.path.exists(restart_path):
         if not mesh_path:
-           log("Error", f"Can not load restart file without SU2 mesh file ")
-           exit(1)
-        log("info", f"Using restart file {restart_path}")
-        with open(restart_path, 'r') as f:
-           content = f.read()
-           state.restartFile = {
-              "name": os.path.basename(restart_path),
-              "size" : os.stat(restart_path).st_size,
-              "content": content,
-              "type": "text/plain",
-           }
+            log("error", "Cannot load restart file without SU2 mesh file.")
+        else:
+            log("info", f"Using restart file {restart_path}")
+            content = None
+            if restart_path.endswith(".dat"):
+                with open(restart_path, 'rb') as f:
+                    content = b64encode(f.read()).decode('utf-8')
 
-    log("info", f"Application Started - Initializing SU2GUI Server at {args.port} port")
+            else:
+                with open(restart_path, 'r') as f:
+                    content = f.read()
+
+            state.restartFile = {
+                "name": os.path.basename(restart_path),
+                "size": os.stat(restart_path).st_size,
+                "content": content,
+                "type": "text/plain" if not restart_path.endswith(".dat") else "application/octet-stream",
+            }
+            state.dirty('restartFile')
+    elif restart_path:
+        log("error", f"The restart file {restart_path} does not exist, and was not loaded.")
+
+    # Flush all states at once
+    state.flush()
+
+    log("info", f"Application Started - Initializing SU2GUI Server at port {args.port}")
     server.start(port=args.port)
     log("info", "SU2GUI Server Ended...")
+
 
 
 if __name__=="__main__":

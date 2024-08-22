@@ -40,12 +40,11 @@ state, ctrl = server.state, server.controller
 # set the state variables using the json data from the config file
 def set_json_fileio():
   try:
-    state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
     state.restart_filename = state.jsonData['RESTART_FILENAME']
-    if state.restart_filename.endswith(".dat") or state.restart_filename.endswith(".csv"):
-       state.restart_filename = state.restart_filename[:-4]
+    # if state.restart_filename.endswith(".dat") or state.restart_filename.endswith(".csv"):
+    #    state.restart_filename = state.restart_filename[:-4]
     state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
-    state.fileio_restart_binary = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
+    state.fileio_restart_binary = bool('OUTPUT_FILES' in state.jsonData and not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
     state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
   except KeyError as e:
     log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
@@ -64,7 +63,7 @@ def set_json_fileio():
     log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
     
 
-  state.dirty('fileio_restart_name')
+  state.dirty('restart_filename')
   state.dirty('fileio_restart_frequency')
   state.dirty('fileio_restart_binary')
   state.dirty('fileio_restart_overwrite')
@@ -100,7 +99,7 @@ def fileio_card():
             with vuetify.VCol(cols="4", classes="py-1 pl-0 pr-1"):
               vuetify.VTextField(
                 label="Restart",
-                v_model=("fileio_restart_name", "restart_flow"),
+                v_model=("restart_filename", state.restart_filename),
                 outlined=True,
                 dense=True,
                 hide_details=True,
@@ -183,9 +182,10 @@ def fileio_card():
                 hide_details=True,
               )
 #
-@state.change("fileio_restart_name")
-def update_material(fileio_restart_name, **kwargs):
-    state.jsonData['RESTART_FILENAME']= fileio_restart_name
+@state.change("restart_filename")
+def update_material(restart_filename, **kwargs):
+    state.jsonData['RESTART_FILENAME']= restart_filename
+    state.dirty('fileio_restart_binary')
     state.dirty('jsonData')
 
 # note that we currently support exactly 2 entries in OUTPUT_FILES, restart and paraview
@@ -203,14 +203,11 @@ def update_material(fileio_restart_frequency, **kwargs):
 @state.change("fileio_restart_binary")
 def update_material(fileio_restart_binary, **kwargs):
     if 'OUTPUT_FILES' not in state.jsonData:
-       state.jsonData['OUTPUT_FILES'] = ["RESTART"]
+       state.jsonData['OUTPUT_FILES'] = ['PARAVIEW', 'SURFACE_PARAVIEW']
 
     if bool(fileio_restart_binary)==True:
       # change extension to .dat
-      if state.restart_filename.endswith(".csv"):
-        state.restart_filename = state.restart_filename[:-4] + ".dat"
-      elif not state.restart_filename.endswith(".dat"): 
-        state.restart_filename += ".dat"
+      state.restart_filename = state.restart_filename.split('.',1)[0]+".dat"
 
       # changes in config file
       try:
@@ -220,12 +217,8 @@ def update_material(fileio_restart_binary, **kwargs):
           if "RESTART" not in state.jsonData['OUTPUT_FILES']:
             state.jsonData['OUTPUT_FILES'] += ["RESTART"]
     else:
-
       # change extension to .csv
-      if state.restart_filename.endswith(".dat"):
-        state.restart_filename = state.restart_filename[:-4] + ".csv"
-      elif not state.restart_filename.endswith(".csv"): 
-        state.restart_filename += ".csv"
+      state.restart_filename = state.restart_filename.split('.',1)[0]+".csv"
 
       # changes is config file
       try:
