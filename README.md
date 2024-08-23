@@ -29,12 +29,12 @@ Here is an overview of how SU2GUI works:
 You can install SU2GUI via pip:
 
 ```sh
-pip install su2guitest
+pip install su2gui
 ```
 ### Usage
 To launch the GUI, run the following command in your terminal:
 ```sh
-su2gui
+SU2_GUI
 ```
 
 #### More Information
