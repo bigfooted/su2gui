@@ -296,7 +296,9 @@ def create_new_case():
 def load_case(case_name):
     # save the cfg file for the previous case
     save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
-
+    if case_name is None or case_name == '':
+        log("Error", "No case selected.")
+        return
     state.case_name = case_name
     state.show_manage_case_dialog_card = False
     state.show_case_name_dialog = False
