@@ -160,7 +160,7 @@ def update_initial_option(initial_option_idx, **kwargs):
     # option=2 : patch
     if (state.initial_option_idx==0):
       # uniform (constant) initialization
-      log("info", f"state.jsonData solve =  = {state.jsonData["SOLVER"]}")
+      log("info", f"state.jsonData solve =  = {state.jsonData['SOLVER']}")
       if "INC" in (state.jsonData["SOLVER"]):
         log("info", "initialization for incompressible")
         if state.active_ui=="Initialization":
@@ -219,7 +219,7 @@ def initialize_uniform():
   else:
     log("info", "incompressible")
     log("info", f"pressure: = {state.init_pressure}")
-    log("info", f"velocity: = {state.init_velx," ",state.init_vely}")
+    log("info", f"velocity: = {state.init_velx} {state.init_vely}")
     FieldNames.extend(["Pressure","Velocity_x","Velocity_y"])
     FieldValues.extend([state.init_pressure,state.init_velx,state.init_vely])
     if state.nDim==3:
@@ -267,7 +267,7 @@ def initialize_uniform():
     ArrayObject.SetNumberOfValues(nPoints)
     ArrayObject.SetNumberOfTuples(nPoints)
 
-    log("info", f"name =  = {name, " , value = ",value }")
+    log("info", f"name = {name} , value = {value}")
 
     # Nijso: TODO FIXME reported to be a slow process.
     for i in range(nPoints):
@@ -392,7 +392,7 @@ def initialize_patch():
   else:
     log("info", "incompressible")
     log("info", f"pressure: = {state.init_pressure}")
-    log("info", f"velocity: = {state.init_velx," ",state.init_vely}")
+    log("info", f"velocity: = {state.init_velx} {state.init_vely}")
     FieldNames.extend(["Pressure","Velocity_x","Velocity_y"])
     FieldValues1.extend([PatchZoneDict[0]['pressure'],PatchZoneDict[0]['velocity'][0], PatchZoneDict[0]['velocity'][1]])
     FieldValues2.extend([PatchZoneDict[1]['pressure'],PatchZoneDict[1]['velocity'][0], PatchZoneDict[1]['velocity'][1]])

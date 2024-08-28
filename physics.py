@@ -398,7 +398,7 @@ def update_physics_turb_sa(physics_turb_sa_ft2_idx, **kwargs):
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          log("info", f"           key= = {key,", val=",value}")
+          log("info", f"           key= = {key} val= {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -412,7 +412,7 @@ def update_physics_turb_sa(physics_turb_sa_qcr2000_idx, **kwargs):
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          log("info", f"           key= = {key,", val=",value}")
+          log("info", f"           key= = {key} val= {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -425,7 +425,7 @@ def update_physics_turb_sa(physics_turb_sa_compressibility_idx, **kwargs):
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          log("info", f"           key= = {key,", val=",value}")
+          log("info", f"           key= = {key} val= {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -438,7 +438,7 @@ def update_physics_turb_sa(physics_turb_sa_rotation_idx, **kwargs):
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          log("info", f"           key= = {key,", val=",value}")
+          log("info", f"           key = {key} val = {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -451,7 +451,7 @@ def update_physics_turb_sa(physics_turb_sa_bcm_idx, **kwargs):
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          log("info", f"           key= = {key,", val=",value}")
+          log("info", f"           key = {key} val = {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -607,7 +607,7 @@ def update_physics_turb(physics_turb_idx, **kwargs):
       state.physics_energy_always_on = 1
 
     state.dirty('physics_energy_always_on')
-    log("info", f"Is energy always on?  = {state.physics_energy_always_on}")
+    log("debug", f"Is energy always on?  = {state.physics_energy_always_on}")
     state.dirty('jsonData')
 
 

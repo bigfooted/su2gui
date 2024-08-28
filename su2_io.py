@@ -232,7 +232,6 @@ def save_json_cfg_file(filename_json_export,filename_cfg_export):
 ########################################################################################
 def save_su2mesh(multiblock,su2_export_filename):
     log("info", type(multiblock))
-    log("info", f"export files: = {"clicked"}")
     # export an su2 file
     # first, get the dimensions. If the z-dimension is smaller than 1e-6, we assume 2D
 
@@ -262,7 +261,7 @@ def save_su2mesh(multiblock,su2_export_filename):
     BOUND=[0,0,0,0,0,0]
     internalBlock.GetBounds(BOUND)
     dz = BOUND[5] - BOUND[2]
-    log("info", f"dz= = {dz}")
+    log("info", f"dz = {dz}")
     NDIME= state.nDim
     # if (dz<1e-12):
     #     log("info", "case is 2D")
@@ -332,7 +331,7 @@ def save_su2mesh(multiblock,su2_export_filename):
       s = "NMARK= " + str(NMARK) + "\n"
       f.write(s)
       for i in range(NMARK):
-        #log("info", f"i =  = {i," / ",NMARK}")
+        #log("info", f"i =  = {i} {NMARK}")
         data = boundaryBlock.GetBlock(i)
         celldata = data.GetCells()
         name = boundaryBlock.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())

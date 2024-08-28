@@ -345,7 +345,7 @@ def load_case(case_name):
                     state.restart_filename = value.strip()
                     break
 
-            log("info", f"Config file '{state.cfg_file_upload['name']}' loaded successfully.")
+            log("info", f"Config file {state.cfg_file_upload['name']} loaded successfully.")
 
             # load the restart file
             log('info', f"Restart file name = {state.restart_filename}")

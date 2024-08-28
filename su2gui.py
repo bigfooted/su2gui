@@ -963,7 +963,7 @@ def load_file_su2(su2_file_upload, **kwargs):
 
     # now construct the actual boundary list for the GUI
     for bcName in boundaryNames:
-       log("info", f"boundary name= = {bcName.get("text")}")
+       log("info", f"boundary name= = {bcName.get('text')}")
        # add the boundaries to the right tree and not the left tree
        id_aa = pipeline.append_node(parent_name="Boundaries", name=bcName.get("text"), left=False, subui="none", visible=1, color="#2962FF")
 

@@ -76,7 +76,7 @@ def set_json_solver():
         state.dirty('convergence_val')
     if 'CONV_FIELD' in state.jsonData:
         state.convergence_fields = state.jsonData['CONV_FIELD']
-        log("info", f"state convergence fields =  = {state.convergence_fields," ",type(state.convergence_fields)}")
+        log("info", f"state convergence fields =  = {state.convergence_fields} {type(state.convergence_fields)}")
 
 
 # matplotlib
@@ -400,7 +400,7 @@ def update_solver_dialog_card_convergence():
       for field in state.jsonData['CONV_FIELD']:
          log("debug", f"field= = {field}")
          for i in range(len(state.convergence_fields)):
-            log("debug", f"i= = {i," ",state.convergence_fields[i]}")
+            log("debug", f"i= = {i} {state.convergence_fields[i]}")
             if (field==state.convergence_fields[i]):
                log("debug", "field found")
                state.convergence_fields_visibility[i] = True
@@ -615,7 +615,7 @@ def readRestart(restartFile, reset_active_field, **kwargs):
         else:
             df = pd.read_csv(lock_file)
     except Exception as e:
-        log("info", f"Unable to read restart file. It may not be available yet or is being used by another process.\n{e}")
+        log("info", f"Unable to read restart file. It may not be available yet or is being used by another process.\n  {e}")
         df = pd.DataFrame()
 
 
