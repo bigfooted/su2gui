@@ -1,9 +1,12 @@
 # ignore all files in directory
 *.pex
 __pycache__/*
+/env/*
 *.pyc
 *.err 
 *.out
 *.su2
 *.vtu
 *.vtm
+/user/*
+user/*.log

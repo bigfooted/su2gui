@@ -7,6 +7,7 @@
 # 4) define any global state variables that might be needed
 
 # definition of ui_card
+import shutil
 from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
@@ -16,8 +17,8 @@ from su2_io import save_su2mesh, save_json_cfg_file
 #import psutil
 
 import pandas as pd
-
-import sys, subprocess, io, time
+from base64 import b64decode
+import subprocess, io, struct, os
 
 # real-time update, asynchronous io
 import asyncio
@@ -31,6 +32,9 @@ from vtkmodules.vtkCommonDataModel import vtkDataObject
 # import the grid from the mesh module
 from mesh import *
 from vtk_helper import *
+
+# Logging function
+from logger import log, update_su2_logs
 
 # matplotlib
 import matplotlib
@@ -64,14 +68,15 @@ state.global_iter = -1
 
 # initialize from json file
 def set_json_solver():
-  state.iter_idx = state.jsonData['ITER']
-  state.dirty('iter_idx')
-  state.convergence_val = state.jsonData['CONV_RESIDUAL_MINVAL']
-  state.dirty('convergence_val')
-
-  #for field in state.jsonData['CONV_FIELD']:
-  state.convergence_fields = state.jsonData['CONV_FIELD']
-  print("state convergence fields = ",state.convergence_fields," ",type(state.convergence_fields))
+    if 'ITER' in state.jsonData:
+        state.iter_idx = state.jsonData['ITER']
+        state.dirty('iter_idx')
+    if 'CONV_RESIDUAL_MINVAL' in state.jsonData:
+        state.convergence_val = state.jsonData['CONV_RESIDUAL_MINVAL']
+        state.dirty('convergence_val')
+    if 'CONV_FIELD' in state.jsonData:
+        state.convergence_fields = state.jsonData['CONV_FIELD']
+        log("info", f"state convergence fields =  = {state.convergence_fields} {type(state.convergence_fields)}")
 
 
 # matplotlib
@@ -79,22 +84,22 @@ state.active_figure="mpl_plot_history"
 state.graph_update=True
 @state.change("active_figure", "figure_size", "countdown","monitorLinesVisibility")
 def update_chart(active_figure, **kwargs):
-    print("updating figure 1")
+    log("info", "updating figure 1")
     ctrl.update_figure(globals()[active_figure]())
     #ctrl.update_figure2(globals()[active_figure]())
 
 #matplotlib
 def update_visibility(index, visibility):
-    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    log("info", f"monitorLinesVisibility =  = {state.monitorLinesVisibility}")
     state.monitorLinesVisibility[index] = visibility
-    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    log("info", f"monitorLinesVisibility =  = {state.monitorLinesVisibility}")
     state.dirty("monitorLinesVisibility")
-    print(f"Toggle {index} to {visibility}")
-    print("monitorLinesVisibility = ",state.monitorLinesVisibility)
+    log("info", f"Toggle {index} to {visibility}")
+    log("info", f"monitorLinesVisibility =  = {state.monitorLinesVisibility}")
 
 #matplotlib
 def dialog_card():
-    print("dialog card, lines=",state.monitorLinesNames)
+    log("info", f"dialog card, lines= = {state.monitorLinesNames}")
     # show_dialog2 determines if the entire dialog is shown or not
     with vuetify.VDialog(width=200,position='{X:10,Y:10}',transition="dialog-top-transition",v_model=("show_dialog",False)):
       #with vuetify.VCard(color="light-gray"):
@@ -136,28 +141,29 @@ async def start_countdown(result):
     while state.keep_updating:
         with state:
             await asyncio.sleep(2.0)
-            print("iteration = ",state.global_iter, type(state.global_iter))
+            log("debug", f"iteration =  = {state.global_iter, type(state.global_iter)}")
             wrt_freq = state.jsonData['OUTPUT_WRT_FREQ'][1]
-            print("wrt_freq = ",wrt_freq, type(wrt_freq))
-            print("iteration save = ",state.global_iter % wrt_freq)
-            print("keep updating = ",state.keep_updating)
+            log("debug", f"wrt_freq =  = {wrt_freq, type(wrt_freq)}")
+            log("info", f"iteration save =  = {state.global_iter % wrt_freq}")
+            log("debug", f"keep updating =  = {state.keep_updating}")
             # update the history from file
-            readHistory(BASE / "user" / state.history_filename)
+            readHistory(BASE / "user" / state.case_name / state.history_filename)
             # update the restart from file, do not reset the active scalar value
             # do not update when we are about to write to the file
-            readRestart(BASE / "user" / state.restart_filename, False)
+            readRestart(BASE / "user" / state.case_name / state.restart_filename, False)
 
             # we flip-flop the true-false state to keep triggering the state and read the history file
             state.countdown = not state.countdown
             # check that the job is still running
-            print("poll = ",proc_SU2.poll())
+            log("debug", f"poll =  = {proc_SU2.poll()}")
             if proc_SU2.poll() != None:
-              print("job has stopped")
+              log("info", "job has stopped")
               # stop updating the graphs
               state.keep_updating = False
               # set the running state to false
               state.solver_running = False
               state.solver_icon="mdi-play-circle"
+            update_su2_logs()
 
 
 ###############################################################
@@ -165,7 +171,7 @@ async def start_countdown(result):
 ###############################################################
 def solver_card():
     with ui_card(title="Solver", ui_name="Solver"):
-        print("## Solver Selection ##")
+        log("debug", "## Solver Selection ##")
       # 1 row of option lists
         with vuetify.VRow(classes="pt-2"):
           with vuetify.VCol(cols="8"):
@@ -194,6 +200,21 @@ def solver_card():
         with vuetify.VBtn("Solve",click=su2_play):
             vuetify.VIcon("{{solver_icon}}",color="purple")
 
+########################################################################################
+# Checks/Corrects some json entries before starting the Solver
+########################################################################################
+# def checkjsonData():
+#    if 'RESTART_FILENAME' in state.jsonData:
+#        state.jsonData['RESTART_FILENAME' ] = 'restart'
+#        state.restart_filename = 'restart'
+#    if 'SOLUTION_FILENAME' in state.jsonData:
+#        state.jsonData['SOLUTION_FILENAME' ] = 'solution_flow'
+
+def checkCaseName():
+    if state.case_name is None or state.case_name == "":
+        log("error", "Case name is empty, create a new case.  \n Otherwise your data will not be saved!")
+        return False
+    return True
 
 ###############################################################
 # Solver - state changes
@@ -201,20 +222,25 @@ def solver_card():
 @state.change("iter_idx")
 def update_material(iter_idx, **kwargs):
     #
-    print("ITER value: ",state.iter_idx)
+    log("debug", f"ITER value:  = {state.iter_idx}")
     #
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     #
     # update config option value
-    state.jsonData['ITER']= int(state.iter_idx)
+    try:
+      state.jsonData['ITER'] = int(state.iter_idx)
+    except ValueError:
+      log("error", "Invalid value for ITER")
 
 @state.change("convergence_val")
 def update_material(convergence_val, **kwargs):
     #
     # update config option value
-    state.jsonData['CONV_RESIDUAL_MINVAL']= int(state.convergence_val)
-
+    try:
+      state.jsonData['CONV_RESIDUAL_MINVAL'] = int(state.convergence_val)
+    except ValueError:
+      log("error", "Invalid value for CONV_RESIDUAL_MINVAL in solver")
 
 
 # start SU2 solver
@@ -225,9 +251,16 @@ def su2_play():
     # every time we press the button we switch the state
     state.solver_running = not state.solver_running
     if state.solver_running:
-        print("### SU2 solver started!")
+        log("info", "### SU2 solver started!")
         # change the solver button icon
         state.solver_icon="mdi-stop-circle"
+
+        # reset monitorLinesNames for the history plot
+        state.monitorLinesNames = []
+
+        # check if the case name is set
+        if not checkCaseName():
+            return
 
         # save the cfg file
         save_json_cfg_file(state.filename_json_export,state.filename_cfg_export)
@@ -235,11 +268,15 @@ def su2_play():
         global root
         save_su2mesh(root,state.jsonData['MESH_FILENAME'])
 
+        # clear old su2 log and set new one
+        state.last_modified_su2_log_len = 0
+        state.su2_logs = ""
+
         # run SU2_CFD with config.cfg
-        with open(BASE / "user" / "su2.out", "w") as outfile:
-          with open(BASE / "user" / "su2.err", "w") as errfile:
+        with open(BASE / "user" / state.case_name / "su2.out", "w") as outfile:
+          with open(BASE / "user" / state.case_name / "su2.err", "w") as errfile:
             proc_SU2 = subprocess.Popen(['SU2_CFD', state.filename_cfg_export],
-                                cwd="user/",
+                                cwd= BASE / "user" / state.case_name,
                                 text=True,
                                 stdout=outfile,
                                 stderr=errfile
@@ -247,38 +284,38 @@ def su2_play():
         # at this point we have started the simulation
         # we can now start updating the real-time plots
         state.keep_updating = True
-        print("start polling, poll = ",proc_SU2.poll())
+        log("debug", f"start polling, poll =  = {proc_SU2.poll()}")
 
         # Wait until process terminates
         #while result.poll() is None:
         #  time.sleep(1.0)
-        print("result = ",proc_SU2)
-        print("result poll= ",proc_SU2.poll())
+        log("debug", f"result =  = {proc_SU2}")
+        log("debug", f"result poll=  = {proc_SU2.poll()}")
 
         # periodic update of the monitor and volume result
         start_countdown(proc_SU2)
 
 
-        print("result = ",proc_SU2)
+        log("debug", f"result =  = {proc_SU2}")
         # save mesh
         # save config
         # save restart file
         # call su2_cfd
     else:
         state.solver_icon="mdi-play-circle"
-        print("### SU2 solver stopped!"),
+        log("info", "### SU2 solver stopped!"),
         # we need to terminate or kill the result process here if stop is pressed
-        print("process=",type(proc_SU2))
+        log("debug", f"process= = {type(proc_SU2)}")
         proc_SU2.terminate()
 
 # matplotlib history
 def update_convergence_fields_visibility(index, visibility):
-    print("index=",index)
-    print("visible=",state.convergence_fields_visibility)
+    log("debug", f"index= = {index}")
+    log("debug", f"visible= = {state.convergence_fields_visibility}")
     state.convergence_fields_visibility[index] = visibility
-    print("visible=",state.convergence_fields_visibility)
+    log("debug", f"visible= = {state.convergence_fields_visibility}")
     state.dirty("convergence_fields_visibility")
-    print(f"Toggle {index} to {visibility}")
+    log("debug", f"Toggle {index} to {visibility}")
 
 
 # matplotlib history
@@ -317,15 +354,15 @@ def solver_dialog_card_convergence():
 
 ###############################################################################
 def update_solver_dialog_card_convergence():
-    print("changing state of solver_dialog_Card_convergence to:",state.show_solver_dialog_card_convergence)
+    log("debug", f"changing state of solver_dialog_Card_convergence to: = {state.show_solver_dialog_card_convergence}")
     state.show_solver_dialog_card_convergence = not state.show_solver_dialog_card_convergence
 
     # if we show the card, then also update the fields that we need to show
     if state.show_solver_dialog_card_convergence==True:
-      print("updating list of fields")
+      log("debug", "updating list of fields")
       # note that Euler and inc_euler can be treated as compressible / incompressible as well
-      print(state.jsonData['SOLVER'])
-      print(state.jsonData['INC_ENERGY_EQUATION'])
+      log("debug", state.jsonData['SOLVER'])
+      log("debug", state.jsonData['INC_ENERGY_EQUATION'])
 
       if ("INC" in str(state.jsonData['SOLVER'])):
         compressible = False
@@ -361,14 +398,14 @@ def update_solver_dialog_card_convergence():
       # get the checkbox states from the jsondata
       state.convergence_fields_visibility = [False for i in state.convergence_fields]
       for field in state.jsonData['CONV_FIELD']:
-         print("field=",field)
+         log("debug", f"field= = {field}")
          for i in range(len(state.convergence_fields)):
-            print("i=",i," ",state.convergence_fields[i])
+            log("debug", f"i= = {i} {state.convergence_fields[i]}")
             if (field==state.convergence_fields[i]):
-               print("field found")
+               log("debug", "field found")
                state.convergence_fields_visibility[i] = True
 
-      print("convergence fields:",state.convergence_fields)
+      log("debug", f"convergence fields: = {state.convergence_fields}")
       state.dirty('convergence_fields')
       state.dirty('convergence_fields_range')
     else:
@@ -398,7 +435,7 @@ def update_dialog():
 # Read the history file
 # set the names and visibility
 def readHistory(filename):
-    print("read_history, filename=",filename)
+    log("debug", f"read_history, filename= = {filename}")
     skipNrRows=[]
     # read the history file
     dataframe = pd.read_csv(filename,skiprows=skipNrRows)
@@ -423,7 +460,7 @@ def readHistory(filename):
     # number of global iterations, assuming we start from 0 and every line is an iteration.
     # actually, we should look at Inner_Iter
     state.global_iter = len(dfrms.index)
-    #print("x = ",state.x)
+    #log("info", f"x =  = {state.x}")
     state.ylist=[]
     for c in range(len(dfrms.columns)):
         state.ylist.append(dfrms.iloc[:,c].tolist())
@@ -433,20 +470,101 @@ def readHistory(filename):
 
 
 ###############################################################################
+# read binay restart file
+def Read_SU2_Restart_Binary(val_filename):
+    val_filename = str(val_filename)
+    fname = val_filename
+    nRestart_Vars = 5
+    Restart_Vars = [0] * nRestart_Vars
+    fields = []
+
+    # Determine sizes dynamically
+    int_size = struct.calcsize('i')
+    double_size = struct.calcsize('d')
+    string_size = 33  # Assuming the fixed length for variable names
+
+    try:
+      with open(fname, "rb") as fhw:
+          # Read the number of variables and points
+          Restart_Vars = struct.unpack('i' * nRestart_Vars, fhw.read(int_size * nRestart_Vars))
+
+          nFields = Restart_Vars[1]
+          nPointFile = Restart_Vars[2]
+
+          # Read variable names
+          for _ in range(nFields):
+              str_buf = fhw.read(string_size).decode('utf-8').strip('\x00')
+              fields.append(str_buf)
+
+          # Read restart data
+          Restart_Data = struct.unpack('d' * nFields * nPointFile, fhw.read(double_size * nFields * nPointFile))
+
+          # Convert the data into a pandas DataFrame
+          Restart_Data = [Restart_Data[i:i + nFields] for i in range(0, len(Restart_Data), nFields)]
+          df = pd.DataFrame(Restart_Data, columns=fields)
+    except:
+      log("info", "Unable able to read binary restart file")
+      df = pd.DataFrame()
+
+
+    return df
+
+
 # # ##### upload ascii restart file #####
 @state.change("restartFile")
 def uploadRestart(restartFile, **kwargs):
-
-  print("loading restart file ")
+  log("debug", "Updating restart.csv file")
   if restartFile is None:
+    state.jsonData["RESTART_SOL"] = False
+    log("debug", "removed file")
     return
 
-  # type(file) will always be bytes
+  # check if the case name is set
+  if not checkCaseName():
+    state.restartFile = None
+    return
+
+  filename = restartFile['name']
   file = ClientFile(restartFile)
-  filecontent = file.content.decode('utf-8')
-  f = filecontent.splitlines()
-  # we reset the active field because we read or upload the restart from file as a user action
-  readRestart(io.StringIO('\n'.join(f)), True)
+
+  base_path = Path("e:/gsoc/su2gui/user") / state.case_name
+  base_path.mkdir(parents=True, exist_ok=True)  # Create directories if they do not exist
+    
+  # for .csv
+  if filename.endswith(".csv"):
+    try:
+        filecontent = file.content.decode('utf-8')
+    except:
+        filecontent = file.content
+
+    f = filecontent.splitlines()
+
+    with open(BASE / "user" / state.case_name / filename,'w') as restartFile:
+      restartFile.write(filecontent)
+
+    state.jsonData["SOLUTION_FILENAME"] = filename
+    state.jsonData["RESTART_SOL"] = True
+    state.jsonData["READ_BINARY_RESTART"] = False
+    
+    # we reset the active field because we read or upload the restart from file as a user action
+    readRestart(BASE / "user" / state.case_name / filename, True, initialization='.csv')
+
+
+  # for .dat binary restart file
+  elif filename.endswith(".dat"):
+    filecontent = b64decode(file.content)
+    with open(BASE / "user" / state.case_name / filename,'wb') as restartFile:
+      restartFile.write(filecontent)
+    
+    state.jsonData["SOLUTION_FILENAME"] = filename
+    state.jsonData["RESTART_SOL"] = True
+    state.jsonData["READ_BINARY_RESTART"] = True
+
+    
+    # we reset the active field because we read or upload the restart from file as a user action
+    readRestart(BASE / "user" / state.case_name / filename, True, initialization='.dat')
+      
+  log("info", "Restart loaded ")
 
 
 # check if a file has a handle on it
@@ -454,7 +572,7 @@ def uploadRestart(restartFile, **kwargs):
 #    for proc in psutil.process_iter():
 #        try:
 #            for item in proc.open_files():
-#                print("item=",item)
+#                log("info", f"item= = {item}")
 #                if fpath == item.path:
 #                    return True
 #        except Exception:
@@ -464,23 +582,49 @@ def uploadRestart(restartFile, **kwargs):
 
 # read the restart file
 # reset_active_field is used to show the active field
-def readRestart(restartFile,reset_active_field):
+def readRestart(restartFile, reset_active_field, **kwargs):
 
+  # check and add extension if needed
+  restartFile = str(restartFile)
+  log("debug", f"read_restart, filename= = {restartFile}")
+
+
+  # kwargs is used to pass the initialization of the restart file
+  # check if function is called by restart initialization 
+  if 'initialization' in kwargs:
+    if kwargs['initialization']=='.dat':
+       df = Read_SU2_Restart_Binary(restartFile)
+    else:
+        df = pd.read_csv(restartFile)
+
+
+  else:
   # move the file to prevent that the file is overwritten while reading
   # the file can still be overwritten while renaming, but the time window is smaller
   # we also try to prevent this by not calling readRestart when we are about to write a file
   # (based on current iteration number)
-  if isinstance(restartFile,str):
-    os.rename(restartFile, restartFile + ".lock")
-    df = pd.read_csv(restartFile+'.lock')
-  else:
-    df = pd.read_csv(restartFile)
+    try:
+        lock_file = restartFile + ".lock"
+
+        # Copy or overwrite the lock_file with the contents of restartFile
+        shutil.copy2(restartFile, lock_file)
+
+        # Read the lock_file based on the state
+        if state.fileio_restart_binary:
+            df = Read_SU2_Restart_Binary(lock_file)
+        else:
+            df = pd.read_csv(lock_file)
+    except Exception as e:
+        log("info", f"Unable to read restart file. It may not be available yet or is being used by another process.\n  {e}")
+        df = pd.DataFrame()
+
 
   # check if the points and cells match, if not then we probably were writing to the file
   # while reading it and we just skip this update
-  print("number of points read = ",len(df))
-  print("number of points expected = ",grid.GetPoints().GetNumberOfPoints())
+  log("info", f"number of points read =  = {len(df)}")
+  log("info", f"number of points expected =  = {grid.GetPoints().GetNumberOfPoints()}")
   if len(df) != grid.GetPoints().GetNumberOfPoints():
+    log("info", "Restart file is invalid, skipping update")
     return
 
   # construct the dataset_arrays
@@ -488,7 +632,7 @@ def readRestart(restartFile,reset_active_field):
   counter=0
   for key in df.keys():
     name = key
-    print("reading restart, field name = ",name)
+    log("info", f"reading restart, field name =  = {name}")
     # let's skip these 
     if (name in ['PointID','x','y']):
       continue
@@ -508,20 +652,23 @@ def readRestart(restartFile,reset_active_field):
 
     grid.GetPointData().AddArray(ArrayObject)
 
-    datasetArrays.append(
-            {
+    datasetArray = {
                 "text": name,
                 "value": counter,
-                "range": [df.min()[key],df.max()[key]],
                 "type": vtkDataObject.FIELD_ASSOCIATION_POINTS,
             }
-    )
+
+    try:
+        datasetArray["range"] = [df[name].min(), df[name].max()]
+    except TypeError as e:
+        log("info", f"Could not compute range for field {name}: {e}")
+    datasetArrays.append(datasetArray)
     counter += 1
 
   state.dataset_arrays = datasetArrays
-  #print("dataset = ",datasetArrays)
-  #print("dataset_0 = ",datasetArrays[0])
-  #print("dataset_0 = ",datasetArrays[0].get('text'))
+  #log("info", f"dataset =  = {datasetArrays}")
+  #log("info", f"dataset_0 =  = {datasetArrays[0]}")
+  #log("info", f"dataset_0 =  = {datasetArrays[0].get('text'}"))
 
   mesh_mapper.SetInputData(grid)
   mesh_actor.SetMapper(mesh_mapper)
@@ -546,8 +693,7 @@ def readRestart(restartFile,reset_active_field):
     # We have loaded a mesh, so enable the exporting of files
     state.export_disabled = False
 
-
-  renderer.ResetCamera()
+  # renderer.ResetCamera()
   ctrl.view_update()
 
 
@@ -575,53 +721,36 @@ def figure_size():
 ###############################################################################
 def mpl_plot_history():
     plt.close('all')
-    fig, ax = plt.subplots(1,1,**figure_size(),facecolor='blue')
-    #ax.cla()
-
-    #fig.set_facecolor('black')
-    #fig.tight_layout()
-    #fig.patch.set_linewidth(10)
-    #fig.patch.set_edgecolor('purple')
+    fig, ax = plt.subplots(1, 1, **figure_size(), facecolor='blue')
     ax.set_facecolor('#eafff5')
     fig.set_facecolor('blue')
     fig.patch.set_facecolor('blue')
-    #ax.plot(
-    #    np.random.rand(20),
-    #    "-o",
-    #    alpha=0.5,
-    #    color="black",
-    #    linewidth=5,
-    #    markerfacecolor="green",
-    #    markeredgecolor="lightgreen",
-    #    markersize=20,
-    #    markeredgewidth=10,
-    #)
-    #fig.subplots_adjust(top=0.95, bottom=0.1, left=0.1, right=0.9,hspace=0.8)
+    fig.subplots_adjust(top=0.98, bottom=0.15, left=0.05, right=0.99, hspace=0.0, wspace=0.0)
 
-    fig.subplots_adjust(top=0.98, bottom=0.15, left=0.05, right=0.99, hspace=0.0,wspace=0.0)
-    #fig.tight_layout()
+    has_lines = False
 
-    # loop over the list and plot
-    for idx in state.monitorLinesRange:
-      #print("line= ",idx,", name= ",state.monitorLinesNames[idx]," visible:",state.monitorLinesVisibility[idx])
-      #print("__ range x = ", min(state.x), " ",max(state.x))
-      # only plot if the visibility is True
-      if state.monitorLinesVisibility[idx]:
-        #print("printing line ",idx)
-        ax.plot( state.x,state.ylist[idx], label=state.monitorLinesNames[idx],linewidth=5, markersize=20, markeredgewidth=10,color=mplColorList[idx])
+    try:
+        for idx in state.monitorLinesRange:
+            if state.monitorLinesVisibility[idx]:
+                ax.plot(state.x, state.ylist[idx], label=state.monitorLinesNames[idx], linewidth=5, markersize=20, markeredgewidth=10, color=mplColorList[idx % 20])
+                has_lines = True
 
-    ax.set_xlabel('iterations',labelpad=10)
-    ax.set_ylabel('residuals',labelpad=-15)
-    ax.grid(True, color="lightgray", linestyle="solid")
-    ax.legend(framealpha=1,facecolor='white')
+        ax.set_xlabel('iterations', labelpad=10)
+        ax.set_ylabel('residuals', labelpad=-15)
+        ax.grid(True, color="lightgray", linestyle="solid")
 
-    # autoscale the axis
-    ax.autoscale(enable=True,axis="x")
-    ax.autoscale(enable=True,axis="y")
-    #ax.set_xlim(0, 22)
-    #ax.set_ylim(-20, 0)
-    #frame = ax.legend.get_frame()
-    #frame.set_color('white')
+        if has_lines:
+            ax.legend(framealpha=1, facecolor='white')
+
+        ax.autoscale(enable=True, axis="x")
+        ax.autoscale(enable=True, axis="y")
+
+    except IndexError as e:
+        log("error", f"IndexError                         : {e}. Index causing error: {idx}")
+        log("error", f"state.x length                     : {len(state.x)}")
+        log("error", f"state.ylist length                 : {len(state.ylist)}")
+        log("error", f"state.monitorLinesNames length     : {len(state.monitorLinesNames), state.monitorLinesNames}")
+        log("error", f"state.monitorLinesVisibility length: {len(state.monitorLinesVisibility)}")
+        log("error", f"mplColorList length                : {len(mplColorList)}")
 
     return fig
-

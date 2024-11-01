@@ -80,7 +80,7 @@ mesh_actor = vtkActor()
 
 def mesh_card():
     with ui_card(title="Mesh", ui_name="Mesh"):
-        print("## Mesh Selection ##")
+        log("info", "## Mesh Selection ##")
         vuetify.VTextarea(
                 label="mesh info:",
                 rows="5",

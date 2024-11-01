@@ -12,8 +12,10 @@ from uicard import ui_card, ui_subcard, server
 from trame.widgets import vuetify
 from su2_json import *
 from materials import *
-import copy
 state, ctrl = server.state, server.controller
+
+# show the material dialog cards
+state.show_wall_function_dialog_card = False
 
 
 ############################################################################
@@ -50,48 +52,21 @@ LPhysicsTurbSSTOptions= [
 
 
 
-# compressible inlet boundary types
-# json name: INLET_TYPE
-LBoundaryInletType= [
-        {"text": "Total conditions", "value": 0,"json":"TOTAL_CONDITIONS"},
-        {"text": "Mass flow", "value": 1,"json":"MASS_FLOW"},
-]
-# compressible inlet boundary types
-# json name: -
-LBoundaryOutletType= [
-  {"text": "None", "value": 0},
-]
-
-# incompressible inlet boundary types
-# json name: INC_INLET_TYPE
-LBoundaryIncInletType= [
-        {"text": "Pressure", "value": 0,"json":"PRESSURE_INLET"},
-        {"text": "Velocity", "value": 1,"json":"VELOCITY_INLET"},
-]
-
-# incompressible outlet boundary types
-# json name: INC_OUTLET_TYPE
-LBoundaryIncOutletType= [
-        {"text": "Pressure", "value": 0,"json":"PRESSURE_OUTLET"},
-        {"text": "Mass flow", "value": 1,"json":"VELOCITY_OUTLET"},
-]
-
-
-
-
 # set the state variables using the json data from the config file
 def set_json_physics():
   # energy equation on/off
-  state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
-  print("       ################# energy equation = ",state.physics_energy_idx)
+  if 'INC_ENERGY_EQUATION' in state.jsonData:
+    state.physics_energy_idx = bool(state.jsonData['INC_ENERGY_EQUATION']==True)
+    log("debug", f"       ################# energy equation =  = {state.physics_energy_idx}")
 
-  # compressible or incompressible
-  state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
-  print("       ################# compressible= ",state.physics_comp_idx)
+  if 'SOLVER' in state.jsonData:
+    # compressible or incompressible
+    state.physics_comp_idx = 0 if "INC" in state.jsonData['SOLVER'] else 1
+    log("debug", f"       ################# compressible=  = {state.physics_comp_idx}")
 
-  # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
-  state.physics_energy_always_on = 0 if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS') else 1
-  print("energy always on = ",state.physics_energy_always_on)
+    # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
+    state.physics_energy_always_on = 0 if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS') else 1
+    log("debug", f"energy always on =  = {state.physics_energy_always_on}")
 
   # the SA options
   state.SAOptions={"NONE":True,
@@ -116,40 +91,59 @@ def set_json_physics():
   state.physics_turb_sa_bcm_idx = 0
 
   if "EULER" in state.jsonData['SOLVER']:
-     print("EULER solver")
+     log("info", "EULER solver")
      state.physics_turb_idx = 0
   elif "NAVIER_STOKES" in state.jsonData['SOLVER']:
-     print("NAVIER-STOKES solver")
+     log("info", "NAVIER-STOKES solver")
      state.physics_turb_idx = 1
   elif "RANS" in state.jsonData['SOLVER']:
-    print("RANS solver")
+    log("info", "RANS solver")
     if state.jsonData['KIND_TURB_MODEL'] == "SA":
-      print("SA model")
+      log("info", "SA model")
       # must be SA
       state.physics_turb_idx = 2
       # activate sub_ui
       #state.active_sub_ui = "subphysics_sa"
       #pipeline.update_node_value("Physics","subui",active_sub_ui)
 
-      if "NEGATIVE" in state.jsonData['SA_OPTIONS']:
-         state.physics_turb_sa_idx = 1
-      elif "EDWARDS" in state.jsonData['SA_OPTIONS']:
-         state.physics_turb_sa_idx = 2
+      if  'SA_OPTIONS' in state.jsonData:
+        if "NEGATIVE" in state.jsonData['SA_OPTIONS']:
+            state.physics_turb_sa_idx = 1
+        elif "EDWARDS" in state.jsonData['SA_OPTIONS']:
+            state.physics_turb_sa_idx = 2
 
-      # SA submodels
-      state.physics_turb_sa_ft2_idx= bool("WITHFT2" in state.jsonData['SA_OPTIONS'])
-      state.physics_turb_sa_qcr2000_idx= bool("QCR200" in state.jsonData['SA_OPTIONS'])
-      state.physics_turb_sa_compressibility_idx= bool("COMPRESSIBILITY" in state.jsonData['SA_OPTIONS'])
-      state.physics_turb_sa_rotation_idx= bool("ROTATION" in state.jsonData['SA_OPTIONS'])
-      state.physics_turb_sa_bcm_idx= bool("BCM" in state.jsonData['SA_OPTIONS'])
+        # SA submodels
+        state.physics_turb_sa_ft2_idx= bool("WITHFT2" in state.jsonData['SA_OPTIONS'])
+        state.physics_turb_sa_qcr2000_idx= bool("QCR200" in state.jsonData['SA_OPTIONS'])
+        state.physics_turb_sa_compressibility_idx= bool("COMPRESSIBILITY" in state.jsonData['SA_OPTIONS'])
+        state.physics_turb_sa_rotation_idx= bool("ROTATION" in state.jsonData['SA_OPTIONS'])
+        state.physics_turb_sa_bcm_idx= bool("BCM" in state.jsonData['SA_OPTIONS'])
     else:
-      print("SST model")
+      log("info", "SST model")
       state.physics_turb_idx = 3
       # activate sub_ui
       #state.active_sub_ui = "subphysics_sst"
-      state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
+      if  'SST_OPTIONS' in state.jsonData :
+        state.physics_turb_sst_idx= GetJsonIndex(state.jsonData['SST_OPTIONS'],LPhysicsTurbSSTOptions)
+
+    # settings for wall functions
+    if ('WALLMODEL_KAPPA' in state.jsonData):
+        state.wallmodel_kappa_idx = state.jsonData['WALLMODEL_KAPPA']
+    if ('WALLMODEL_B' in state.jsonData):   
+        state.wallmodel_b_idx = state.jsonData['WALLMODEL_B']
+    if ('WALLMODEL_MINYPLUS' in state.jsonData):   
+        state.wallmodel_miny_idx = state.jsonData['WALLMODEL_MINYPLUS']
+    if ('WALLMODEL_MAXITER' in state.jsonData):  
+        state.wallmodel_maxiter_idx = state.jsonData['WALLMODEL_MAXITER'] 
+    if ('WALLMODEL_RELFAC' in state.jsonData):  
+        state.wallmodel_relax_factor_idx = state.jsonData['WALLMODEL_RELFAC']
+    if ('MARKER_WALL_FUNCTIONS' in state.jsonData):
+        state.wall_function = True
+    else:
+        state.wall_function = False
+
   else:
-     print("no proper solver defined")
+     log("info", "no proper solver defined")
 
   state.dirty('physics_energy_idx')
   state.dirty('physics_comp_idx')
@@ -172,7 +166,7 @@ def set_json_physics():
 ###############################################################
 def physics_card():
     with ui_card(title="Physics", ui_name="Physics"):
-        print("     ## Physics Selection ##")
+        log("info", "     ## Physics Selection ##")
 
         # todo: viscous flow on/off (Euler vs Navier-Stokes)
 
@@ -221,9 +215,150 @@ def physics_card():
             outlined=True,
             classes="pt-1 mt-1",
         )
+        
+        with vuetify.VRow(classes="pt-2"):
+            with vuetify.VCol(cols="6"):
+                vuetify.VCheckbox(
+                    v_model=("wall_function", False),
+                    label="Wall Function",
+                    classes="mt-1 pt-1",
+                    # use wall function only if the turbulence model is RANS or INC_RANS
+                    disabled=("physics_turb_idx < 2",0),
+                    hide_details=True,
+                    dense=True,
+                )
+            with vuetify.VCol(cols="4"):
+              with vuetify.VBtn(
+                                elevation=1,
+                                variant="text",
+                                color="white",
+                                click=update_wall_function_dialog_card,
+                                disabled=("!wall_function",0),
+                                icon="mdi-dots-vertical"):
+                vuetify.VIcon("mdi-dots-vertical",density="compact",color="green")
 
 
 ###############################################################
+
+
+# WALL FUNCTION Dialog box
+# Marker_wall is built by su2_io->createjsonMarkers
+# and not stored in BCDictList
+def wall_function_dialog_card():
+    with vuetify.VDialog(width=300,position='{X:10,Y:10}',transition="dialog-top-transition",v_model=("show_wall_function_dialog_card",False)):
+      with vuetify.VCard():
+
+        vuetify.VCardTitle("Wall Functions",
+                           classes="grey lighten-1 py-1 grey--text text--darken-3")
+        
+        with vuetify.VContainer(fluid=True, classes="pl-4"):
+          # ####################################################### #
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_kappa_idx", 0.41),
+                label="Von Karman Constant",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_b_idx", 5.0),
+                label="Model Constant B",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_miny_idx", 5.5),
+                label="Minimum Y+ value",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_maxiter_idx", 200),
+                label="Max Newton iterations",
+              )
+          with vuetify.VRow(classes="py-0 my-0"):
+            with vuetify.VCol(cols="8"):
+              vuetify.VTextField(
+                v_model=("wallmodel_relax_factor_idx", 0.5),
+                label="Relaxation factor",
+              )
+        
+        with vuetify.VCardText():
+          vuetify.VBtn("close", click=update_wall_function_dialog_card)
+
+
+###############################################################
+# Wall Functions 
+###############################################################
+
+def update_wall_function_dialog_card():
+    state.show_wall_function_dialog_card = not state.show_wall_function_dialog_card
+
+@state.change("wall_function")
+def update_wall_function(wall_function, **kwargs):
+    log("info", f"     wall function selection:  = {wall_function}")
+    if wall_function==False:
+        keys_to_remove = [
+            "MARKER_WALL_FUNCTIONS",
+            # "WALLMODEL_KAPPA",
+            # "WALLMODEL_B",
+            # "WALLMODEL_MINYPLUS",
+            # "WALLMODEL_MAXITER",
+            # "WALLMODEL_RELFAC"
+            ]   
+
+        for key in keys_to_remove:
+            state.jsonData.pop(key, None)
+    # else:
+    #     state.jsonData['WALLMODEL_KAPPA'] = state.wallmodel_kappa_idx
+    #     state.jsonData['WALLMODEL_B'] = state.wallmodel_b_idx
+    #     state.jsonData['WALLMODEL_MINYPLUS'] = state.wallmodel_miny_idx
+    #     state.jsonData['WALLMODEL_MAXITER'] = state.wallmodel_maxiter_idx
+    #     state.jsonData['WALLMODEL_RELFAC'] = state.wallmodel_relax_factor_idx
+    
+    state.dirty('jsonData')
+
+@state.change("wallmodel_kappa_idx")
+def update_wallmodel_kappa(wallmodel_kappa_idx, **kwargs):
+    if state.wall_function:
+      try:
+          state.jsonData['WALLMODEL_KAPPA'] = float(wallmodel_kappa_idx)
+      except Exception as e:
+          log("error", f"Error in setting wallmodel_kappa_idx:  \n {e}")
+
+@state.change("wallmodel_b_idx")
+def update_wallmodel_b(wallmodel_b_idx, **kwargs):
+    if state.wall_function:
+      try:
+          state.jsonData['WALLMODEL_B'] = float(wallmodel_b_idx)
+      except Exception as e:  
+          log("error", f"Error in setting wallmodel_b_idx:  \n {e}")
+
+@state.change("wallmodel_miny_idx")
+def update_wallmodel_miny(wallmodel_miny_idx, **kwargs):
+    if state.wall_function:
+      try:
+        state.jsonData['WALLMODEL_MINYPLUS'] = float(wallmodel_miny_idx)
+      except Exception as e:
+        log("error", f"Error in setting wallmodel_miny_idx:  \n {e}")
+
+@state.change("wallmodel_maxiter_idx")
+def update_wallmodel_maxiter(wallmodel_maxiter_idx, **kwargs):
+    if state.wall_function:
+      try:
+        state.jsonData['WALLMODEL_MAXITER'] = float(wallmodel_maxiter_idx)
+      except Exception as e:
+        log("error", f"Error in setting wallmodel_maxiter_idx:  \n {e}")
+
+@state.change("wallmodel_relax_factor_idx")
+def update_wallmodel_relax_factor(wallmodel_relax_factor_idx, **kwargs):
+    if state.wall_function:
+      try:
+        state.jsonData['WALLMODEL_RELFAC'] = float(wallmodel_relax_factor_idx)
+      except Exception as e:
+        log("error", f"Error in setting wallmodel_relax_factor_idx:  \n {e}")
+
 
 
 ###############################################################
@@ -231,7 +366,7 @@ def physics_card():
 ###############################################################
 @state.change("physics_turb_sst_idx")
 def update_physics_turb_sst(physics_turb_sst_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sst_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sst_idx}")
     state.jsonData['SST_OPTIONS']= GetJsonName(physics_turb_sst_idx,LPhysicsTurbSSTOptions)
 
 ###############################################################
@@ -239,13 +374,13 @@ def update_physics_turb_sst(physics_turb_sst_idx, **kwargs):
 ###############################################################
 @state.change("physics_turb_sa_idx")
 def update_physics_turb_sa(physics_turb_sa_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_idx}")
     #NONE should be false
     state.SAOptions['NONE'] = False
     state.SAOptions['NEGATIVE'] = False
     state.SAOptions['EDWARDS'] = False
     state.SAOptions[GetJsonName(physics_turb_sa_idx,LPhysicsTurbSAOptions)] = True
-    print("     SA options=",state.SAOptions)
+    log("info", f"     SA options= = {state.SAOptions}")
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
@@ -255,68 +390,68 @@ def update_physics_turb_sa(physics_turb_sa_idx, **kwargs):
 
 @state.change("physics_turb_sa_ft2_idx")
 def update_physics_turb_sa(physics_turb_sa_ft2_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_ft2_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_ft2_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['WITHFT2'] = physics_turb_sa_ft2_idx
-    print("     SA options=",state.SAOptions)
+    log("info", f"     SA options= = {state.SAOptions}")
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key} val= {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_qcr2000_idx")
 def update_physics_turb_sa(physics_turb_sa_qcr2000_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_qcr2000_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_qcr2000_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['QCR2000'] = physics_turb_sa_qcr2000_idx
-    print("     SA options=",state.SAOptions)
+    log("info", f"     SA options= = {state.SAOptions}")
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key} val= {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_compressibility_idx")
 def update_physics_turb_sa(physics_turb_sa_compressibility_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_compressibility_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_compressibility_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['COMPRESSIBILITY'] = physics_turb_sa_compressibility_idx
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key= = {key} val= {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_rotation_idx")
 def update_physics_turb_sa(physics_turb_sa_rotation_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_rotation_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_rotation_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['ROTATION'] = physics_turb_sa_rotation_idx
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key = {key} val = {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
 @state.change("physics_turb_sa_bcm_idx")
 def update_physics_turb_sa(physics_turb_sa_bcm_idx, **kwargs):
-    print("     turbulence model selection: ",physics_turb_sa_bcm_idx)
+    log("info", f"     turbulence model selection:  = {physics_turb_sa_bcm_idx}")
     state.SAOptions['NONE'] = False
     state.SAOptions['BCM'] = physics_turb_sa_bcm_idx
     optionstring=""
     for key in state.SAOptions:
       value=state.SAOptions[key]
       if (value==True):
-          print("           key=",key,", val=",value)
+          log("info", f"           key = {key} val = {value}")
           optionstring += str(key) + " "
     state.jsonData['SA_OPTIONS']= optionstring
 
@@ -326,11 +461,12 @@ def update_physics_turb_sa(physics_turb_sa_bcm_idx, **kwargs):
 @state.change("physics_energy_idx")
 def update_physics_energy(physics_energy_idx, **kwargs):
 
-    print("     energy selection: ",physics_energy_idx)
+    log("info", f"     energy selection:  = {physics_energy_idx}")
     # can only be activated/deactivated for incompressible
     #state.energy = bool(state.physics_energy_idx)
 
-    state.jsonData['INC_ENERGY_EQUATION']= bool(physics_energy_idx)
+    if 'INC_DENSITY_MODEL' in state.jsonData and state.jsonData['INC_DENSITY_MODEL']!='CONSTANT':
+        state.jsonData['INC_ENERGY_EQUATION']= bool(physics_energy_idx)
 
     # update jsonData
     state.dirty("jsonData")
@@ -342,13 +478,13 @@ def update_physics_energy(physics_energy_idx, **kwargs):
 ############################################################################
 @state.change("physics_comp_idx")
 def update_physics_comp(physics_comp_idx, **kwargs):
-    print("     compressible selection: ",physics_comp_idx)
+    log("info", f"     compressible selection:  = {physics_comp_idx}")
     # compressible selected means we have either NAVIER_STOKES or RANS or EULER
     # incompressible selected means we have either INC_RANS or INC_NAVIER_STOKES or INC_EULER
     # This option goes together with the turbulence option
 
     compressible = bool(physics_comp_idx)
-    print("compressible = ",compressible)
+    log("info", f"compressible =  = {compressible}")
 
     # update the turbulence models from compressible to incompressible or vice versa
     update_physics_turb(state.physics_turb_idx)
@@ -358,30 +494,47 @@ def update_physics_comp(physics_comp_idx, **kwargs):
     # - fluid materials (viscosity)
     # - boundary conditions
     if (compressible==True):
-      print("       selecting compressible for material fluids")
+      log("info", "       selecting compressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidComp
       #state.field_state_name = "Density"
       state.LMaterialsViscosity = LMaterialsViscosityComp
       state.LMaterialsConductivity = LMaterialsConductivityComp
-      print("       selecting compressible boundary type for inlet and outlet")
-      state.bcinletsubtype = LBoundaryInletType
-      state.bcoutletsubtype = LBoundaryOutletType
+      log("info", "       selecting compressible boundary type ")
+      state.LBoundariesMain = state.LBoundariesMain[:5]
+      state.LBoundariesInlet= [
+        {"text": "Total Conditions", "value": 2},
+        {"text": "Mass flow", "value": 3},
+        ]
+      state.LBoundariesOutlet = [
+        {"text": "Pressure outlet", "value": 0},
+        ]
+
+      
     else:
-      print("       selecting incompressible for material fluids")
+      log("info", "       selecting incompressible for material fluids")
       state.LMaterialsFluid = LMaterialsFluidIncomp
       #state.field_state_name = "Pressure"
       state.LMaterialsViscosity = LMaterialsViscosityIncomp
       state.LMaterialsConductivity = LMaterialsConductivityIncomp
-      print("       selecting incompressible boundary type for inlet and outlet")
-      state.bcinletsubtype = LBoundaryIncInletType
-      state.bcoutletsubtype = LBoundaryIncOutletType
+      log("info", "       selecting incompressible boundary type ")
+      
+      state.LBoundariesMain+= [{"text": "Supersonic Inlet", "value": 5},{"text": "Supersonic Outlet", "value": 6}]
+      state.LBoundariesInlet= [
+        {"text": "Velocity inlet", "value": 0},
+        {"text": "Pressure inlet", "value": 1},
+        ]
+      state.LBoundariesOutlet = [
+        {"text": "Pressure outlet", "value": 0},
+        {"text": "Target mass flow rate", "value": 1},
+        ]
+
     # communicate to update all options when loading json config file
+    state.dirty('LBoundariesMain')
+    state.dirty('LBoundariesInlet')
     state.dirty('LMaterialsFluid')
     state.dirty('LMaterialsViscosity')
     state.dirty('LMaterialsConductivity')
-    #state.dirty('field_state_name')
-    state.dirty('bcinletsubtype')
-    state.dirty('bcoutletsubtype')
+    #state.dirty('field_state_name')s
 
 
 ###############################################################
@@ -389,7 +542,7 @@ def update_physics_comp(physics_comp_idx, **kwargs):
 ###############################################################
 @state.change("physics_turb_idx")
 def update_physics_turb(physics_turb_idx, **kwargs):
-    print("     turbulence selection: ",physics_turb_idx)
+    log("info", f"     turbulence selection:  = {physics_turb_idx}")
     # if turbulence is selected, we also need to select a default turbulence model
     # if turbulence is deselected, we put turbulence model to "NONE"
 
@@ -431,30 +584,30 @@ def update_physics_turb(physics_turb_idx, **kwargs):
             state.jsonData['KIND_TURB_MODEL']="SST"
 
     if (physics_turb_idx == 2):
-        print("     SA turbulence model activated")
+        log("info", "     SA turbulence model activated")
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sa"
         state.submodeltext = "SA text"
     elif (physics_turb_idx == 3):
-        print("     SST turbulence model activated")
+        log("info", "     SST turbulence model activated")
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_sst"
         state.submodeltext = "SST text"
     else:
-        print("     SST turbulence model deactivated")
+        log("info", "     SST turbulence model deactivated")
         if state.active_ui=="Physics":
           state.active_sub_ui = "subphysics_none"
         state.submodeltext = "no model"
 
     # energy equation can be deactivated only for inc_rans and inc_navier-stokes?
-    print("solver = ",state.jsonData['SOLVER'])
+    log("info", f"solver =  = {state.jsonData['SOLVER']}")
     if (state.jsonData['SOLVER']=='INC_NAVIER_STOKES' or state.jsonData['SOLVER']=='INC_RANS'):
       state.physics_energy_always_on = 0
     else:
       state.physics_energy_always_on = 1
 
     state.dirty('physics_energy_always_on')
-    print("Is energy always on? ",state.physics_energy_always_on)
+    log("debug", f"Is energy always on?  = {state.physics_energy_always_on}")
     state.dirty('jsonData')
 
 

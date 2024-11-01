@@ -40,9 +40,15 @@ LNumericsGradRecon= [
 
 # set the state variables using the json data from the config file
 def set_json_numerics():
-    state.CFL_idx = float(state.jsonData['CFL_NUMBER'])
-    state.numerics_grad_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD'],LNumericsGrad)
-    state.numerics_grad_recon_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD_RECON'],LNumericsGradRecon)
+    if 'CFL_NUMBER' in state.jsonData:
+        try:
+            state.CFL_idx = float(state.jsonData['CFL_NUMBER'])
+        except Exception as e:
+            log("error", f"Error in setting CFL number in Numeric Tab:  \n {e}")
+    if 'NUM_METHOD_GRAD' in state.jsonData:
+        state.numerics_grad_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD'],LNumericsGrad)
+    if 'NUM_METHOD_GRAD_RECON' in state.jsonData:
+        state.numerics_grad_recon_idx = GetJsonIndex(state.jsonData['NUM_METHOD_GRAD_RECON'],LNumericsGradRecon)
     state.dirty('CFL_idx')
     state.dirty('numerics_grad_idx')
     state.dirty('numerics_grad_recon_idx')
@@ -52,7 +58,7 @@ def set_json_numerics():
 ###############################################################
 def numerics_card():
     with ui_card(title="Numerics", ui_name="Numerics"):
-        print("## Numerics Selection ##")
+        log("info", "## Numerics Selection ##")
 
         # 1 row of option lists
         with vuetify.VRow(classes="pt-2"):
@@ -95,7 +101,7 @@ def numerics_card():
 ###############################################################
 @state.change("numerics_grad_idx")
 def update_material(numerics_grad_idx, **kwargs):
-    print("numerics spatial gradient selection: ",numerics_grad_idx)
+    log("info", f"numerics spatial gradient selection:  = {numerics_grad_idx}")
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
@@ -103,7 +109,7 @@ def update_material(numerics_grad_idx, **kwargs):
 
 @state.change("numerics_grad_recon_idx")
 def update_material(numerics_grad_recon_idx, **kwargs):
-    print("numerics MUSCL spatial gradient selection: ",numerics_grad_recon_idx)
+    log("info", f"numerics MUSCL spatial gradient selection:  = {numerics_grad_recon_idx}")
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
@@ -111,8 +117,12 @@ def update_material(numerics_grad_recon_idx, **kwargs):
 
 @state.change("CFL_idx")
 def update_material(CFL_idx, **kwargs):
-    print("CFL value: ",CFL_idx)
+    log("info", f"CFL value:  = {CFL_idx}")
     # we want to call a submenu
     #state.active_sub_ui = "submaterials_fluid"
     # update config option value
-    state.jsonData['CFL_NUMBER']= float(CFL_idx)
+    try:
+        state.jsonData['CFL_NUMBER']= float(CFL_idx)
+    except Exception as e:
+        log("error", f"Error in setting CFL number in Numeric Tab:  \n {e}")
+   

@@ -39,19 +39,31 @@ state, ctrl = server.state, server.controller
 # ### READ CONFIG FILE ### #
 # set the state variables using the json data from the config file
 def set_json_fileio():
-  state.fileio_restart_name = state.jsonData['RESTART_FILENAME']
-  state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
-  state.fileio_restart_binary = bool( not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
-  state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
+  try:
+    state.restart_filename = state.jsonData['RESTART_FILENAME']
+    # if state.restart_filename.endswith(".dat") or state.restart_filename.endswith(".csv"):
+    #    state.restart_filename = state.restart_filename[:-4]
+    state.fileio_restart_frequency = state.jsonData['OUTPUT_WRT_FREQ'][0]
+    state.fileio_restart_binary = bool('OUTPUT_FILES' in state.jsonData and not "RESTART_ASCII" in  state.jsonData['OUTPUT_FILES'])
+    state.fileio_restart_overwrite = bool(state.jsonData['WRT_RESTART_OVERWRITE'])
+  except KeyError as e:
+    log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
+    
+  try:
+    state.fileio_volume_name = state.jsonData['VOLUME_FILENAME']
+    state.fileio_volume_frequency = state.jsonData['OUTPUT_WRT_FREQ'][1]
+    state.fileio_volume_overwrite = bool(state.jsonData['WRT_VOLUME_OVERWRITE'])
+  except KeyError as e:
+    log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
+    
+  try:
+    state.fileio_history_name = state.jsonData['CONV_FILENAME']
+    state.fileio_history_frequency = state.jsonData['HISTORY_WRT_FREQ_INNER']
+  except KeyError as e:
+    log("warn", f"Key '{e.args[0]}' not found in state.jsonData")
+    
 
-  state.fileio_volume_name = state.jsonData['VOLUME_FILENAME']
-  state.fileio_volume_frequency = state.jsonData['OUTPUT_WRT_FREQ'][1]
-  state.fileio_volume_overwrite = bool(state.jsonData['WRT_VOLUME_OVERWRITE'])
-
-  state.fileio_history_name = state.jsonData['CONV_FILENAME']
-  state.fileio_history_frequency = state.jsonData['HISTORY_WRT_FREQ_INNER']
-
-  state.dirty('fileio_restart_name')
+  state.dirty('restart_filename')
   state.dirty('fileio_restart_frequency')
   state.dirty('fileio_restart_binary')
   state.dirty('fileio_restart_overwrite')
@@ -69,7 +81,7 @@ def set_json_fileio():
 ###############################################################
 def fileio_card():
     with ui_card(title="File I/O", ui_name="File I/O"):
-        print("     ## File I/O Selection ##")
+        log("info", "     ## File I/O Selection ##")
 
         with vuetify.VContainer(fluid=True, classes="pa-1 ma-1"):
           # ####################################################### #
@@ -87,7 +99,7 @@ def fileio_card():
             with vuetify.VCol(cols="4", classes="py-1 pl-0 pr-1"):
               vuetify.VTextField(
                 label="Restart",
-                v_model=("fileio_restart_name", "restart_flow"),
+                v_model=("restart_filename", state.restart_filename),
                 outlined=True,
                 dense=True,
                 hide_details=True,
@@ -170,30 +182,60 @@ def fileio_card():
                 hide_details=True,
               )
 #
-@state.change("fileio_restart_name")
-def update_material(fileio_restart_name, **kwargs):
-    state.jsonData['RESTART_FILENAME']= fileio_restart_name
+@state.change("restart_filename")
+def update_material(restart_filename, **kwargs):
+    state.jsonData['RESTART_FILENAME']= restart_filename
+    state.dirty('fileio_restart_binary')
     state.dirty('jsonData')
 
 # note that we currently support exactly 2 entries in OUTPUT_FILES, restart and paraview
 @state.change("fileio_restart_frequency")
 def update_material(fileio_restart_frequency, **kwargs):
-    state.jsonData['OUTPUT_WRT_FREQ'][0]= int(fileio_restart_frequency)
-    state.dirty('jsonData')
+    if 'OUTPUT_WRT_FREQ' not in state.jsonData:
+       state.jsonData['OUTPUT_WRT_FREQ'] = [100, 100]
+    try:
+      state.jsonData['OUTPUT_WRT_FREQ'][0]= int(fileio_restart_frequency)
+      state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 
 # if binary, change the file type
 @state.change("fileio_restart_binary")
 def update_material(fileio_restart_binary, **kwargs):
+    if 'OUTPUT_FILES' not in state.jsonData:
+       state.jsonData['OUTPUT_FILES'] = ['PARAVIEW', 'SURFACE_PARAVIEW']
+
     if bool(fileio_restart_binary)==True:
-      state.jsonData['OUTPUT_FILES'][0]= "RESTART"
+      # change extension to .dat
+      state.restart_filename = state.restart_filename.split('.',1)[0]+".dat"
+
+      # changes in config file
+      try:
+        restart_index = state.jsonData['OUTPUT_FILES'].index("RESTART_ASCII")
+        state.jsonData['OUTPUT_FILES'][restart_index]= "RESTART"
+      except:
+          if "RESTART" not in state.jsonData['OUTPUT_FILES']:
+            state.jsonData['OUTPUT_FILES'] += ["RESTART"]
     else:
-      state.jsonData['OUTPUT_FILES'][0]= "RESTART_ASCII"
+      # change extension to .csv
+      state.restart_filename = state.restart_filename.split('.',1)[0]+".csv"
+
+      # changes is config file
+      try:
+        restart_index = state.jsonData['OUTPUT_FILES'].index("RESTART")
+        state.jsonData['OUTPUT_FILES'][restart_index]= "RESTART_ASCII"
+      except:
+         if "RESTART_ASCII" not in state.jsonData['OUTPUT_FILES']:
+          state.jsonData['OUTPUT_FILES'] += ["RESTART_ASCII"]
     state.dirty('jsonData')
 
 @state.change("fileio_restart_overwrite")
 def update_material(fileio_restart_overwrite, **kwargs):
-    state.jsonData['WRT_RESTART_OVERWRITE']= bool(fileio_restart_overwrite)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['WRT_RESTART_OVERWRITE']= bool(fileio_restart_overwrite)
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 
 #
 @state.change("fileio_volume_name")
@@ -203,13 +245,19 @@ def update_material(fileio_volume_name, **kwargs):
 
 @state.change("fileio_volume_frequency")
 def update_material(fileio_volume_frequency, **kwargs):
-    state.jsonData['OUTPUT_WRT_FREQ'][1]= int(fileio_volume_frequency)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['OUTPUT_WRT_FREQ'][1]= int(fileio_volume_frequency)
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 
 @state.change("fileio_volume_overwrite")
 def update_material(fileio_volume_overwrite, **kwargs):
-    state.jsonData['WRT_VOLUME_OVERWRITE']= bool(fileio_volume_overwrite)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['WRT_VOLUME_OVERWRITE']= bool(fileio_volume_overwrite)
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n {str(e)}")
 # if binary, change the file type
 #@state.change("fileio_volume_binary")
 #def update_material(fileio_restart_binary, **kwargs):
@@ -228,6 +276,9 @@ def update_material(fileio_history_name, **kwargs):
 
 @state.change("fileio_history_frequency")
 def update_material(fileio_history_frequency, **kwargs):
-    state.jsonData['HISTORY_WRT_FREQ_INNER']= int(fileio_history_frequency)
-    state.dirty('jsonData')
+    try:
+        state.jsonData['HISTORY_WRT_FREQ_INNER']= int(fileio_history_frequency) 
+        state.dirty('jsonData')
+    except Exception as e:
+      log("error", f"An error occurred in FileIO Tab: \n{str(e)}")
 
